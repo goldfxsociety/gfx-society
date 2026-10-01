@@ -11,6 +11,7 @@ import {
   CandlestickPlotBlock,
   type CandlestickPreset,
 } from "@/components/lesson-engine/blocks/candlestick-plot-block";
+import { CandlestickFreehandPractice } from "@/components/lesson-engine/blocks/candlestick-freehand-practice";
 
 export default async function LessonPage({
   params,
@@ -55,6 +56,7 @@ export default async function LessonPage({
   const candlestickConfig = isCandlestickPlot
     ? (lesson.interactive_config as {
         showAnatomyDiagram?: boolean;
+        includeFreehandPractice?: boolean;
         presets: CandlestickPreset[];
       } | null)
     : null;
@@ -101,6 +103,10 @@ export default async function LessonPage({
 
       {isCandlestickPlot && candlestickConfig && (
         <CandlestickPlotBlock presets={candlestickConfig.presets} />
+      )}
+
+      {isCandlestickPlot && candlestickConfig?.includeFreehandPractice && (
+        <CandlestickFreehandPractice />
       )}
 
       {keyTakeaways.length > 0 && (

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { classifyCandle, type CandleClassification } from "@/lib/candlestick";
 
 export type CandlestickPreset = {
   label: string;
@@ -13,13 +14,9 @@ export type CandlestickPreset = {
   c: number;
 };
 
-type Result = {
-  type: string;
-  tone: "doji" | "bullish" | "bearish";
-  explanation: string;
+type Result = CandleClassification & {
   rangePips: number;
   bodyPips: number;
-  color: string;
 };
 
 export function CandlestickPlotBlock({
@@ -64,9 +61,10 @@ export function CandlestickPlotBlock({
 
     const range = H - L || 1;
     const toY = (v: number) => pad + ((H - v) / range) * (Ht - pad * 2);
+    const classification = classifyCandle(O, H, L, C);
     const isBull = C >= O;
-    const isDoji = Math.abs(C - O) / range < 0.05;
-    const color = isDoji ? "#D4A017" : isBull ? "#3DCB8A" : "#E05555";
+    const isDoji = classification.tone === "doji";
+    const color = classification.color;
     const cx = W / 2;
     const bTop = toY(Math.max(O, C));
     const bBot = toY(Math.min(O, C));
@@ -99,39 +97,10 @@ export function CandlestickPlotBlock({
     ctx.fillText(isBull ? "C" : "O", cx - 21, toY(Math.max(O, C)) + 4);
     ctx.fillText(isBull ? "O" : "C", cx - 21, toY(Math.min(O, C)) + 4);
 
-    const wr = (H - Math.max(O, C)) / range;
-    const lwr = (Math.min(O, C) - L) / range;
-    let type: string;
-    let tone: Result["tone"];
-    let explanation: string;
-
-    if (isDoji) {
-      type = "Doji";
-      tone = "doji";
-      explanation = "Open equals Close. Indecision — neither bulls nor bears won.";
-    } else if (isBull) {
-      const isHammer = lwr > 0.4 && (C - O) / range > 0.25;
-      type = isHammer ? "Hammer / Bullish Pin Bar" : "Bullish Candle";
-      tone = "bullish";
-      explanation = isHammer
-        ? "Long lower wick — buyers took control at support."
-        : "Close greater than Open. Buyers dominated.";
-    } else {
-      const isStar = wr > 0.4 && (O - C) / range > 0.25;
-      type = isStar ? "Shooting Star" : "Bearish Candle";
-      tone = "bearish";
-      explanation = isStar
-        ? "Long upper wick — sellers took over at resistance."
-        : "Close less than Open. Sellers dominated.";
-    }
-
     setResult({
-      type,
-      tone,
-      explanation,
+      ...classification,
       rangePips: Math.round((H - L) * 100),
       bodyPips: Math.round(Math.abs(C - O) * 100),
-      color,
     });
   }
 
