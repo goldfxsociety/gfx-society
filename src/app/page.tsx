@@ -1,21 +1,22 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { buttonVariants } from "@/components/ui/button";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export default async function Home() {
-  let supabaseStatus: "connected" | "error" = "connected";
-  let errorMessage = "";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.getUser();
-    // "Auth session missing" just means no one is logged in yet — that's
-    // expected and still proves the connection to Supabase works.
-    if (error && error.name !== "AuthSessionMissingError") {
-      supabaseStatus = "error";
-      errorMessage = error.message;
-    }
-  } catch (err) {
-    supabaseStatus = "error";
-    errorMessage = err instanceof Error ? err.message : "Unknown error";
+  let profileName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .single();
+    profileName = profile?.display_name ?? null;
   }
 
   return (
@@ -25,25 +26,27 @@ export default async function Home() {
           GFX Society
         </span>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-          v2 scaffold is live
+          {user ? `Welcome back${profileName ? `, ${profileName}` : ""}` : "v2 scaffold is live"}
         </h1>
         <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-          This is the starting point for GFX Society — Academy, Dashboard,
-          Resources, Community, Broker, and Admin will all be built here.
+          {user
+            ? `Logged in as ${user.email}. Your profile row was created automatically on signup.`
+            : "This is the starting point for GFX Society — Academy, Dashboard, Resources, Community, Broker, and Admin will all be built here."}
         </p>
       </div>
 
-      <div
-        className={`rounded-full border px-4 py-1.5 text-xs font-medium ${
-          supabaseStatus === "connected"
-            ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-            : "border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
-        }`}
-      >
-        {supabaseStatus === "connected"
-          ? "Supabase: connected"
-          : `Supabase: error — ${errorMessage}`}
-      </div>
+      {user ? (
+        <LogoutButton />
+      ) : (
+        <div className="flex gap-3">
+          <Link href="/signup" className={buttonVariants({ variant: "default" })}>
+            Sign up
+          </Link>
+          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+            Log in
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
