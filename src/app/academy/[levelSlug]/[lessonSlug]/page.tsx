@@ -17,6 +17,8 @@ import {
   type PatternDef,
 } from "@/components/lesson-engine/blocks/pattern-intro-grid";
 import { PatternRecognitionBlock } from "@/components/lesson-engine/blocks/pattern-recognition-block";
+import { RsiMaTool } from "@/components/lesson-engine/blocks/rsi-ma-tool";
+import { FibonacciCalculator } from "@/components/lesson-engine/blocks/fibonacci-calculator";
 
 export default async function LessonPage({
   params,
@@ -75,6 +77,9 @@ export default async function LessonPage({
       } | null)
     : null;
 
+  const isRsiMaTool = lesson.lesson_type === "rsi_ma_tool";
+  const isFibCalc = lesson.lesson_type === "fibonacci_calculator";
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -126,6 +131,10 @@ export default async function LessonPage({
       {isPatternRecognition && patternConfig && (
         <PatternIntroGrid patterns={patternConfig.patterns} />
       )}
+
+      {isRsiMaTool && <RsiMaTool />}
+
+      {isFibCalc && <FibonacciCalculator />}
 
       {keyTakeaways.length > 0 && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">

@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { markLessonComplete } from "@/lib/progress/mark-complete";
 import { Button } from "@/components/ui/button";
+import { CandleSequenceCanvas } from "@/components/lesson-engine/blocks/candle-sequence-canvas";
+import type { OHLC } from "@/lib/candlestick";
 import { cn } from "cn";
 
 export type ScenarioQuizScenario = {
   icon?: string;
+  chart?: OHLC[];
   question: string;
   options: string[];
   correctIndex: number;
@@ -81,6 +84,12 @@ export function ScenarioQuizBlock({
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
         Scenario {index + 1} of {scenarios.length}
       </p>
+      {scenario.chart && (
+        <div className="flex justify-center rounded-md border border-zinc-200 bg-zinc-50 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+          <CandleSequenceCanvas candles={scenario.chart} width={200} height={120} />
+        </div>
+      )}
+
       <p className="text-base font-medium">
         {scenario.icon} {scenario.question}
       </p>
