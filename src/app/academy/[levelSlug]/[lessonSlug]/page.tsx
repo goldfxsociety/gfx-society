@@ -12,6 +12,11 @@ import {
   type CandlestickPreset,
 } from "@/components/lesson-engine/blocks/candlestick-plot-block";
 import { CandlestickFreehandPractice } from "@/components/lesson-engine/blocks/candlestick-freehand-practice";
+import {
+  PatternIntroGrid,
+  type PatternDef,
+} from "@/components/lesson-engine/blocks/pattern-intro-grid";
+import { PatternRecognitionBlock } from "@/components/lesson-engine/blocks/pattern-recognition-block";
 
 export default async function LessonPage({
   params,
@@ -58,6 +63,15 @@ export default async function LessonPage({
         showAnatomyDiagram?: boolean;
         includeFreehandPractice?: boolean;
         presets: CandlestickPreset[];
+      } | null)
+    : null;
+
+  const isPatternRecognition = lesson.lesson_type === "pattern_recognition";
+  const patternConfig = isPatternRecognition
+    ? (lesson.interactive_config as {
+        patterns: PatternDef[];
+        lookalikes?: Record<string, string[]>;
+        rounds?: number;
       } | null)
     : null;
 
@@ -109,6 +123,10 @@ export default async function LessonPage({
         <CandlestickFreehandPractice />
       )}
 
+      {isPatternRecognition && patternConfig && (
+        <PatternIntroGrid patterns={patternConfig.patterns} />
+      )}
+
       {keyTakeaways.length > 0 && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <p className="mb-2 text-sm font-semibold">Key takeaways</p>
@@ -126,13 +144,24 @@ export default async function LessonPage({
         </p>
       )}
 
-      {isScenarioQuiz ? (
+      {isScenarioQuiz || isPatternRecognition ? (
         <>
-          <ScenarioQuizBlock
-            lessonId={lesson.id}
-            scenarios={scenarios}
-            canSave={!!user}
-          />
+          {isScenarioQuiz && (
+            <ScenarioQuizBlock
+              lessonId={lesson.id}
+              scenarios={scenarios}
+              canSave={!!user}
+            />
+          )}
+          {isPatternRecognition && patternConfig && (
+            <PatternRecognitionBlock
+              lessonId={lesson.id}
+              patterns={patternConfig.patterns}
+              lookalikes={patternConfig.lookalikes}
+              rounds={patternConfig.rounds}
+              canSave={!!user}
+            />
+          )}
           {!user && (
             <p className="text-sm text-zinc-500">
               <Link href="/login" className="underline">

@@ -9,6 +9,58 @@ export type CandleClassification = {
 
 export type OHLC = { o: number; h: number; l: number; c: number };
 
+/**
+ * Draws a row of candles sharing one price scale — used for multi-candle
+ * patterns (e.g. engulfing) and for mini preview charts. Ported from the
+ * original app's drawPatternCanvas().
+ */
+export function drawCandleSequence(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  candles: OHLC[],
+  small = false,
+) {
+  const pad = small ? 6 : 14;
+  ctx.clearRect(0, 0, width, height);
+  if (candles.length === 0) return;
+
+  const high = Math.max(...candles.map((c) => c.h));
+  const low = Math.min(...candles.map((c) => c.l));
+  const range = high - low || 1;
+  const toY = (v: number) => pad + ((high - v) / range) * (height - pad * 2);
+  const cw = (width - pad * 2) / candles.length;
+  const bodyW = Math.max(Math.floor(cw * 0.5), 4);
+
+  candles.forEach((c, i) => {
+    const cx = pad + i * cw + cw / 2;
+    const isBull = c.c >= c.o;
+    const isDoji = Math.abs(c.c - c.o) / range < 0.04;
+    const color = isDoji ? "#D4A017" : isBull ? "#3DCB8A" : "#E05555";
+    const bTop = toY(Math.max(c.o, c.c));
+    const bBot = toY(Math.min(c.o, c.c));
+    const bH = Math.max(bBot - bTop, 2);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = small ? 1.5 : 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, toY(c.h));
+    ctx.lineTo(cx, bTop);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, bBot);
+    ctx.lineTo(cx, toY(c.l));
+    ctx.stroke();
+
+    ctx.fillStyle = isBull && !isDoji ? color : "transparent";
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.rect(cx - bodyW / 2, bTop, bodyW, bH);
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+
 /** Ported from the original app's drawCandle() classification thresholds. */
 export function classifyCandle(O: number, H: number, L: number, C: number): CandleClassification {
   const range = H - L || 1;
