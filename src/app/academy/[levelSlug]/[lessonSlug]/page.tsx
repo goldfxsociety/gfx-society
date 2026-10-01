@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MarkCompleteButton } from "@/components/academy/mark-complete-button";
+import {
+  ScenarioQuizBlock,
+  type ScenarioQuizScenario,
+} from "@/components/lesson-engine/blocks/scenario-quiz-block";
 
 export default async function LessonPage({
   params,
@@ -22,7 +26,9 @@ export default async function LessonPage({
 
   const { data: lesson } = await supabase
     .from("lessons")
-    .select("id, title, learning_objective, content, key_takeaways")
+    .select(
+      "id, title, learning_objective, content, key_takeaways, lesson_type, interactive_config",
+    )
     .eq("level_id", level.id)
     .eq("slug", lessonSlug)
     .eq("is_published", true)
@@ -32,6 +38,12 @@ export default async function LessonPage({
 
   const keyTakeaways = Array.isArray(lesson.key_takeaways)
     ? (lesson.key_takeaways as string[])
+    : [];
+
+  const isScenarioQuiz = lesson.lesson_type === "scenario_quiz";
+  const scenarios = isScenarioQuiz
+    ? ((lesson.interactive_config as { scenarios: ScenarioQuizScenario[] } | null)
+        ?.scenarios ?? [])
     : [];
 
   const {
@@ -81,22 +93,41 @@ export default async function LessonPage({
         </div>
       )}
 
-      {!user && (
-        <p className="text-sm text-zinc-500">
-          <Link href="/login" className="underline">
-            Log in
-          </Link>{" "}
-          to save your progress on this lesson.
-        </p>
-      )}
-
       {user && completedAt && (
         <p className="text-sm font-medium text-emerald-600">
           ✓ Completed on {new Date(completedAt).toLocaleDateString()}
         </p>
       )}
 
-      {user && !completedAt && <MarkCompleteButton lessonId={lesson.id} />}
+      {isScenarioQuiz ? (
+        <>
+          <ScenarioQuizBlock
+            lessonId={lesson.id}
+            scenarios={scenarios}
+            canSave={!!user}
+          />
+          {!user && (
+            <p className="text-sm text-zinc-500">
+              <Link href="/login" className="underline">
+                Log in
+              </Link>{" "}
+              to save your quiz result.
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {!user && (
+            <p className="text-sm text-zinc-500">
+              <Link href="/login" className="underline">
+                Log in
+              </Link>{" "}
+              to save your progress on this lesson.
+            </p>
+          )}
+          {user && !completedAt && <MarkCompleteButton lessonId={lesson.id} />}
+        </>
+      )}
     </div>
   );
 }

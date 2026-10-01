@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { markLessonComplete } from "@/lib/progress/mark-complete";
 import { Button } from "@/components/ui/button";
 
 export function MarkCompleteButton({ lessonId }: { lessonId: string }) {
@@ -13,10 +13,7 @@ export function MarkCompleteButton({ lessonId }: { lessonId: string }) {
   async function handleClick() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("lesson_progress")
-      .insert({ lesson_id: lessonId });
+    const { error } = await markLessonComplete(lessonId);
     setLoading(false);
 
     if (error) {
