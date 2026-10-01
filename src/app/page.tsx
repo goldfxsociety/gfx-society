@@ -35,18 +35,23 @@ export default async function Home() {
         </p>
       </div>
 
-      {user ? (
-        <LogoutButton />
-      ) : (
-        <div className="flex gap-3">
-          <Link href="/signup" className={buttonVariants({ variant: "default" })}>
-            Sign up
-          </Link>
-          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
-            Log in
-          </Link>
-        </div>
-      )}
+      <div className="flex gap-3">
+        <Link href="/academy" className={buttonVariants({ variant: "default" })}>
+          Go to Academy
+        </Link>
+        {user ? (
+          <LogoutButton />
+        ) : (
+          <>
+            <Link href="/signup" className={buttonVariants({ variant: "outline" })}>
+              Sign up
+            </Link>
+            <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+              Log in
+            </Link>
+          </>
+        )}
+      </div>
     </div>
   );
 }
