@@ -6,6 +6,11 @@ import {
   ScenarioQuizBlock,
   type ScenarioQuizScenario,
 } from "@/components/lesson-engine/blocks/scenario-quiz-block";
+import { CandlestickAnatomyDiagram } from "@/components/lesson-engine/blocks/candlestick-anatomy-diagram";
+import {
+  CandlestickPlotBlock,
+  type CandlestickPreset,
+} from "@/components/lesson-engine/blocks/candlestick-plot-block";
 
 export default async function LessonPage({
   params,
@@ -46,6 +51,14 @@ export default async function LessonPage({
         ?.scenarios ?? [])
     : [];
 
+  const isCandlestickPlot = lesson.lesson_type === "candlestick_plot";
+  const candlestickConfig = isCandlestickPlot
+    ? (lesson.interactive_config as {
+        showAnatomyDiagram?: boolean;
+        presets: CandlestickPreset[];
+      } | null)
+    : null;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -81,6 +94,14 @@ export default async function LessonPage({
       <div className="whitespace-pre-line text-sm leading-7 text-zinc-700 dark:text-zinc-300">
         {lesson.content}
       </div>
+
+      {isCandlestickPlot && candlestickConfig?.showAnatomyDiagram && (
+        <CandlestickAnatomyDiagram />
+      )}
+
+      {isCandlestickPlot && candlestickConfig && (
+        <CandlestickPlotBlock presets={candlestickConfig.presets} />
+      )}
 
       {keyTakeaways.length > 0 && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
