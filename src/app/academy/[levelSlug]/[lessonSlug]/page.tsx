@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { MarkCompleteButton } from "@/components/academy/mark-complete-button";
 
 export default async function LessonPage({
   params,
@@ -21,7 +22,7 @@ export default async function LessonPage({
 
   const { data: lesson } = await supabase
     .from("lessons")
-    .select("title, learning_objective, content, key_takeaways")
+    .select("id, title, learning_objective, content, key_takeaways")
     .eq("level_id", level.id)
     .eq("slug", lessonSlug)
     .eq("is_published", true)
@@ -32,6 +33,20 @@ export default async function LessonPage({
   const keyTakeaways = Array.isArray(lesson.key_takeaways)
     ? (lesson.key_takeaways as string[])
     : [];
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let completedAt: string | null = null;
+  if (user) {
+    const { data: progress } = await supabase
+      .from("lesson_progress")
+      .select("completed_at")
+      .eq("lesson_id", lesson.id)
+      .maybeSingle();
+    completedAt = progress?.completed_at ?? null;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -65,6 +80,23 @@ export default async function LessonPage({
           </ul>
         </div>
       )}
+
+      {!user && (
+        <p className="text-sm text-zinc-500">
+          <Link href="/login" className="underline">
+            Log in
+          </Link>{" "}
+          to save your progress on this lesson.
+        </p>
+      )}
+
+      {user && completedAt && (
+        <p className="text-sm font-medium text-emerald-600">
+          ✓ Completed on {new Date(completedAt).toLocaleDateString()}
+        </p>
+      )}
+
+      {user && !completedAt && <MarkCompleteButton lessonId={lesson.id} />}
     </div>
   );
 }
