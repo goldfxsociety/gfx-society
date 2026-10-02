@@ -19,6 +19,9 @@ import {
 import { PatternRecognitionBlock } from "@/components/lesson-engine/blocks/pattern-recognition-block";
 import { RsiMaTool } from "@/components/lesson-engine/blocks/rsi-ma-tool";
 import { FibonacciCalculator } from "@/components/lesson-engine/blocks/fibonacci-calculator";
+import { LotSizeCalculator } from "@/components/lesson-engine/blocks/lot-size-calculator";
+import { RiskRewardCalculator } from "@/components/lesson-engine/blocks/risk-reward-calculator";
+import { JournalToolBlock } from "@/components/lesson-engine/blocks/journal-tool-block";
 
 export default async function LessonPage({
   params,
@@ -79,6 +82,9 @@ export default async function LessonPage({
 
   const isRsiMaTool = lesson.lesson_type === "rsi_ma_tool";
   const isFibCalc = lesson.lesson_type === "fibonacci_calculator";
+  const isLotSizeCalc = lesson.lesson_type === "lot_size_calculator";
+  const isRrCalc = lesson.lesson_type === "risk_reward_calculator";
+  const isJournalTool = lesson.lesson_type === "journal_tool";
 
   const {
     data: { user },
@@ -135,6 +141,12 @@ export default async function LessonPage({
       {isRsiMaTool && <RsiMaTool />}
 
       {isFibCalc && <FibonacciCalculator />}
+
+      {isLotSizeCalc && <LotSizeCalculator />}
+
+      {isRrCalc && <RiskRewardCalculator />}
+
+      {isJournalTool && <JournalToolBlock />}
 
       {keyTakeaways.length > 0 && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
