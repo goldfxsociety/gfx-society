@@ -22,6 +22,11 @@ import { FibonacciCalculator } from "@/components/lesson-engine/blocks/fibonacci
 import { LotSizeCalculator } from "@/components/lesson-engine/blocks/lot-size-calculator";
 import { RiskRewardCalculator } from "@/components/lesson-engine/blocks/risk-reward-calculator";
 import { JournalToolBlock } from "@/components/lesson-engine/blocks/journal-tool-block";
+import { SessionCheckerBlock } from "@/components/lesson-engine/blocks/session-checker-block";
+import {
+  ConceptIntroGrid,
+  type ConceptDef,
+} from "@/components/lesson-engine/blocks/concept-intro-grid";
 
 export default async function LessonPage({
   params,
@@ -57,10 +62,14 @@ export default async function LessonPage({
     : [];
 
   const isScenarioQuiz = lesson.lesson_type === "scenario_quiz";
-  const scenarios = isScenarioQuiz
-    ? ((lesson.interactive_config as { scenarios: ScenarioQuizScenario[] } | null)
-        ?.scenarios ?? [])
-    : [];
+  const scenarioConfig = isScenarioQuiz
+    ? (lesson.interactive_config as {
+        scenarios: ScenarioQuizScenario[];
+        introConcepts?: ConceptDef[];
+      } | null)
+    : null;
+  const scenarios = scenarioConfig?.scenarios ?? [];
+  const introConcepts = scenarioConfig?.introConcepts;
 
   const isCandlestickPlot = lesson.lesson_type === "candlestick_plot";
   const candlestickConfig = isCandlestickPlot
@@ -85,6 +94,7 @@ export default async function LessonPage({
   const isLotSizeCalc = lesson.lesson_type === "lot_size_calculator";
   const isRrCalc = lesson.lesson_type === "risk_reward_calculator";
   const isJournalTool = lesson.lesson_type === "journal_tool";
+  const isSessionChecker = lesson.lesson_type === "session_checker";
 
   const {
     data: { user },
@@ -138,6 +148,10 @@ export default async function LessonPage({
         <PatternIntroGrid patterns={patternConfig.patterns} />
       )}
 
+      {isScenarioQuiz && introConcepts && (
+        <ConceptIntroGrid concepts={introConcepts} />
+      )}
+
       {isRsiMaTool && <RsiMaTool />}
 
       {isFibCalc && <FibonacciCalculator />}
@@ -147,6 +161,8 @@ export default async function LessonPage({
       {isRrCalc && <RiskRewardCalculator />}
 
       {isJournalTool && <JournalToolBlock />}
+
+      {isSessionChecker && <SessionCheckerBlock />}
 
       {keyTakeaways.length > 0 && (
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
