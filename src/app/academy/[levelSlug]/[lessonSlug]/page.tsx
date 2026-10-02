@@ -36,12 +36,15 @@ export default async function LessonPage({
   const { levelSlug, lessonSlug } = await params;
   const supabase = await createClient();
 
-  const { data: level } = await supabase
-    .from("levels")
-    .select("id, slug, title")
-    .eq("slug", levelSlug)
-    .eq("is_published", true)
-    .single();
+  const [{ data: level }, userResult] = await Promise.all([
+    supabase
+      .from("levels")
+      .select("id, slug, title")
+      .eq("slug", levelSlug)
+      .eq("is_published", true)
+      .single(),
+    supabase.auth.getUser(),
+  ]);
 
   if (!level) notFound();
 
@@ -98,7 +101,7 @@ export default async function LessonPage({
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = userResult;
 
   let completedAt: string | null = null;
   if (user) {

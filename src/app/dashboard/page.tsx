@@ -34,15 +34,16 @@ export default async function DashboardPage() {
     );
   }
 
-  const { data: levelsData } = await supabase
-    .from("levels")
-    .select(
-      "id, slug, title, badge_name, badge_icon, order_index, lessons(id, slug, title, order_index)",
-    )
-    .eq("is_published", true)
-    .order("order_index");
-
-  const { data: progress } = await supabase.from("lesson_progress").select("lesson_id");
+  const [{ data: levelsData }, { data: progress }] = await Promise.all([
+    supabase
+      .from("levels")
+      .select(
+        "id, slug, title, badge_name, badge_icon, order_index, lessons(id, slug, title, order_index)",
+      )
+      .eq("is_published", true)
+      .order("order_index"),
+    supabase.from("lesson_progress").select("lesson_id"),
+  ]);
   const completedIds = new Set((progress ?? []).map((p) => p.lesson_id));
 
   const levels = ((levelsData as LevelRow[] | null) ?? []).map((lvl) => ({
