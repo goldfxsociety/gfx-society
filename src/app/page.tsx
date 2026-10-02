@@ -57,6 +57,18 @@ export default async function Home() {
           </>
         )}
       </div>
+
+      <div className="flex gap-4 text-xs text-zinc-500">
+        <Link href="/resources" className="underline hover:text-amber-600">
+          Resources
+        </Link>
+        <Link href="/community" className="underline hover:text-amber-600">
+          Community
+        </Link>
+        <Link href="/broker" className="underline hover:text-amber-600">
+          Broker
+        </Link>
+      </div>
     </div>
   );
 }
