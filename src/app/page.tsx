@@ -40,7 +40,12 @@ export default async function Home() {
           Go to Academy
         </Link>
         {user ? (
-          <LogoutButton />
+          <>
+            <Link href="/dashboard" className={buttonVariants({ variant: "outline" })}>
+              Dashboard
+            </Link>
+            <LogoutButton />
+          </>
         ) : (
           <>
             <Link href="/signup" className={buttonVariants({ variant: "outline" })}>
