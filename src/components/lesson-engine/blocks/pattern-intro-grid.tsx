@@ -26,7 +26,7 @@ export function PatternIntroGrid({ patterns }: { patterns: PatternDef[] }) {
       {patterns.map((p) => (
         <div
           key={p.id}
-          className="flex gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          className="flex gap-3 rounded-lg border border-border bg-card p-3"
         >
           <div className="flex-shrink-0">
             <CandleSequenceCanvas candles={p.ohlc} width={70} height={60} small />
@@ -40,13 +40,13 @@ export function PatternIntroGrid({ patterns }: { patterns: PatternDef[] }) {
                 {p.signal}
               </span>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-xs text-muted-foreground">
+              <span className="font-medium text-muted-foreground">
                 What it looks like:{" "}
               </span>
               {p.desc}
             </p>
-            <p className="mt-1 text-xs text-zinc-400">💡 {p.tip}</p>
+            <p className="mt-1 text-xs text-muted-foreground">💡 {p.tip}</p>
           </div>
         </div>
       ))}

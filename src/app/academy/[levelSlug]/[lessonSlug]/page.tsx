@@ -117,7 +117,7 @@ export default async function LessonPage({
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <Link
         href={`/academy/${level.slug}`}
-        className="text-sm text-zinc-500 underline"
+        className="text-sm text-muted-foreground underline"
       >
         ← Back to {level.title}
       </Link>
@@ -125,13 +125,13 @@ export default async function LessonPage({
       <h1 className="text-2xl font-bold tracking-tight">{lesson.title}</h1>
 
       {lesson.learning_objective && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950">
+        <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm">
           <span className="font-semibold">Learning objective: </span>
           {lesson.learning_objective}
         </div>
       )}
 
-      <div className="whitespace-pre-line text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+      <div className="whitespace-pre-line text-sm leading-7 text-foreground/90">
         {lesson.content}
       </div>
 
@@ -168,9 +168,9 @@ export default async function LessonPage({
       {isSessionChecker && <SessionCheckerBlock />}
 
       {keyTakeaways.length > 0 && (
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="rounded-lg border border-border bg-card p-4">
           <p className="mb-2 text-sm font-semibold">Key takeaways</p>
-          <ul className="list-inside list-disc text-sm text-zinc-600 dark:text-zinc-400">
+          <ul className="list-inside list-disc text-sm text-muted-foreground">
             {keyTakeaways.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
@@ -203,7 +203,7 @@ export default async function LessonPage({
             />
           )}
           {!user && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               <Link href="/login" className="underline">
                 Log in
               </Link>{" "}
@@ -214,7 +214,7 @@ export default async function LessonPage({
       ) : (
         <>
           {!user && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               <Link href="/login" className="underline">
                 Log in
               </Link>{" "}

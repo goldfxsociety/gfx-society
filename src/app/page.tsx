@@ -20,15 +20,15 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-6 text-center dark:bg-black">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           GFX Society
         </span>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {user ? `Welcome back${profileName ? `, ${profileName}` : ""}` : "v2 scaffold is live"}
         </h1>
-        <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="max-w-md text-sm text-muted-foreground">
           {user
             ? `Logged in as ${user.email}. Your profile row was created automatically on signup.`
             : "This is the starting point for GFX Society — Academy, Dashboard, Resources, Community, Broker, and Admin will all be built here."}
@@ -58,14 +58,14 @@ export default async function Home() {
         )}
       </div>
 
-      <div className="flex gap-4 text-xs text-zinc-500">
-        <Link href="/resources" className="underline hover:text-amber-600">
+      <div className="flex gap-4 text-xs text-muted-foreground">
+        <Link href="/resources" className="underline hover:text-primary">
           Resources
         </Link>
-        <Link href="/community" className="underline hover:text-amber-600">
+        <Link href="/community" className="underline hover:text-primary">
           Community
         </Link>
-        <Link href="/broker" className="underline hover:text-amber-600">
+        <Link href="/broker" className="underline hover:text-primary">
           Broker
         </Link>
       </div>

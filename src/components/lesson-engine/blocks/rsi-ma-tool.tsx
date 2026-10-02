@@ -109,9 +109,9 @@ export function RsiMaTool() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
         <p className="text-sm font-semibold">📉 RSI Reader</p>
-        <p className="text-xs text-zinc-500">Tap an example, or enter an RSI value.</p>
+        <p className="text-xs text-muted-foreground">Tap an example, or enter an RSI value.</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => handleRsiCheck(25)}>
             RSI 25
@@ -138,14 +138,14 @@ export function RsiMaTool() {
           <div className="flex flex-col gap-2">
             <div className="relative h-3 w-full overflow-hidden rounded-full">
               <div className="absolute inset-y-0 left-0 w-[30%] bg-red-400" />
-              <div className="absolute inset-y-0 left-[30%] w-[40%] bg-zinc-300 dark:bg-zinc-700" />
+              <div className="absolute inset-y-0 left-[30%] w-[40%] bg-muted" />
               <div className="absolute inset-y-0 left-[70%] w-[30%] bg-emerald-400" />
               <div
-                className="absolute top-[-3px] h-[18px] w-0.5 bg-zinc-900 dark:bg-white"
+                className="absolute top-[-3px] h-[18px] w-0.5 bg-foreground"
                 style={{ left: `calc(${Math.max(0, Math.min(100, rsiResult.value))}% - 1px)` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-zinc-400">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>0</span>
               <span>30</span>
               <span>70</span>
@@ -154,7 +154,7 @@ export function RsiMaTool() {
             <p className={`text-sm font-semibold ${TONE_CLASS[rsiResult.tone]}`}>
               {rsiResult.verdict} ({rsiResult.value})
             </p>
-            <p className="text-xs text-zinc-500">{rsiResult.desc}</p>
+            <p className="text-xs text-muted-foreground">{rsiResult.desc}</p>
           </div>
         )}
         <Button onClick={() => handleRsiCheck()} className="self-start">
@@ -162,9 +162,9 @@ export function RsiMaTool() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
         <p className="text-sm font-semibold">🔀 Golden / Death Cross Checker</p>
-        <p className="text-xs text-zinc-500">Tap an example, or enter your own MA values.</p>
+        <p className="text-xs text-muted-foreground">Tap an example, or enter your own MA values.</p>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
@@ -209,7 +209,7 @@ export function RsiMaTool() {
             <p className={`text-sm font-semibold ${TONE_CLASS[crossResult.tone]}`}>
               {crossResult.verdict}
             </p>
-            <p className="text-xs text-zinc-500">{crossResult.desc}</p>
+            <p className="text-xs text-muted-foreground">{crossResult.desc}</p>
           </div>
         )}
         <Button onClick={() => handleCrossCheck()} className="self-start">

@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-sm text-zinc-500">Log in to see your dashboard.</p>
+        <p className="text-sm text-muted-foreground">Log in to see your dashboard.</p>
         <div className="flex gap-3">
           <Link href="/login" className={buttonVariants({ variant: "default" })}>
             Log in
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           Dashboard
         </span>
         <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
@@ -89,24 +89,24 @@ export default async function DashboardPage() {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-zinc-500">Overall completion</span>
-          <span className="font-semibold text-amber-600">{overallPct}%</span>
+          <span className="text-muted-foreground">Overall completion</span>
+          <span className="font-semibold text-primary">{overallPct}%</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-amber-500 transition-all"
+            className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${overallPct}%` }}
           />
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           {totalCompleted} of {totalLessons} lessons completed
         </p>
       </div>
 
       {allDone ? (
-        <div className="rounded-lg border border-amber-400 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950">
+        <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
           <p className="font-semibold">🎓 Congratulations, Graduate!</p>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             You&apos;ve completed every lesson in GFX Academy.
           </p>
         </div>
@@ -114,13 +114,13 @@ export default async function DashboardPage() {
         continueTarget && (
           <Link
             href={`/academy/${continueTarget.levelSlug}/${continueTarget.lessonSlug}`}
-            className="flex flex-col gap-1 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm transition-colors hover:border-amber-400 dark:border-amber-900 dark:bg-amber-950"
+            className="flex flex-col gap-1 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
               Continue Learning
             </span>
             <span className="font-semibold">{continueTarget.lessonTitle}</span>
-            <span className="text-xs text-zinc-500">{continueTarget.levelTitle}</span>
+            <span className="text-xs text-muted-foreground">{continueTarget.levelTitle}</span>
           </Link>
         )
       )}
@@ -135,10 +135,10 @@ export default async function DashboardPage() {
               <Link
                 key={lvl.id}
                 href={`/academy/${lvl.slug}`}
-                className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-colors hover:border-amber-400 ${
+                className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-colors hover:border-primary ${
                   earned
-                    ? "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950"
-                    : "border-zinc-200 dark:border-zinc-800"
+                    ? "border-primary/30 bg-primary/10"
+                    : "border-border bg-card"
                 }`}
               >
                 <span className={`text-2xl ${earned ? "" : "opacity-40 grayscale"}`}>
@@ -147,7 +147,7 @@ export default async function DashboardPage() {
                 <span className="text-xs font-medium">
                   {earned ? (lvl.badge_name ?? "Earned") : lvl.title}
                 </span>
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-muted-foreground">
                   {completedCount}/{lvl.lessons.length}
                 </span>
               </Link>

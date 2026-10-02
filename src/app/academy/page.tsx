@@ -19,7 +19,7 @@ export default async function AcademyPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           GFX Academy
         </span>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -34,12 +34,12 @@ export default async function AcademyPage() {
             : 0;
           return (
             <Link key={level.id} href={`/academy/${level.slug}`}>
-              <Card className="transition-colors hover:border-amber-400">
+              <Card className="transition-colors hover:border-primary">
                 <CardHeader>
                   <CardTitle>{level.title}</CardTitle>
                   <CardDescription>{level.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="text-sm text-zinc-500">
+                <CardContent className="text-sm text-muted-foreground">
                   {lessonCount} lesson{lessonCount === 1 ? "" : "s"}
                 </CardContent>
               </Card>
@@ -47,7 +47,7 @@ export default async function AcademyPage() {
           );
         })}
         {(!levels || levels.length === 0) && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             No levels published yet — check back soon.
           </p>
         )}

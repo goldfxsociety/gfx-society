@@ -124,9 +124,9 @@ export function CandlestickPlotBlock({
         : "border-amber-500 text-amber-600";
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
       <p className="text-sm font-semibold">🕯️ Candlestick Plotter</p>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Tap an example to see it plotted, or enter your own OHLC values.
       </p>
 
@@ -164,13 +164,13 @@ export function CandlestickPlotBlock({
           ref={canvasRef}
           width={100}
           height={200}
-          className="rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+          className="rounded-md border border-border bg-muted"
         />
         {result && (
           <div className={`flex-1 rounded-md border p-3 text-sm ${toneClass}`}>
             <p className="font-semibold">{result.type}</p>
-            <p className="mt-1 text-xs text-zinc-500">{result.explanation}</p>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-muted-foreground">{result.explanation}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
               Range: <strong>{result.rangePips} pips</strong> · Body:{" "}
               <strong>{result.bodyPips} pips</strong>
             </p>

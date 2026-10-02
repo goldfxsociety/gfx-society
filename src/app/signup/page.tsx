@@ -125,7 +125,7 @@ export default function SignupPage() {
               {loading ? "Creating account..." : "Sign up"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-zinc-500">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="underline">
               Log in

@@ -67,9 +67,9 @@ export function CandlestickAnatomyDiagram() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-4">
       <canvas ref={canvasRef} width={240} height={180} />
-      <p className="text-center text-xs text-zinc-500">
+      <p className="text-center text-xs text-muted-foreground">
         This is a <strong>bullish</strong> candle — Close is above Open, so
         the body is green. The thin lines above and below are the{" "}
         <strong>wicks</strong> (High and Low).

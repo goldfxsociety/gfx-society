@@ -5,19 +5,19 @@ export default function BrokerPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           Broker
         </span>
         <h1 className="text-2xl font-bold tracking-tight">About ACCM</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           GFX Academy is education-first — this page is here if and when you&apos;re
           ready to open an account, not a requirement to use the Academy.
         </p>
       </div>
 
-      <div className="rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+      <div className="rounded-lg border border-border bg-card p-4 text-sm">
         <p className="font-semibold">Why ACCM</p>
-        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-muted-foreground">
           ACCM is a regulated broker offering competitive Gold spreads, fast
           MT5 execution, and support across Southeast Asia — the broker used
           throughout the Academy&apos;s examples.
@@ -28,18 +28,18 @@ export default function BrokerPage() {
         href="https://www.wikifx.com/fil/dealer/3052942299.html"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-amber-400 dark:border-zinc-800"
+        className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary"
       >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-white">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
           W
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold">ACCM — Verified on WikiFX</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Independent broker verification platform
           </p>
         </div>
-        <span className="text-xs font-medium text-emerald-600">Verified ✓</span>
+        <span className="text-xs font-medium text-emerald-500">Verified ✓</span>
       </a>
 
       <a
@@ -51,13 +51,13 @@ export default function BrokerPage() {
         Open Free Demo Account →
       </a>
 
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-muted-foreground">
         Affiliated link. Trading involves risk — past performance is not
         indicative of future results. Only trade with money you can afford to
         lose.
       </p>
 
-      <Link href="/" className="text-sm text-zinc-500 underline">
+      <Link href="/" className="text-sm text-muted-foreground underline">
         ← Back to home
       </Link>
     </div>

@@ -147,15 +147,15 @@ export function CandlestickFreehandPractice() {
   const result = showAnswer ? classifyCandle(ohlc.o, ohlc.h, ohlc.l, ohlc.c) : null;
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
       <p className="text-sm font-semibold">✏️ Practice: Draw the Candle Yourself</p>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Given these OHLC values, sketch what you think the candlestick looks
         like on the left side of the chart — then tap &quot;Show Answer&quot;
         to see the real one drawn next to it.
       </p>
 
-      <div className="flex flex-wrap gap-3 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+      <div className="flex flex-wrap gap-3 text-xs font-medium text-muted-foreground">
         <span>Open: {ohlc.o.toFixed(2)}</span>
         <span>High: {ohlc.h.toFixed(2)}</span>
         <span>Low: {ohlc.l.toFixed(2)}</span>
@@ -171,13 +171,13 @@ export function CandlestickFreehandPractice() {
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
         style={{ touchAction: "none", width: "100%", maxWidth: W, height: "auto" }}
-        className="cursor-crosshair rounded-md border border-zinc-200 bg-white dark:border-zinc-800"
+        className="cursor-crosshair rounded-md border border-border bg-white"
       />
 
       {result && (
-        <div className="rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+        <div className="rounded-md bg-muted p-3 text-sm">
           <p className="font-semibold">{result.type}</p>
-          <p className="mt-1 text-xs text-zinc-500">{result.explanation}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{result.explanation}</p>
         </div>
       )}
 
@@ -192,7 +192,7 @@ export function CandlestickFreehandPractice() {
         <select
           value={penColor}
           onChange={(e) => setPenColor(e.target.value)}
-          className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-border bg-white px-2 py-1 text-xs text-zinc-900"
           aria-label="Pen color"
         >
           {PEN_COLORS.map((c) => (

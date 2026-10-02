@@ -62,16 +62,16 @@ export function ScenarioQuizBlock({
 
   if (finished) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-zinc-200 p-6 text-center dark:border-zinc-800">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-6 text-center">
         <p className="text-lg font-semibold">
           Quiz complete: {score}/{scenarios.length} correct
         </p>
         {canSave ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             {saving ? "Saving your progress..." : "Progress saved ✓"}
           </p>
         ) : (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             Log in to save this result to your account.
           </p>
         )}
@@ -80,12 +80,12 @@ export function ScenarioQuizBlock({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Scenario {index + 1} of {scenarios.length}
       </p>
       {scenario.chart && (
-        <div className="flex justify-center rounded-md border border-zinc-200 bg-zinc-50 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex justify-center rounded-md border border-border bg-muted py-2">
           <CandleSequenceCanvas candles={scenario.chart} width={200} height={120} />
         </div>
       )}
@@ -108,7 +108,7 @@ export function ScenarioQuizBlock({
               disabled={answered}
               className={cn(
                 "rounded-md border px-4 py-2 text-left text-sm transition-colors",
-                !answered && "hover:border-amber-400",
+                !answered && "hover:border-primary",
                 answered && isCorrect && "border-emerald-500 bg-emerald-50 dark:bg-emerald-950",
                 answered && isChosen && !isCorrect && "border-red-500 bg-red-50 dark:bg-red-950",
                 answered && !isCorrect && !isChosen && "opacity-60",
@@ -121,7 +121,7 @@ export function ScenarioQuizBlock({
       </div>
 
       {selected !== null && (
-        <div className="flex flex-col gap-3 rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+        <div className="flex flex-col gap-3 rounded-md bg-muted p-3 text-sm">
           <p>{scenario.explanation}</p>
           <Button onClick={handleNext} className="self-start">
             {isLast ? "See results" : "Next"}

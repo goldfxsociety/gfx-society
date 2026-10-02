@@ -52,20 +52,20 @@ export function JournalToolBlock() {
   }
 
   const toneClass = {
-    bullish: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950",
-    bearish: "border-red-500 bg-red-50 dark:bg-red-950",
-    doji: "border-amber-500 bg-amber-50 dark:bg-amber-950",
+    bullish: "border-emerald-500 bg-emerald-950/30",
+    bearish: "border-red-500 bg-red-950/30",
+    doji: "border-primary bg-primary/10",
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
       <p className="text-sm font-semibold">📓 Mock Journal Entry</p>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Pick a direction, a reason, and a result — the feedback depends on more than just win or loss.
       </p>
 
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Direction</p>
+        <p className="text-xs font-medium text-muted-foreground">Direction</p>
         <div className="flex gap-2">
           <Button
             variant={direction === "buy" ? "default" : "outline"}
@@ -85,7 +85,7 @@ export function JournalToolBlock() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Reason for Entry</p>
+        <p className="text-xs font-medium text-muted-foreground">Reason for Entry</p>
         <div className="flex flex-col gap-2">
           {REASONS.map((r) => (
             <button
@@ -93,8 +93,8 @@ export function JournalToolBlock() {
               type="button"
               onClick={() => setReasonId(r.id)}
               className={cn(
-                "rounded-md border px-4 py-2 text-left text-sm transition-colors hover:border-amber-400",
-                reasonId === r.id && "border-amber-500 bg-amber-50 dark:bg-amber-950",
+                "rounded-md border px-4 py-2 text-left text-sm transition-colors hover:border-primary",
+                reasonId === r.id && "border-primary bg-primary/10",
               )}
             >
               {r.label}
@@ -104,7 +104,7 @@ export function JournalToolBlock() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Result</p>
+        <p className="text-xs font-medium text-muted-foreground">Result</p>
         <div className="flex gap-2">
           <Button
             variant={result === "win" ? "default" : "outline"}
@@ -130,7 +130,7 @@ export function JournalToolBlock() {
           <p className="font-semibold">
             {direction?.toUpperCase()} · {REASONS.find((r) => r.id === reasonId)?.label} · {result?.toUpperCase()}
           </p>
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{feedback.message}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{feedback.message}</p>
         </div>
       )}
 

@@ -14,11 +14,11 @@ export function ConceptIntroGrid({ concepts }: { concepts: ConceptDef[] }) {
       {concepts.map((c) => (
         <div
           key={c.id}
-          className="flex flex-col items-center gap-2 rounded-lg border border-zinc-200 p-3 text-center dark:border-zinc-800"
+          className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-3 text-center"
         >
           <CandleSequenceCanvas candles={c.ohlc} width={70} height={60} small />
           <p className="text-xs font-semibold">{c.name}</p>
-          <p className="text-[11px] text-zinc-500">{c.desc}</p>
+          <p className="text-[11px] text-muted-foreground">{c.desc}</p>
         </div>
       ))}
     </div>

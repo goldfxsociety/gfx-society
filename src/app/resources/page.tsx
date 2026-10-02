@@ -34,18 +34,18 @@ export default async function ResourcesPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           Resources
         </span>
         <h1 className="text-2xl font-bold tracking-tight">Trader Toolkit</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Everything you need before you start — all free.
         </p>
       </div>
 
       {Object.entries(byCategory).map(([category, items]) => (
         <div key={category} className="flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {CATEGORY_LABELS[category] ?? category}
           </p>
           {items.map((r) => (
@@ -54,13 +54,13 @@ export default async function ResourcesPage() {
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-3 rounded-lg border border-zinc-200 p-3 transition-colors hover:border-amber-400 dark:border-zinc-800"
+              className="flex gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-primary"
             >
               <span className="text-xl">{r.icon}</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold">{r.title}</p>
                 {r.description && (
-                  <p className="mt-1 text-xs text-zinc-500">{r.description}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
                 )}
               </div>
             </a>
@@ -69,7 +69,7 @@ export default async function ResourcesPage() {
       ))}
 
       {resources.length === 0 && (
-        <p className="text-sm text-zinc-500">No resources published yet.</p>
+        <p className="text-sm text-muted-foreground">No resources published yet.</p>
       )}
     </div>
   );

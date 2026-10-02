@@ -36,9 +36,9 @@ export function FibonacciCalculator() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5">
       <p className="text-sm font-semibold">📐 Fibonacci Calculator</p>
-      <p className="text-xs text-zinc-500">Tap an example, or enter a real swing.</p>
+      <p className="text-xs text-muted-foreground">Tap an example, or enter a real swing.</p>
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={() => compute(2300, 2350)}>
@@ -81,15 +81,15 @@ export function FibonacciCalculator() {
               key={l.ratio}
               className={`rounded-md border p-3 text-sm ${
                 l.ratio === 0.618
-                  ? "border-amber-400 bg-amber-50 dark:bg-amber-950"
-                  : "border-zinc-200 dark:border-zinc-800"
+                  ? "border-primary/40 bg-primary/10"
+                  : "border-border bg-card"
               }`}
             >
               <p className="font-semibold">
                 {(l.ratio * 100).toFixed(1)}% — ${l.price.toFixed(2)}
               </p>
               {l.ratio === 0.618 && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
+                <p className="text-xs text-primary">
                   ⭐ Golden Ratio — strongest level
                 </p>
               )}

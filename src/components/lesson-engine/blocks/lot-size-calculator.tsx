@@ -68,9 +68,9 @@ export function LotSizeCalculator() {
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
       <p className="text-sm font-semibold">🧮 Lot Size Calculator</p>
-      <p className="text-xs text-zinc-500">Tap an example, or enter your own account numbers.</p>
+      <p className="text-xs text-muted-foreground">Tap an example, or enter your own account numbers.</p>
 
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((p) => (
@@ -98,13 +98,13 @@ export function LotSizeCalculator() {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {result && (
-        <div className="rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
+        <div className="rounded-md bg-muted p-3 text-sm">
           <p className="text-lg font-semibold">{result.lotSize.toFixed(2)} lot</p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Risking ${result.riskAmount.toFixed(2)} on this stop loss.
           </p>
           {result.warnings.map((w, i) => (
-            <p key={i} className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            <p key={i} className="mt-2 text-xs text-primary">
               {w}
             </p>
           ))}
