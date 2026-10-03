@@ -27,6 +27,17 @@ export default async function AcademyPage() {
         </h1>
       </div>
 
+      <Link
+        href="/diagnostic"
+        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 text-sm transition-colors hover:border-primary"
+      >
+        <span>
+          <span className="font-semibold">Not sure where to start?</span>{" "}
+          <span className="text-muted-foreground">Take the GFX Diagnostic.</span>
+        </span>
+        <span className="text-primary">→</span>
+      </Link>
+
       <div className="flex flex-col gap-3">
         {(levels ?? []).map((level) => {
           const lessonCount = Array.isArray(level.lessons)
