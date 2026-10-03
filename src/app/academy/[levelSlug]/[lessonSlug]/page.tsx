@@ -51,7 +51,7 @@ export default async function LessonPage({
   const { data: lesson } = await supabase
     .from("lessons")
     .select(
-      "id, title, learning_objective, content, key_takeaways, lesson_type, interactive_config",
+      "id, title, learning_objective, content, key_takeaways, lesson_type, interactive_config, passing_score, prerequisite_lesson_id",
     )
     .eq("level_id", level.id)
     .eq("slug", lessonSlug)
@@ -104,13 +104,49 @@ export default async function LessonPage({
   } = userResult;
 
   let completedAt: string | null = null;
+  let prerequisite: { title: string; slug: string; levelSlug: string; completed: boolean } | null =
+    null;
+
   if (user) {
+    void supabase.from("analytics_events").insert({
+      event_name: "lesson_started",
+      entity_id: lesson.id,
+    });
+
     const { data: progress } = await supabase
       .from("lesson_progress")
       .select("completed_at")
       .eq("lesson_id", lesson.id)
       .maybeSingle();
     completedAt = progress?.completed_at ?? null;
+
+    if (lesson.prerequisite_lesson_id) {
+      const [{ data: prereqLesson }, { data: prereqProgress }] = await Promise.all([
+        supabase
+          .from("lessons")
+          .select("slug, title, levels(slug)")
+          .eq("id", lesson.prerequisite_lesson_id)
+          .single(),
+        supabase
+          .from("lesson_progress")
+          .select("completed_at")
+          .eq("lesson_id", lesson.prerequisite_lesson_id)
+          .maybeSingle(),
+      ]);
+
+      const prereqLevel = Array.isArray(prereqLesson?.levels)
+        ? prereqLesson.levels[0]
+        : prereqLesson?.levels;
+
+      if (prereqLesson && prereqLevel) {
+        prerequisite = {
+          title: prereqLesson.title,
+          slug: prereqLesson.slug,
+          levelSlug: (prereqLevel as { slug: string }).slug,
+          completed: !!prereqProgress?.completed_at,
+        };
+      }
+    }
   }
 
   return (
@@ -123,6 +159,19 @@ export default async function LessonPage({
       </Link>
 
       <h1 className="text-2xl font-bold tracking-tight">{lesson.title}</h1>
+
+      {prerequisite && !prerequisite.completed && (
+        <p className="text-xs text-muted-foreground">
+          💡 This lesson builds on{" "}
+          <Link
+            href={`/academy/${prerequisite.levelSlug}/${prerequisite.slug}`}
+            className="underline"
+          >
+            {prerequisite.title}
+          </Link>{" "}
+          — consider completing that first if this feels unfamiliar.
+        </p>
+      )}
 
       {lesson.learning_objective && (
         <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm">
@@ -191,6 +240,7 @@ export default async function LessonPage({
               lessonId={lesson.id}
               scenarios={scenarios}
               canSave={!!user}
+              passingScore={lesson.passing_score}
             />
           )}
           {isPatternRecognition && patternConfig && (
@@ -200,6 +250,7 @@ export default async function LessonPage({
               lookalikes={patternConfig.lookalikes}
               rounds={patternConfig.rounds}
               canSave={!!user}
+              passingScore={lesson.passing_score}
             />
           )}
           {!user && (

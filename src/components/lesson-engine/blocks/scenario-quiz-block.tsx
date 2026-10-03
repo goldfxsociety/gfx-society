@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { markLessonComplete } from "@/lib/progress/mark-complete";
+import { recordAssessmentAttempt } from "@/lib/progress/assessment-attempts";
+import { logEvent } from "@/lib/analytics/log-event";
 import { Button } from "@/components/ui/button";
 import { CandleSequenceCanvas } from "@/components/lesson-engine/blocks/candle-sequence-canvas";
 import type { OHLC } from "@/lib/candlestick";
@@ -21,26 +23,38 @@ export function ScenarioQuizBlock({
   lessonId,
   scenarios,
   canSave,
+  passingScore,
 }: {
   lessonId: string;
   scenarios: ScenarioQuizScenario[];
   canSave: boolean;
+  passingScore?: number | null;
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
+  const [missed, setMissed] = useState<ScenarioQuizScenario[]>([]);
   const [finished, setFinished] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attemptNumber, setAttemptNumber] = useState<number | null>(null);
 
   const scenario = scenarios[index];
   const isLast = index === scenarios.length - 1;
+  const hasThreshold = typeof passingScore === "number";
+
+  useEffect(() => {
+    if (canSave) void logEvent("quiz_started", lessonId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSelect(optionIndex: number) {
     if (selected !== null) return; // already answered this round
     setSelected(optionIndex);
     if (optionIndex === scenario.correctIndex) {
       setScore((s) => s + 1);
+    } else {
+      setMissed((m) => [...m, scenario]);
     }
   }
 
@@ -52,28 +66,80 @@ export function ScenarioQuizBlock({
     }
 
     setFinished(true);
+    const pct = Math.round((score / scenarios.length) * 100);
+    const passed = !hasThreshold || pct >= (passingScore as number);
+
     if (canSave) {
       setSaving(true);
-      await markLessonComplete(lessonId);
+      const attemptNo = await recordAssessmentAttempt(lessonId, score, scenarios.length, passed);
+      setAttemptNumber(attemptNo);
+      void logEvent(passed ? "quiz_passed" : "quiz_failed", lessonId, {
+        score,
+        total: scenarios.length,
+      });
+      if (passed) {
+        await markLessonComplete(lessonId);
+        router.refresh();
+      }
       setSaving(false);
-      router.refresh();
     }
   }
 
+  function handleRetry() {
+    if (canSave) void logEvent("quiz_retried", lessonId);
+    setIndex(0);
+    setSelected(null);
+    setScore(0);
+    setMissed([]);
+    setFinished(false);
+  }
+
   if (finished) {
+    const pct = Math.round((score / scenarios.length) * 100);
+    const passed = !hasThreshold || pct >= (passingScore as number);
+
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-6 text-center">
         <p className="text-lg font-semibold">
-          Quiz complete: {score}/{scenarios.length} correct
+          {hasThreshold ? (passed ? "Passed — " : "Not quite — ") : "Quiz complete: "}
+          {score}/{scenarios.length} correct
+          {hasThreshold ? ` (${pct}%)` : ""}
         </p>
+        {hasThreshold && (
+          <p className="text-xs text-muted-foreground">
+            Passing score: {passingScore}%
+            {attemptNumber ? ` · Attempt ${attemptNumber}` : ""}
+          </p>
+        )}
         {canSave ? (
           <p className="text-sm text-muted-foreground">
-            {saving ? "Saving your progress..." : "Progress saved ✓"}
+            {saving
+              ? "Saving..."
+              : passed
+                ? "Progress saved ✓"
+                : "Not saved as complete yet — review below and try again."}
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
             Log in to save this result to your account.
           </p>
+        )}
+
+        {!passed && missed.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-md bg-muted p-3 text-left text-sm">
+            <p className="font-semibold">Review these before retrying:</p>
+            {missed.map((m, i) => (
+              <p key={i} className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{m.question}</span> — {m.explanation}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {!passed && (
+          <Button onClick={handleRetry} className="self-center">
+            Try Again
+          </Button>
         )}
       </div>
     );
