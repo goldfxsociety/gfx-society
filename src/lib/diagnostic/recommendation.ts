@@ -75,7 +75,7 @@ export function recommendStartingPoint(input: RecommendationInput): Recommendati
     const targetLesson = competencyLessons.find((l) => !completedLessonIds.has(l.id));
     if (!targetLesson) continue; // guarded by allComplete above, but keeps types honest
 
-    const resolved = walkPrerequisiteChain(targetLesson, lessons, completedLessonIds);
+    const resolved = walkPrerequisiteChain(targetLesson, lessons, completedLessonIds, competencyTiers);
     return {
       kind: "lesson",
       lessonId: resolved.id,
@@ -99,14 +99,22 @@ export function recommendStartingPoint(input: RecommendationInput): Recommendati
   if (!nextIncomplete) {
     return { kind: "complete" };
   }
-  const resolved = walkPrerequisiteChain(nextIncomplete, lessons, completedLessonIds);
+  const resolved = walkPrerequisiteChain(nextIncomplete, lessons, completedLessonIds, competencyTiers);
   return { kind: "lesson", lessonId: resolved.id, reason: "continue" };
 }
 
+/**
+ * A prerequisite whose own competency is already diagnosed "Strong
+ * Foundation" is treated as already-known — the walk stops and returns the
+ * current lesson rather than routing the learner backward into confirmed
+ * material. Mirrors the Strong-Foundation skip already applied in the
+ * fallback branch above, but at the per-step prerequisite level.
+ */
 function walkPrerequisiteChain(
   lesson: LessonRow,
   allLessons: LessonRow[],
   completedLessonIds: Set<string>,
+  competencyTiers: Record<string, CompetencyTier>,
   depth = 0,
 ): LessonRow {
   if (depth > 10) return lesson; // safety valve, not expected to ever trigger
@@ -114,5 +122,6 @@ function walkPrerequisiteChain(
   if (completedLessonIds.has(lesson.prerequisiteLessonId)) return lesson;
   const prerequisite = allLessons.find((l) => l.id === lesson.prerequisiteLessonId);
   if (!prerequisite) return lesson;
-  return walkPrerequisiteChain(prerequisite, allLessons, completedLessonIds, depth + 1);
+  if (competencyTiers[prerequisite.competencyKey ?? ""] === "Strong Foundation") return lesson;
+  return walkPrerequisiteChain(prerequisite, allLessons, completedLessonIds, competencyTiers, depth + 1);
 }

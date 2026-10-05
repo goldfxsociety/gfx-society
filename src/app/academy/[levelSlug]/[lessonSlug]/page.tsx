@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 import { MarkCompleteButton } from "@/components/academy/mark-complete-button";
 import {
   ScenarioQuizBlock,
@@ -229,17 +231,6 @@ export default async function LessonPage({
         </div>
       )}
 
-      {user && completedAt && (
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-emerald-600">
-            ✓ Completed on {new Date(completedAt).toLocaleDateString()}
-          </p>
-          <Link href="/learning" className="text-xs text-primary underline">
-            Back to My Learning Path
-          </Link>
-        </div>
-      )}
-
       {hasScoredQuiz || isPatternRecognition ? (
         <>
           {hasScoredQuiz && (
@@ -268,6 +259,24 @@ export default async function LessonPage({
               to save your quiz result.
             </p>
           )}
+          {/* Only renders once the attempt has passed and lesson_progress is
+              set — a failed attempt leaves completedAt null, so this never
+              appears alongside (or instead of) the quiz's own Try Again
+              button. Placed after the result card, since that's where the
+              learner's attention actually is right after finishing. */}
+          {user && completedAt && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-emerald-600">
+                ✓ Completed on {new Date(completedAt).toLocaleDateString()}
+              </p>
+              <Link
+                href="/learning"
+                className={cn(buttonVariants({ variant: "default" }), "self-start")}
+              >
+                Continue to My Learning Path
+              </Link>
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -280,6 +289,19 @@ export default async function LessonPage({
             </p>
           )}
           {user && !completedAt && <MarkCompleteButton lessonId={lesson.id} />}
+          {user && completedAt && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-emerald-600">
+                ✓ Completed on {new Date(completedAt).toLocaleDateString()}
+              </p>
+              <Link
+                href="/learning"
+                className={cn(buttonVariants({ variant: "default" }), "self-start")}
+              >
+                Back to My Learning Path
+              </Link>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -303,5 +303,88 @@ console.log("\n=== Phase 2C-B: Strong Foundation acceleration + fresh-struggle-o
   check("E. everything complete -> {kind: complete}", rec, { kind: "complete" });
 }
 
+console.log("\n=== UX Polish F4: Strong Foundation awareness in prerequisite walk ===");
+
+// Cross-competency fixture: gold's lesson requires a setups lesson as its
+// prerequisite — mirrors the real understanding-golds-market-behavior ->
+// what-is-a-trading-plan relationship that surfaced this bug.
+const L3_SETUPS: LessonRow = { id: "L3_SETUPS", levelId: "lvl3", levelOrderIndex: 2, orderIndex: 0, competencyKey: "setups", prerequisiteLessonId: null };
+const L3_GOLD1: LessonRow = { id: "L3_GOLD1", levelId: "lvl3", levelOrderIndex: 2, orderIndex: 1, competencyKey: "gold", prerequisiteLessonId: "L3_SETUPS" };
+const fixtureF4a = [L3_SETUPS, L3_GOLD1];
+
+// F4-C/E. Target competency (gold) needs attention; its only prerequisite
+// belongs to a competency (setups) already diagnosed Strong Foundation.
+// Must NOT walk backward into setups, and must NOT invent a lesson --
+// the target itself is the correct resolution (covers Case C and Case E:
+// "every available prerequisite is Strong Foundation").
+{
+  const rec = recommendStartingPoint({
+    lessons: fixtureF4a,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { setups: "Strong Foundation", gold: "Developing" },
+  });
+  check(
+    "F4-C/E. gold needs attention, prerequisite (setups) is Strong Foundation -> stay on gold lesson, not routed backward",
+    rec,
+    { kind: "lesson", lessonId: "L3_GOLD1", reason: "meaningful_gap" },
+  );
+}
+
+// F4-B (regression, explicit cross-competency form). Same fixture, but the
+// prerequisite's competency is NOT Strong Foundation -> normal backward walk
+// still applies exactly as before this change.
+{
+  const rec = recommendStartingPoint({
+    lessons: fixtureF4a,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { setups: "Developing", gold: "Developing" },
+  });
+  check(
+    "F4-B. prerequisite (setups) not Strong Foundation -> loop stops on setups itself as the earliest meaningful gap",
+    rec,
+    { kind: "lesson", lessonId: "L3_SETUPS", reason: "meaningful_gap" },
+  );
+}
+
+// F4-D. Multi-level chain: gold -> risk_management (Familiar, pass through)
+// -> setups (Strong Foundation, stop here). The rule must apply at every
+// step, not just the first, and must land on the Familiar lesson (not the
+// original target, not the Strong Foundation one, not skipping past both).
+const L4_SETUPS: LessonRow = { id: "L4_SETUPS", levelId: "lvl4", levelOrderIndex: 3, orderIndex: 0, competencyKey: "setups", prerequisiteLessonId: null };
+const L4_RISK: LessonRow = { id: "L4_RISK", levelId: "lvl4", levelOrderIndex: 3, orderIndex: 1, competencyKey: "risk_management", prerequisiteLessonId: "L4_SETUPS" };
+const L4_GOLD: LessonRow = { id: "L4_GOLD", levelId: "lvl4", levelOrderIndex: 3, orderIndex: 2, competencyKey: "gold", prerequisiteLessonId: "L4_RISK" };
+{
+  const rec = recommendStartingPoint({
+    lessons: [L4_SETUPS, L4_RISK, L4_GOLD],
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { setups: "Strong Foundation", risk_management: "Familiar", gold: "Developing" },
+  });
+  check(
+    "F4-D. gold -> risk_management (Familiar, pass through) -> setups (Strong Foundation, stop) -> recommend L4_RISK",
+    rec,
+    { kind: "lesson", lessonId: "L4_RISK", reason: "prerequisite" },
+  );
+}
+
+// F4-A. No diagnostic at all -> competencyTiers = {} -> behavior byte-identical
+// to pre-F4 (prerequisite.competencyKey lookup is always undefined, never
+// "Strong Foundation", so the walk proceeds exactly as before).
+{
+  const rec = recommendStartingPoint({
+    lessons: fixtureF4a,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: {},
+  });
+  check(
+    "F4-A. no diagnostic -> unaffected, earliest lesson (L3_SETUPS) via normal continue fallback",
+    rec,
+    { kind: "lesson", lessonId: "L3_SETUPS", reason: "continue" },
+  );
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

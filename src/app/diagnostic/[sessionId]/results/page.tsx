@@ -71,38 +71,19 @@ export default async function DiagnosticResultsPage({
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
         <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-          Your Baseline
+          Diagnostic Complete
         </span>
-        <h1 className="text-2xl font-bold tracking-tight">What you already understand</h1>
+        <h1 className="text-2xl font-bold tracking-tight">You&apos;re all set.</h1>
         <p className="text-sm text-muted-foreground">
-          This is a starting point, not a grade — and the Academy stays fully open either way.
+          Based on what you already know, we&apos;ve prepared a learning path just for you.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {Object.entries(scores).map(([key, score]) => (
-          <div key={key} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4">
-            <p className="text-sm font-semibold">{COMPETENCY_LABEL[key] ?? key}</p>
-            <p className="text-sm text-primary">{TIER_LABEL[score.tier] ?? score.tier}</p>
-            {score.confidence === "Limited data" && (
-              <p className="text-xs text-muted-foreground">
-                Limited data — based on {score.answered} question{score.answered === 1 ? "" : "s"}
-              </p>
-            )}
-          </div>
-        ))}
-        {Object.keys(scores).length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            No questions were answered this round — you can always retake the diagnostic.
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/10 p-4">
+      <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/10 p-5">
         {recommendedLesson ? (
           <>
             <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-              Suggested starting point
+              Your next step
             </span>
             <p className="text-sm font-semibold">{recommendedLesson.title}</p>
             <p className="text-xs text-muted-foreground">
@@ -110,7 +91,7 @@ export default async function DiagnosticResultsPage({
             </p>
             <Link
               href="/learning"
-              className={cn(buttonVariants({ variant: "default" }), "self-start")}
+              className={cn(buttonVariants({ variant: "default" }), "mt-1 self-start")}
             >
               Go to My Learning Path
             </Link>
@@ -119,10 +100,35 @@ export default async function DiagnosticResultsPage({
           <>
             <p className="text-sm font-semibold">You&apos;ve completed the Academy 🎓</p>
             <p className="text-xs text-muted-foreground">
-              The areas above can still point you toward lessons worth revisiting, whenever you&apos;d like.
+              The results below can still point you toward lessons worth revisiting, whenever you&apos;d like.
             </p>
           </>
         )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-semibold text-muted-foreground">Review My Results</p>
+        <p className="text-xs text-muted-foreground">
+          This is a starting point, not a grade — and the Academy stays fully open either way.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Object.entries(scores).map(([key, score]) => (
+            <div key={key} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4">
+              <p className="text-sm font-semibold">{COMPETENCY_LABEL[key] ?? key}</p>
+              <p className="text-sm text-primary">{TIER_LABEL[score.tier] ?? score.tier}</p>
+              {score.confidence === "Limited data" && (
+                <p className="text-xs text-muted-foreground">
+                  Limited data — based on {score.answered} question{score.answered === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
+          ))}
+          {Object.keys(scores).length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No questions were answered this round — you can always retake the diagnostic.
+            </p>
+          )}
+        </div>
       </div>
 
       <Link href="/academy" className="text-sm text-muted-foreground underline">

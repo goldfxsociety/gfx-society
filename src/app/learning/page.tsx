@@ -5,8 +5,16 @@ import { cn } from "cn";
 import { buildLearningContext, type LearningLesson } from "@/lib/competency/build-learning-context";
 import { recommendStartingPoint, type Recommendation } from "@/lib/diagnostic/recommendation";
 import { stageLabelFor } from "@/lib/competency/stage-labels";
+import { ContinueLearningLink } from "@/components/dashboard/continue-learning-link";
 
-function reasonCopy(reason: string): string {
+// On a true first visit (zero completions), the "continue" reason would
+// otherwise read as if the learner were resuming something — swap in a
+// starting-point framing instead, without touching the other reasons, which
+// already read fine on a first visit.
+function reasonCopy(reason: string, isFirstVisit: boolean): string {
+  if (isFirstVisit && reason === "continue") {
+    return "This is your starting point — we'll guide you one step at a time from here.";
+  }
   switch (reason) {
     case "meaningful_gap":
       return "We'll start by strengthening this area.";
@@ -82,7 +90,7 @@ export default async function LearningPathPage() {
   let whyLine = "";
   if (recommendation.kind === "lesson") {
     currentLesson = lessonById.get(recommendation.lessonId) ?? null;
-    whyLine = reasonCopy(recommendation.reason);
+    whyLine = reasonCopy(recommendation.reason, isFirstVisit);
   }
 
   const upcomingIds =
@@ -136,12 +144,13 @@ export default async function LearningPathPage() {
               <p className="text-sm text-muted-foreground">{currentLesson.learningObjective}</p>
             )}
             {whyLine && <p className="text-xs text-muted-foreground">{whyLine}</p>}
-            <Link
+            <ContinueLearningLink
               href={`/academy/${currentLesson.levelSlug}/${currentLesson.slug}`}
+              lessonId={currentLesson.id}
               className={cn(buttonVariants({ variant: "default" }), "mt-1 self-start")}
             >
               {isFirstVisit ? "Start This Lesson" : "Continue Learning"}
-            </Link>
+            </ContinueLearningLink>
           </div>
 
           {upcomingLessons.length > 0 && (
