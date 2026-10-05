@@ -8,6 +8,14 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // supabase-js uses the global fetch, which Next.js patches with its
+      // own Data Cache inside Server Components — without this, a Supabase
+      // REST response (including an error response) can get cached and
+      // served to every subsequent request regardless of user/session,
+      // and on Vercel that cache can persist across deployments.
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, cache: "no-store" }),
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();
