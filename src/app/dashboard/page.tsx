@@ -2,33 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { recommendStartingPoint, type LessonRow } from "@/lib/diagnostic/recommendation";
-import type { CompetencyTier, CompetencyScore } from "@/lib/diagnostic/scoring";
-import {
-  computeCompetencyEvidence,
-  type EvidenceLessonInput,
-  type AssessmentAttemptInput,
-} from "@/lib/competency/evidence";
+import { recommendStartingPoint } from "@/lib/diagnostic/recommendation";
+import { buildLearningContext } from "@/lib/competency/build-learning-context";
+import { computeCompetencyEvidence, type EvidenceLessonInput } from "@/lib/competency/evidence";
 import { CompetencyCard } from "@/components/dashboard/competency-card";
 import { ContinueLearningLink } from "@/components/dashboard/continue-learning-link";
-
-type LevelRow = {
-  id: string;
-  slug: string;
-  title: string;
-  badge_name: string | null;
-  badge_icon: string | null;
-  order_index: number;
-  lessons: {
-    id: string;
-    slug: string;
-    title: string;
-    order_index: number;
-    competency_key: string | null;
-    prerequisite_lesson_id: string | null;
-    passing_score: number | null;
-  }[];
-};
 
 const COMPETENCY_ORDER = [
   "foundations",
@@ -56,19 +34,6 @@ const COMPETENCY_LABEL: Record<string, string> = {
   journaling: "Journaling",
 };
 
-function recommendationReasonCopy(reason: string): string {
-  switch (reason) {
-    case "meaningful_gap":
-      return "Recommended because this is an area you're still building.";
-    case "prerequisite":
-      return "This lesson is a prerequisite for a later lesson in your path.";
-    case "continue":
-      return "Continuing where you left off.";
-    default:
-      return "";
-  }
-}
-
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -93,116 +58,49 @@ export default async function DashboardPage() {
 
   void supabase.from("analytics_events").insert({ event_name: "competency_dashboard_viewed" });
 
-  const [{ data: levelsData }, { data: progress }, { data: attemptsRaw }, { data: latestDiagnostic }] =
-    await Promise.all([
-      supabase
-        .from("levels")
-        .select(
-          "id, slug, title, badge_name, badge_icon, order_index, lessons(id, slug, title, order_index, competency_key, prerequisite_lesson_id, passing_score)",
-        )
-        .eq("is_published", true)
-        .order("order_index"),
-      supabase.from("lesson_progress").select("lesson_id"),
-      supabase.from("assessment_attempts").select("lesson_id, passed, created_at"),
-      supabase
-        .from("diagnostic_sessions")
-        .select("competency_scores")
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-
-  const completedIds = new Set((progress ?? []).map((p) => p.lesson_id));
-
-  const levels = ((levelsData as LevelRow[] | null) ?? []).map((lvl) => ({
-    ...lvl,
-    lessons: [...lvl.lessons].sort((a, b) => a.order_index - b.order_index),
-  }));
-
-  const totalLessons = levels.reduce((sum, l) => sum + l.lessons.length, 0);
-  const totalCompleted = levels.reduce(
-    (sum, l) => sum + l.lessons.filter((les) => completedIds.has(les.id)).length,
-    0,
+  const [context, { data: badgeData }] = await Promise.all([
+    buildLearningContext(),
+    supabase.from("levels").select("id, badge_name, badge_icon").eq("is_published", true),
+  ]);
+  const { lessons, completedLessonIds, baselineScores, attempts } = context;
+  const badgesByLevelId = new Map(
+    (badgeData ?? []).map((b) => [b.id as string, { badgeName: b.badge_name as string | null, badgeIcon: b.badge_icon as string | null }]),
   );
+
+  const totalLessons = lessons.length;
+  const totalCompleted = lessons.filter((l) => completedLessonIds.has(l.id)).length;
   const overallPct = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
 
-  // Flatten for the recommendation engine and the evidence calculator — both
-  // read from the exact same lesson list, built once here.
-  const allLessons: LessonRow[] = levels.flatMap((lvl) =>
-    lvl.lessons.map((les) => ({
-      id: les.id,
-      levelId: lvl.id,
-      levelOrderIndex: lvl.order_index,
-      orderIndex: les.order_index,
-      competencyKey: les.competency_key,
-      prerequisiteLessonId: les.prerequisite_lesson_id,
-    })),
-  );
+  const recommendation = recommendStartingPoint(context);
 
-  const attempts: AssessmentAttemptInput[] = (attemptsRaw ?? []).map((a) => ({
-    lessonId: a.lesson_id as string,
-    passed: a.passed as boolean,
-    createdAt: a.created_at as string,
-  }));
-
-  // Same "struggling" definition used by the recommendation engine's own
-  // input prep in complete-session.ts (latest attempt failed, no later pass).
-  const sortedAttempts = [...attempts].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const latestPassedByLesson = new Map<string, boolean>();
-  for (const a of sortedAttempts) {
-    latestPassedByLesson.set(a.lessonId, a.passed);
-  }
-  const strugglingLessonIds = new Set(
-    [...latestPassedByLesson.entries()].filter(([, passed]) => !passed).map(([id]) => id),
-  );
-
-  const baselineScores = (latestDiagnostic?.competency_scores ?? null) as Record<
+  // The levels/badges grid still groups by level — derive that grouping
+  // from the shared lesson list rather than a second query.
+  const levelsMap = new Map<
     string,
-    CompetencyScore
-  > | null;
-  const competencyTiers: Record<string, CompetencyTier> = {};
-  if (baselineScores) {
-    for (const [key, score] of Object.entries(baselineScores)) {
-      competencyTiers[key] = score.tier;
+    { slug: string; title: string; orderIndex: number; lessonIds: string[]; badgeName: string | null; badgeIcon: string | null }
+  >();
+  for (const l of lessons) {
+    if (!levelsMap.has(l.levelId)) {
+      const badge = badgesByLevelId.get(l.levelId);
+      levelsMap.set(l.levelId, {
+        slug: l.levelSlug,
+        title: l.levelTitle,
+        orderIndex: l.levelOrderIndex,
+        lessonIds: [],
+        badgeName: badge?.badgeName ?? null,
+        badgeIcon: badge?.badgeIcon ?? null,
+      });
     }
+    levelsMap.get(l.levelId)!.lessonIds.push(l.id);
   }
+  const levels = [...levelsMap.values()].sort((a, b) => a.orderIndex - b.orderIndex);
 
-  const recommendation = recommendStartingPoint({
-    lessons: allLessons,
-    completedLessonIds: completedIds,
-    strugglingLessonIds,
-    competencyTiers,
-  });
-
-  let continueTarget:
-    | { levelSlug: string; lessonSlug: string; levelTitle: string; lessonTitle: string; reason: string }
-    | null = null;
-  if (recommendation.kind === "lesson") {
-    for (const lvl of levels) {
-      const lesson = lvl.lessons.find((l) => l.id === recommendation.lessonId);
-      if (lesson) {
-        continueTarget = {
-          levelSlug: lvl.slug,
-          lessonSlug: lesson.slug,
-          levelTitle: lvl.title,
-          lessonTitle: lesson.title,
-          reason: recommendationReasonCopy(recommendation.reason),
-        };
-        break;
-      }
-    }
-  }
-
-  const evidenceLessons: EvidenceLessonInput[] = allLessons.map((l) => ({
+  const evidenceLessons: EvidenceLessonInput[] = lessons.map((l) => ({
     id: l.id,
     competencyKey: l.competencyKey,
-    hasScoredAssessment:
-      levels
-        .flatMap((lvl) => lvl.lessons)
-        .find((les) => les.id === l.id)?.passing_score != null,
+    hasScoredAssessment: l.hasScoredAssessment,
   }));
-  const competencyEvidence = computeCompetencyEvidence(evidenceLessons, completedIds, attempts);
+  const competencyEvidence = computeCompetencyEvidence(evidenceLessons, completedLessonIds, attempts);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -237,33 +135,29 @@ export default async function DashboardPage() {
           </p>
         </div>
       ) : (
-        continueTarget && (
-          <ContinueLearningLink
-            href={`/academy/${continueTarget.levelSlug}/${continueTarget.lessonSlug}`}
-            lessonId={recommendation.kind === "lesson" ? recommendation.lessonId : ""}
-            className="flex flex-col gap-1 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
-          >
-            <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-              Continue Learning
-            </span>
-            <span className="font-semibold">{continueTarget.lessonTitle}</span>
-            <span className="text-xs text-muted-foreground">{continueTarget.levelTitle}</span>
-            {continueTarget.reason && (
-              <span className="text-xs text-muted-foreground">{continueTarget.reason}</span>
-            )}
-          </ContinueLearningLink>
-        )
+        <ContinueLearningLink
+          href="/learning"
+          lessonId={recommendation.lessonId}
+          className="flex flex-col gap-1 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Continue Learning
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Pick up your personalized learning path.
+          </span>
+        </ContinueLearningLink>
       )}
 
       <div className="flex flex-col gap-3">
         <p className="text-sm font-semibold">Badges Earned</p>
         <div className="grid grid-cols-3 gap-3">
           {levels.map((lvl) => {
-            const completedCount = lvl.lessons.filter((les) => completedIds.has(les.id)).length;
-            const earned = lvl.lessons.length > 0 && completedCount === lvl.lessons.length;
+            const completedCount = lvl.lessonIds.filter((id) => completedLessonIds.has(id)).length;
+            const earned = lvl.lessonIds.length > 0 && completedCount === lvl.lessonIds.length;
             return (
               <Link
-                key={lvl.id}
+                key={lvl.slug}
                 href={`/academy/${lvl.slug}`}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-colors hover:border-primary",
@@ -271,13 +165,13 @@ export default async function DashboardPage() {
                 )}
               >
                 <span className={cn("text-2xl", earned ? "" : "opacity-40 grayscale")}>
-                  {lvl.badge_icon ?? "📘"}
+                  {lvl.badgeIcon ?? "📘"}
                 </span>
                 <span className="text-xs font-medium">
-                  {earned ? (lvl.badge_name ?? "Earned") : lvl.title}
+                  {earned ? (lvl.badgeName ?? "Earned") : lvl.title}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {completedCount}/{lvl.lessons.length}
+                  {completedCount}/{lvl.lessonIds.length}
                 </span>
               </Link>
             );

@@ -63,7 +63,13 @@ export function recommendStartingPoint(input: RecommendationInput): Recommendati
 
     const tier = competencyTiers[competencyKey];
     const hasStruggling = competencyLessons.some((l) => strugglingLessonIds.has(l.id));
-    const isMeaningfulGap = (tier && TIERS_NEEDING_ATTENTION.includes(tier)) || (!tier && hasStruggling);
+    // Current demonstrated struggle always counts as a meaningful gap,
+    // regardless of what the diagnostic once said — fresh evidence from
+    // actually attempting the material outranks a cold-start guess. This is
+    // the one behavior change beyond the fallback-skip below: previously a
+    // "Strong Foundation"/"Familiar" diagnostic tier could mask a real,
+    // current failure in that same competency.
+    const isMeaningfulGap = hasStruggling || (tier && TIERS_NEEDING_ATTENTION.includes(tier));
     if (!isMeaningfulGap) continue;
 
     const targetLesson = competencyLessons.find((l) => !completedLessonIds.has(l.id));
@@ -78,7 +84,18 @@ export function recommendStartingPoint(input: RecommendationInput): Recommendati
   }
 
   // No meaningful gap found anywhere — fall back to "continue where you left off".
-  const nextIncomplete = sorted.find((l) => !completedLessonIds.has(l.id));
+  // Prefer an incomplete lesson outside any competency already diagnosed
+  // "Strong Foundation" first — an experienced learner shouldn't be funneled
+  // through confirmed-strong material just because they haven't clicked it
+  // yet. When competencyTiers is {} (no diagnostic taken), every lookup is
+  // undefined, undefined !== "Strong Foundation" is always true, so this is
+  // identical to the old behavior for anyone without a diagnostic. If every
+  // remaining incomplete lesson belongs to a Strong Foundation competency,
+  // this falls through to the original fallback unchanged.
+  const nextIncompleteNonStrong = sorted.find(
+    (l) => !completedLessonIds.has(l.id) && competencyTiers[l.competencyKey ?? ""] !== "Strong Foundation",
+  );
+  const nextIncomplete = nextIncompleteNonStrong ?? sorted.find((l) => !completedLessonIds.has(l.id));
   if (!nextIncomplete) {
     return { kind: "complete" };
   }

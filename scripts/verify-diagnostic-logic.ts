@@ -219,5 +219,89 @@ const allLessons = [L1_A, L1_B, L2_A, L2_B];
   check("12. both competencies weak -> earliest-appearing (foundations/L1_A) wins", rec, { kind: "lesson", lessonId: "L1_A", reason: "meaningful_gap" });
 }
 
+console.log("\n=== Phase 2C-B: Strong Foundation acceleration + fresh-struggle-overrides-stale-diagnostic ===");
+
+// A. No diagnostic -> behavior must be byte-identical to before this change
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: {},
+  });
+  check("A. no diagnostic, no progress -> unchanged (L1_A, continue)", rec, { kind: "lesson", lessonId: "L1_A", reason: "continue" });
+}
+
+// B. Developing competency -> meaningful gap still prioritized (unaffected by this phase's changes)
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { foundations: "Developing" },
+  });
+  check("B. foundations Developing -> recommend L1_A (meaningful_gap)", rec, { kind: "lesson", lessonId: "L1_A", reason: "meaningful_gap" });
+}
+
+// C. Every remaining competency Strong Foundation -> fallback still returns the earliest incomplete lesson (rule 4, old behavior preserved)
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { foundations: "Strong Foundation", market_structure: "Strong Foundation" },
+  });
+  check("C. all Strong Foundation, nothing complete -> falls through to L1_A anyway", rec, { kind: "lesson", lessonId: "L1_A", reason: "continue" });
+}
+
+// C2. Partial Strong Foundation -> skip past the Strong-Foundation competency's incomplete lessons during fallback
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { foundations: "Strong Foundation" }, // market_structure untested (undefined)
+  });
+  check("C2. foundations Strong Foundation, market_structure untested -> skip to L2_A", rec, { kind: "lesson", lessonId: "L2_A", reason: "continue" });
+}
+
+// D. Struggling lesson with no diagnostic tier at all -> still prioritized (unaffected regression check)
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(["L1_A", "L1_B"]),
+    strugglingLessonIds: new Set(["L2_A"]),
+    competencyTiers: {},
+  });
+  check("D. struggling L2_A, no diagnostic -> still recommend L2_A", rec, { kind: "lesson", lessonId: "L2_A", reason: "meaningful_gap" });
+}
+
+// D2. REQUIRED: diagnostic says Strong Foundation, but there is a current
+// unresolved struggle in that same competency -> the struggle must win.
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(["L1_A", "L1_B"]),
+    strugglingLessonIds: new Set(["L2_A"]),
+    competencyTiers: { market_structure: "Strong Foundation" },
+  });
+  check(
+    "D2. market_structure diagnosed Strong Foundation BUT L2_A currently struggling -> struggle overrides stale diagnostic, recommend L2_A",
+    rec,
+    { kind: "lesson", lessonId: "L2_A", reason: "meaningful_gap" },
+  );
+}
+
+// E. Fully completed Academy -> unchanged terminal state, no fabricated recommendation
+{
+  const rec = recommendStartingPoint({
+    lessons: allLessons,
+    completedLessonIds: new Set(["L1_A", "L1_B", "L2_A", "L2_B"]),
+    strugglingLessonIds: new Set(),
+    competencyTiers: { foundations: "Strong Foundation", market_structure: "Strong Foundation" },
+  });
+  check("E. everything complete -> {kind: complete}", rec, { kind: "complete" });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

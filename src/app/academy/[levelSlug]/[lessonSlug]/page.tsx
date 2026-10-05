@@ -64,15 +64,17 @@ export default async function LessonPage({
     ? (lesson.key_takeaways as string[])
     : [];
 
-  const isScenarioQuiz = lesson.lesson_type === "scenario_quiz";
-  const scenarioConfig = isScenarioQuiz
-    ? (lesson.interactive_config as {
-        scenarios: ScenarioQuizScenario[];
-        introConcepts?: ConceptDef[];
-      } | null)
-    : null;
+  // Read unconditionally (not gated to lesson_type === "scenario_quiz") so a
+  // tool-type lesson (e.g. candlestick_plot, rsi_ma_tool) can carry its own
+  // scenarios array and render a scored quiz alongside its interactive tool,
+  // rather than only as a standalone lesson type.
+  const scenarioConfig = lesson.interactive_config as {
+    scenarios?: ScenarioQuizScenario[];
+    introConcepts?: ConceptDef[];
+  } | null;
   const scenarios = scenarioConfig?.scenarios ?? [];
   const introConcepts = scenarioConfig?.introConcepts;
+  const hasScoredQuiz = scenarios.length > 0;
 
   const isCandlestickPlot = lesson.lesson_type === "candlestick_plot";
   const candlestickConfig = isCandlestickPlot
@@ -200,7 +202,7 @@ export default async function LessonPage({
         <PatternIntroGrid patterns={patternConfig.patterns} />
       )}
 
-      {isScenarioQuiz && introConcepts && (
+      {hasScoredQuiz && introConcepts && (
         <ConceptIntroGrid concepts={introConcepts} />
       )}
 
@@ -228,14 +230,19 @@ export default async function LessonPage({
       )}
 
       {user && completedAt && (
-        <p className="text-sm font-medium text-emerald-600">
-          ✓ Completed on {new Date(completedAt).toLocaleDateString()}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-emerald-600">
+            ✓ Completed on {new Date(completedAt).toLocaleDateString()}
+          </p>
+          <Link href="/learning" className="text-xs text-primary underline">
+            Back to My Learning Path
+          </Link>
+        </div>
       )}
 
-      {isScenarioQuiz || isPatternRecognition ? (
+      {hasScoredQuiz || isPatternRecognition ? (
         <>
-          {isScenarioQuiz && (
+          {hasScoredQuiz && (
             <ScenarioQuizBlock
               lessonId={lesson.id}
               scenarios={scenarios}

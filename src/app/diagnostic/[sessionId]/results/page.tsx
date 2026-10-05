@@ -109,10 +109,10 @@ export default async function DiagnosticResultsPage({
               Nothing is locked — explore any lesson anytime.
             </p>
             <Link
-              href={`/academy/${recommendedLesson.levelSlug}/${recommendedLesson.slug}`}
+              href="/learning"
               className={cn(buttonVariants({ variant: "default" }), "self-start")}
             >
-              Start this lesson
+              Go to My Learning Path
             </Link>
           </>
         ) : (
