@@ -12,28 +12,46 @@ export default async function DiagnosticQuestionsPage({
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
-  if (!user) notFound();
+  if (!user) {
+    console.error("[diagnostic/[sessionId]] no authenticated user", { sessionId, userError });
+    notFound();
+  }
 
-  const { data: session } = await supabase
+  const { data: session, error: sessionError } = await supabase
     .from("diagnostic_sessions")
     .select("id, status")
     .eq("id", sessionId)
     .single();
 
-  if (!session) notFound();
+  if (!session) {
+    console.error("[diagnostic/[sessionId]] session lookup failed", {
+      sessionId,
+      userId: user.id,
+      sessionError,
+    });
+    notFound();
+  }
 
   if (session.status === "completed") {
     redirect(`/diagnostic/${sessionId}/results`);
   }
 
-  const { data: questions } = await supabase
+  const { data: questions, error: questionsError } = await supabase
     .from("diagnostic_questions")
     .select("id, question_key, competency_key, question, options, chart, question_type, difficulty, order_index")
     .eq("is_published", true)
     .order("order_index");
 
-  if (!questions || questions.length === 0) notFound();
+  if (!questions || questions.length === 0) {
+    console.error("[diagnostic/[sessionId]] no published questions returned", {
+      sessionId,
+      userId: user.id,
+      questionsError,
+    });
+    notFound();
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-12">
