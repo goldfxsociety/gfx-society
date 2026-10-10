@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SIGNUP_CONSENT_VERSION } from "@/config/legal";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,9 +24,17 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
+  const [experienceLevel, setExperienceLevel] = useState("");
+  // Both consent boxes are unticked by default (RA 10173). Never pre-tick.
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consentRequired) {
+      setError("Please tick the consent box to create your account.");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -34,7 +43,14 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { display_name: displayName },
+        data: {
+          display_name: displayName,
+          experience_level: experienceLevel,
+          consent_version: SIGNUP_CONSENT_VERSION,
+          consent_required: consentRequired,
+          consent_marketing: consentMarketing,
+          consented_at: new Date().toISOString(),
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -120,11 +136,68 @@ export default function SignupPage() {
                 placeholder="At least 6 characters"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={loading}>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="experienceLevel">Trading experience</Label>
+              <select
+                id="experienceLevel"
+                value={experienceLevel}
+                onChange={(e) => setExperienceLevel(e.target.value)}
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="">Choose one (optional)</option>
+                <option value="never_traded">Never traded</option>
+                <option value="demo_only">Demo only</option>
+                <option value="trading_live">Trading live</option>
+              </select>
+            </div>
+            <div className="flex items-start gap-2 text-xs">
+              <input
+                id="consentRequired"
+                type="checkbox"
+                checked={consentRequired}
+                onChange={(e) => setConsentRequired(e.target.checked)}
+                required
+                className="mt-0.5"
+              />
+              <label htmlFor="consentRequired">
+                I am 18 or older, and I agree to the{" "}
+                <Link href="/terms" className="underline" target="_blank">Terms of Use</Link>{" "}
+                and consent to GoldFX Society processing my name, email and
+                experience level to create my account, give me Academy access,
+                and send me the Starter Kit and GFX education emails, as
+                described in the{" "}
+                <Link href="/privacy" className="underline" target="_blank">Privacy Notice</Link>.
+                I can unsubscribe or withdraw consent anytime.
+                <span className="mt-1 block text-muted-foreground">
+                  Kailangan ito para magawa ang account mo at maipadala ang starter kit.
+                </span>
+              </label>
+            </div>
+            <div className="flex items-start gap-2 text-xs">
+              <input
+                id="consentMarketing"
+                type="checkbox"
+                checked={consentMarketing}
+                onChange={(e) => setConsentMarketing(e.target.checked)}
+                className="mt-0.5"
+              />
+              <label htmlFor="consentMarketing">
+                (Optional) Send me GFX Society community news, event invites
+                and updates. I can unsubscribe anytime.
+              </label>
+            </div>
+            {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+            <Button type="submit" disabled={loading || !consentRequired}>
               {loading ? "Creating account..." : "Sign up"}
             </Button>
           </form>
+          <p className="mt-4 text-xs text-muted-foreground">
+            We use your data only as described in our{" "}
+            <Link href="/privacy" className="underline">Privacy Notice</Link>. We
+            never sell your data or share it with brokers without your consent.
+            Education only — not financial advice.{" "}
+            <Link href="/risk" className="underline">Risk warning</Link>.
+          </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="underline">
