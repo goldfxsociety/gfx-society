@@ -33,6 +33,41 @@ import {
   type ConceptDef,
 } from "@/components/lesson-engine/blocks/concept-intro-grid";
 
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ levelSlug: string; lessonSlug: string }>;
+}): Promise<Metadata> {
+  const { levelSlug, lessonSlug } = await params;
+  const supabase = await createClient();
+  const { data: level } = await supabase
+    .from("levels")
+    .select("id")
+    .eq("slug", levelSlug)
+    .eq("is_published", true)
+    .maybeSingle();
+  if (!level) return {};
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("title, learning_objective")
+    .eq("level_id", level.id)
+    .eq("slug", lessonSlug)
+    .eq("is_published", true)
+    .maybeSingle();
+  if (!lesson) return {};
+  const url = `/academy/${levelSlug}/${lessonSlug}`;
+  const description =
+    lesson.learning_objective ?? `Free GFX Academy lesson: ${lesson.title}`;
+  return {
+    title: `${lesson.title} — GFX Academy`,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: lesson.title, description, url, type: "article", images: ["/opengraph-image"] },
+  };
+}
+
 export default async function LessonPage({
   params,
 }: {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Syne, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 
@@ -17,9 +18,20 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "GFX Society",
-  description:
-    "Free Gold/XAUUSD trading education and community for Filipino traders.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_PH",
+    url: "/",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

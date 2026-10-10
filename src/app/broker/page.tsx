@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Choosing a Broker",
+  description: "Education-first broker info with IB disclosure. Demo first; you can use any broker.",
+  alternates: { canonical: "/broker" },
+  openGraph: { title: "Choosing a Broker", description: "Education-first broker info with IB disclosure. Demo first; you can use any broker.", url: "/broker", images: ["/opengraph-image"] },
+};
+
 
 export default function BrokerPage() {
   return (

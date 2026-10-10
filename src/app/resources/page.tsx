@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Resources",
+  description: "Free gold trading tools and resources from GFX Society.",
+  alternates: { canonical: "/resources" },
+  openGraph: { title: "Resources", description: "Free gold trading tools and resources from GFX Society.", url: "/resources", images: ["/opengraph-image"] },
+};
+
 
 type Resource = {
   id: string;

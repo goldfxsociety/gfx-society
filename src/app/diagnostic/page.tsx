@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { StartDiagnosticButton } from "@/components/diagnostic/start-diagnostic-button";
+
+export const metadata: Metadata = {
+  title: "Skills Diagnostic",
+  description: "Find your starting point: a short gold trading skills check that recommends your first lessons.",
+  alternates: { canonical: "/diagnostic" },
+  openGraph: { title: "Skills Diagnostic", description: "Find your starting point: a short gold trading skills check that recommends your first lessons.", url: "/diagnostic", images: ["/opengraph-image"] },
+};
+
 
 export default async function DiagnosticIntroPage() {
   const supabase = await createClient();
