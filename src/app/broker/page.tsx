@@ -16,46 +16,38 @@ export default function BrokerPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4 text-sm">
-        <p className="font-semibold">Why ACCM</p>
+        <p className="font-semibold">About ACCM</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          ACCM is a regulated broker offering competitive Gold spreads, fast
-          MT5 execution, and support across Southeast Asia — the broker used
-          throughout the Academy&apos;s examples.
+          ACCM is the broker used in the Academy&apos;s examples. Before opening
+          any account, check the broker&apos;s licence and terms yourself.
         </p>
       </div>
 
-      <a
-        href="https://www.wikifx.com/fil/dealer/3052942299.html"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary"
-      >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-          W
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold">ACCM — Verified on WikiFX</p>
-          <p className="text-xs text-muted-foreground">
-            Independent broker verification platform
-          </p>
-        </div>
-        <span className="text-xs font-medium text-emerald-500">Verified ✓</span>
-      </a>
+      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+        <p className="font-semibold">Demo first. Risk warning.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Start on a free demo account and follow your plan: max 1% risk per
+          trade, stop-loss on every trade. Trading forex, gold and CFDs with
+          leverage carries a high risk of losing money and is not suitable for
+          everyone. Education only, not financial advice. Only trade with money
+          you can afford to lose.
+        </p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        <strong>Disclosure:</strong> GFX may earn a commission or rebate from
+        partner brokers when you open an account or trade through our links.
+        You can use any broker you choose.
+      </p>
 
       <a
         href="https://accm.global/account/register?shareUserSetId=3a59d46d63f04393b"
         target="_blank"
-        rel="noopener noreferrer"
+        rel="sponsored noopener noreferrer"
         className={buttonVariants({ variant: "default" })}
       >
         Open Free Demo Account →
       </a>
-
-      <p className="text-xs text-muted-foreground">
-        Affiliated link. Trading involves risk — past performance is not
-        indicative of future results. Only trade with money you can afford to
-        lose.
-      </p>
 
       <Link href="/" className="text-sm text-muted-foreground underline">
         ← Back to home
