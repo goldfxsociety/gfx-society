@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Community",
+  description: "Join the GFX Society community of Filipino gold traders learning with demo-first discipline.",
+  alternates: { canonical: "/community" },
+  openGraph: { title: "Community", description: "Join the GFX Society community of Filipino gold traders learning with demo-first discipline.", url: "/community", images: ["/opengraph-image"] },
+};
+
 
 export default function CommunityPage() {
   return (

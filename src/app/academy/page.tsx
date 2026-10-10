@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -7,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "GFX Academy — Free Gold Trading Course",
+  description: "Free, beginner-friendly gold (XAUUSD) trading lessons for Filipinos: basics, risk management, demo practice. Education only.",
+  alternates: { canonical: "/academy" },
+  openGraph: { title: "GFX Academy — Free Gold Trading Course", description: "Free, beginner-friendly gold (XAUUSD) trading lessons for Filipinos: basics, risk management, demo practice. Education only.", url: "/academy", images: ["/opengraph-image"] },
+};
+
 
 export default async function AcademyPage() {
   const supabase = await createClient();
