@@ -18,7 +18,7 @@ GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the 
 | Account data | Password (stored hashed by our authentication provider; we cannot see it) | You, at signup |
 | Experience level | "Never traded", "Demo only", "Trading live" | You, at signup |
 | Learning data | Lesson progress, quiz and diagnostic answers, competency results, demo journal entries you submit | Your use of the Academy |
-| Consent records | Which boxes you ticked, consent text version, date/time, a hashed (not raw) IP address | Automatically, at signup |
+| Consent records | Which boxes you ticked, consent text version, and date/time | Automatically, at signup |
 | Usage and analytics | Pages visited, events (e.g. lesson started), referral/UTM campaign tags, device and browser type, approximate location (country/city) | Automatically, via first-party analytics (Vercel Web Analytics, which is cookieless) |
 
 We do **not** ask for your phone number, ID, bank details, broker account numbers or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
