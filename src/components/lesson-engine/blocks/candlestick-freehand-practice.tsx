@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { classifyCandle, generateRandomCandle, type OHLC } from "@/lib/candlestick";
+import { classifyCandle, generateRandomCandle, seededRandom, type OHLC } from "@/lib/candlestick";
 
 const PEN_COLORS: { label: string; value: string }[] = [
   { label: "Black", value: "#111111" },
@@ -24,7 +24,7 @@ export function CandlestickFreehandPractice() {
   const strokesRef = useRef<{ x: number; y: number }[][]>([]);
   const drawingRef = useRef(false);
 
-  const [ohlc, setOhlc] = useState<OHLC>(() => generateRandomCandle());
+  const [ohlc, setOhlc] = useState<OHLC>(() => generateRandomCandle(seededRandom(20261012)))  // fixed first candle: SSR == client;
   const [showAnswer, setShowAnswer] = useState(false);
   const [penColor, setPenColor] = useState(PEN_COLORS[0].value);
 

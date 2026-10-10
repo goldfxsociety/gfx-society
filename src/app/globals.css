@@ -144,3 +144,15 @@
     @apply font-heading;
   }
 }
+
+/* Academy lesson pages: minimum 44px touch targets (WCAG 2.5.5 / Apple HIG) */
+.touch-targets :is(button, select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), [role="button"]) {
+  min-height: 44px;
+}
+.touch-targets :is(button, [role="button"]) {
+  min-width: 44px;
+}
+.touch-targets input:is([type="checkbox"], [type="radio"]) {
+  width: 22px;
+  height: 22px;
+}

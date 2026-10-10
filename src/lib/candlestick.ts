@@ -133,10 +133,22 @@ function round2(n: number) {
  * thresholds in the intended direction (e.g. "small" bodies never
  * accidentally read as a hammer).
  */
-export function generateRandomCandle(): OHLC {
-  const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
-  const base = 2280 + Math.random() * 40;
-  const range = 10 + Math.random() * 20;
+/** Small deterministic PRNG so server and client render the same first candle (no hydration mismatch). */
+export function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function generateRandomCandle(rand: () => number = Math.random): OHLC {
+  const category = CATEGORIES[Math.floor(rand() * CATEGORIES.length)];
+  const base = 2280 + rand() * 40;
+  const range = 10 + rand() * 20;
   const L = base;
   const H = base + range;
 
@@ -147,32 +159,32 @@ export function generateRandomCandle(): OHLC {
 
   switch (category) {
     case "doji":
-      bodyFrac = Math.random() * 0.04;
-      upperFrac = Math.random() * (1 - bodyFrac);
+      bodyFrac = rand() * 0.04;
+      upperFrac = rand() * (1 - bodyFrac);
       lowerFrac = 1 - bodyFrac - upperFrac;
-      bullish = Math.random() < 0.5;
+      bullish = rand() < 0.5;
       break;
     case "hammer":
-      upperFrac = 0.03 + Math.random() * 0.05;
-      bodyFrac = 0.26 + Math.random() * 0.1;
+      upperFrac = 0.03 + rand() * 0.05;
+      bodyFrac = 0.26 + rand() * 0.1;
       lowerFrac = 1 - upperFrac - bodyFrac;
       bullish = true;
       break;
     case "shooting-star":
-      lowerFrac = 0.03 + Math.random() * 0.05;
-      bodyFrac = 0.26 + Math.random() * 0.1;
+      lowerFrac = 0.03 + rand() * 0.05;
+      bodyFrac = 0.26 + rand() * 0.1;
       upperFrac = 1 - lowerFrac - bodyFrac;
       bullish = false;
       break;
     case "bullish-strong":
     case "bearish-strong":
-      bodyFrac = 0.6 + Math.random() * 0.25;
+      bodyFrac = 0.6 + rand() * 0.25;
       upperFrac = (1 - bodyFrac) / 2;
       lowerFrac = (1 - bodyFrac) / 2;
       bullish = category === "bullish-strong";
       break;
     default: // bullish-small / bearish-small
-      bodyFrac = 0.22 + Math.random() * 0.18; // keeps wick fractions safely under 0.4
+      bodyFrac = 0.22 + rand() * 0.18; // keeps wick fractions safely under 0.4
       upperFrac = (1 - bodyFrac) / 2;
       lowerFrac = (1 - bodyFrac) / 2;
       bullish = category === "bullish-small";
