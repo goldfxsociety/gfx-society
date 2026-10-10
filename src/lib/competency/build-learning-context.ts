@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CompetencyTier, CompetencyScore } from "@/lib/diagnostic/scoring";
+import { effectiveTier, type CompetencyTier, type CompetencyScore } from "@/lib/diagnostic/scoring";
 import type { AssessmentAttemptInput } from "@/lib/competency/evidence";
 
 /**
@@ -128,7 +128,7 @@ export async function buildLearningContext(): Promise<LearningContext> {
   const competencyTiers: Record<string, CompetencyTier> = {};
   if (baselineScores) {
     for (const [key, score] of Object.entries(baselineScores)) {
-      competencyTiers[key] = score.tier;
+      competencyTiers[key] = effectiveTier(score) as CompetencyTier;
     }
   }
 

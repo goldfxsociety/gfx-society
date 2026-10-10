@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { effectiveTier, MIN_ANSWERS_FOR_TIER } from "@/lib/diagnostic/scoring";
 
 const TIER_LABEL: Record<string, string> = {
   "No Data": "Not tested yet",
+  "Not Enough Data": "Not enough data",
   Developing: "Developing",
   Familiar: "Familiar",
   "Strong Foundation": "Strong Foundation",
@@ -115,10 +117,10 @@ export default async function DiagnosticResultsPage({
           {Object.entries(scores).map(([key, score]) => (
             <div key={key} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4">
               <p className="text-sm font-semibold">{COMPETENCY_LABEL[key] ?? key}</p>
-              <p className="text-sm text-primary">{TIER_LABEL[score.tier] ?? score.tier}</p>
-              {score.confidence === "Limited data" && (
+              <p className="text-sm text-primary">{TIER_LABEL[effectiveTier(score)] ?? effectiveTier(score)}</p>
+              {score.answered > 0 && score.answered < MIN_ANSWERS_FOR_TIER && (
                 <p className="text-xs text-muted-foreground">
-                  Limited data — based on {score.answered} question{score.answered === 1 ? "" : "s"}
+                  Needs at least {MIN_ANSWERS_FOR_TIER} answers — based on {score.answered} question{score.answered === 1 ? "" : "s"}
                 </p>
               )}
             </div>

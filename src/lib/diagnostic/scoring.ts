@@ -1,4 +1,12 @@
-export type CompetencyTier = "No Data" | "Developing" | "Familiar" | "Strong Foundation";
+export type CompetencyTier =
+  | "No Data"
+  | "Not Enough Data"
+  | "Developing"
+  | "Familiar"
+  | "Strong Foundation";
+
+/** A competency needs at least this many answered questions to get a rating (QA L5). */
+export const MIN_ANSWERS_FOR_TIER = 3;
 export type ConfidenceLevel = "Limited data" | "Standard";
 
 export type DiagnosticAnswerRecord = {
@@ -23,6 +31,7 @@ export type CompetencyScore = {
  */
 export function computeTier(answered: number, correct: number): CompetencyTier {
   if (answered === 0) return "No Data";
+  if (answered < MIN_ANSWERS_FOR_TIER) return "Not Enough Data";
   const pct = (correct / answered) * 100;
   if (pct < 50) return "Developing";
   if (pct < 80) return "Familiar";
@@ -35,7 +44,19 @@ export function computeTier(answered: number, correct: number): CompetencyTier {
  * "Limited data" if the learner answered 0-1 of its questions this time.
  */
 export function computeConfidence(answered: number): ConfidenceLevel {
-  return answered <= 1 ? "Limited data" : "Standard";
+  return answered < MIN_ANSWERS_FOR_TIER ? "Limited data" : "Standard";
+}
+
+/**
+ * Tier to show/use for a stored score. Sessions completed before the
+ * minimum-answers rule may have stored e.g. "Strong Foundation" from 1
+ * answer, so recompute from the stored counts.
+ */
+export function effectiveTier(score: { answered: number; correct: number; tier: string }): string {
+  if (typeof score.answered === "number" && typeof score.correct === "number") {
+    return computeTier(score.answered, score.correct);
+  }
+  return score.tier;
 }
 
 export function computeCompetencyScores(

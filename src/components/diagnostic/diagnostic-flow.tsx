@@ -8,6 +8,7 @@ import { submitDiagnosticAnswer, skipDiagnosticQuestion } from "@/lib/diagnostic
 import { completeDiagnosticSession } from "@/lib/diagnostic/complete-session";
 import { CandleSequenceCanvas } from "@/components/lesson-engine/blocks/candle-sequence-canvas";
 import type { DiagnosticQuestionPublic } from "@/lib/diagnostic/types";
+import { optionOrder } from "@/lib/diagnostic/option-order";
 
 export function DiagnosticFlow({
   sessionId,
@@ -24,7 +25,9 @@ export function DiagnosticFlow({
 
   const question = questions[index];
   const isLast = index === questions.length - 1;
+  // `chosen` and everything submitted are ORIGINAL option indexes.
   const chosen = selected[question.id];
+  const order = optionOrder(sessionId, question.id, question.options.length);
 
   async function advance() {
     if (isLast) {
@@ -98,9 +101,9 @@ export function DiagnosticFlow({
         <p className="text-base font-medium">{question.question}</p>
 
         <div className="flex flex-col gap-2">
-          {question.options.map((option, i) => (
+          {order.map((i) => (
             <button
-              key={i}
+              key={`${question.id}-${i}`}
               type="button"
               onClick={() => setSelected((s) => ({ ...s, [question.id]: i }))}
               disabled={submitting}
@@ -109,7 +112,7 @@ export function DiagnosticFlow({
                 chosen === i ? "border-primary bg-primary/10" : "border-border",
               )}
             >
-              {option}
+              {question.options[i]}
             </button>
           ))}
         </div>

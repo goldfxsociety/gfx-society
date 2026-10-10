@@ -20,7 +20,7 @@ export type Recommendation =
   | { kind: "lesson"; lessonId: string; reason: "meaningful_gap" | "prerequisite" | "continue" }
   | { kind: "complete" };
 
-const TIERS_NEEDING_ATTENTION: CompetencyTier[] = ["No Data", "Developing"];
+const TIERS_NEEDING_ATTENTION: CompetencyTier[] = ["No Data", "Not Enough Data", "Developing"];
 
 /**
  * Lowest meaningful learning gap -> prerequisite chain -> earliest
