@@ -28,14 +28,22 @@ export default async function AcademyPage() {
       </div>
 
       <Link
-        href="/diagnostic"
-        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 text-sm transition-colors hover:border-primary"
+        href="/start"
+        className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
       >
         <span>
-          <span className="font-semibold">Not sure where to start?</span>{" "}
-          <span className="text-muted-foreground">Take the GFX Diagnostic.</span>
+          <span className="font-semibold">New here? Start here.</span>{" "}
+          <span className="text-muted-foreground">
+            Your first steps — no signup needed.
+          </span>
         </span>
         <span className="text-primary">→</span>
+      </Link>
+      <Link
+        href="/diagnostic"
+        className="text-xs text-muted-foreground underline"
+      >
+        Already know the basics? Take the GFX Diagnostic (free account).
       </Link>
 
       <div className="flex flex-col gap-3">

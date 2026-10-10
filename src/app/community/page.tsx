@@ -17,7 +17,7 @@ export default function CommunityPage() {
       <div className="rounded-lg border border-border bg-card p-4 text-sm">
         <p className="font-semibold">What you&apos;ll find here</p>
         <ul className="mt-2 list-inside list-disc text-muted-foreground">
-          <li>Live newbie training sessions and walkthroughs</li>
+          <li>Beginner Q&A and walkthroughs</li>
           <li>A place to ask questions as you go through the Academy</li>
           <li>Other traders at the same stage as you</li>
         </ul>
@@ -34,18 +34,10 @@ export default function CommunityPage() {
 
       <div className="flex flex-col gap-2">
         <a
-          href="https://discord.gg/AZb5Gk9xNP"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonVariants({ variant: "default" })}
-        >
-          Join Discord Community →
-        </a>
-        <a
           href="https://m.me/cm/DT8JPfkzsMUWMvYy/"
           target="_blank"
           rel="noopener noreferrer"
-          className={buttonVariants({ variant: "outline" })}
+          className={buttonVariants({ variant: "default" })}
         >
           Join Messenger Community →
         </a>
