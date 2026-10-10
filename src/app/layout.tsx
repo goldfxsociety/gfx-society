@@ -5,6 +5,8 @@ import "./globals.css";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { Suspense } from "react";
+import { ReconsentGate } from "@/components/consent/reconsent-gate";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -43,6 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
+        <Suspense fallback={null}>
+          <ReconsentGate />
+        </Suspense>
         <BottomNav />
         <Analytics />
       </body>
