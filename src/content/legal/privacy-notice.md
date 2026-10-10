@@ -18,7 +18,7 @@ GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the 
 | Account data | Password (stored hashed by our authentication provider; we cannot see it) | You, at signup |
 | Experience level | "Never traded", "Demo only", "Trading live" | You, at signup |
 | Learning data | Lesson progress, quiz and diagnostic answers, competency results, demo journal entries you submit | Your use of the Academy |
-| Consent records | Which boxes you ticked, consent text version, and date/time | Automatically, at signup |
+| Consent records | Which boxes you ticked, consent text version, date/time, and a one-way hash of your email (so the record can be matched to you without storing the email itself) | Automatically, at signup |
 | Usage and analytics | Pages visited, events (e.g. lesson started), referral/UTM campaign tags, device and browser type, approximate location (country/city) | Automatically, via first-party analytics (Vercel Web Analytics, which is cookieless) |
 
 We do **not** ask for your phone number, ID, bank details, broker account numbers or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
@@ -62,7 +62,7 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Account and learning data | While your account is active, then deleted or anonymised within 90 days of account deletion |
 | Email list data | Until you unsubscribe or withdraw consent; then suppression record (email only) kept to honour the opt-out |
 | Inactive accounts | Deleted after 24 months of no activity, after a reminder email |
-| Consent records | For the duration of the relationship plus 3 years as evidence of consent |
+| Consent records | For the duration of the relationship plus 3 years as evidence of consent. If you delete your account, the consent record is kept for those 3 years, linked only by the email hash |
 | Analytics | Aggregated/anonymised; raw event data kept up to 13 months |
 
 ## 8. How we protect it
