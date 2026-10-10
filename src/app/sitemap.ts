@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 3600;
 
-const STATIC = ["", "/start", "/academy", "/diagnostic", "/resources", "/community", "/broker", "/signup"]  // add "/privacy", "/terms", "/risk", "/disclosure" when PR #3 merges;
+const STATIC = ["", "/start", "/academy", "/diagnostic", "/resources", "/community", "/broker", "/signup"]; // add "/privacy", "/terms", "/risk", "/disclosure" when PR #3 merges
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = STATIC.map((p) => ({
