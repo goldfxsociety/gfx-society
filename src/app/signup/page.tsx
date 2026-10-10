@@ -61,7 +61,7 @@ export default function SignupPage() {
       <div className="flex flex-1 items-center justify-center px-6">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle>Check your email</CardTitle>
+            <CardTitle><h1 className="text-lg font-semibold">Check your email</h1></CardTitle>
             <CardDescription>
               We sent a confirmation link to {email}. Click it to activate
               your account, then come back and log in.
@@ -81,7 +81,7 @@ export default function SignupPage() {
     <div className="flex flex-1 items-center justify-center px-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Create your GFX Society account</CardTitle>
+          <CardTitle><h1 className="text-lg font-semibold">Create your GFX Society account</h1></CardTitle>
           <CardDescription>
             Free forever — this just saves your progress across devices.
           </CardDescription>

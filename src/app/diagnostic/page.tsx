@@ -12,9 +12,20 @@ export default async function DiagnosticIntroPage() {
   if (!user) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-        <p className="text-sm text-muted-foreground">Log in to take the GFX Diagnostic.</p>
+        <h1 className="text-2xl font-bold tracking-tight">The GFX Diagnostic</h1>
+        <p className="text-sm text-muted-foreground">
+          A short quiz that finds your starting level. It needs a free account so we can
+          save your results and point you to the right lesson.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Brand new to trading? You don&apos;t need it — start with Lesson 1, no signup needed.
+        </p>
+        <Link href="/start" className={buttonVariants({ variant: "default" })}>
+          Start here (no signup)
+        </Link>
+        <p className="text-xs text-muted-foreground">Already have an account? Log in to save your results.</p>
         <div className="flex gap-3">
-          <Link href="/login" className={buttonVariants({ variant: "default" })}>
+          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
             Log in
           </Link>
           <Link href="/signup" className={buttonVariants({ variant: "outline" })}>

@@ -48,7 +48,7 @@ export default function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Log in</CardTitle>
+          <CardTitle><h1 className="text-lg font-semibold">Log in</h1></CardTitle>
           <CardDescription>Welcome back to GFX Society.</CardDescription>
         </CardHeader>
         <CardContent>

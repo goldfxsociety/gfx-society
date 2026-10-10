@@ -43,6 +43,7 @@ export default async function DashboardPage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
         <p className="text-sm text-muted-foreground">Log in to see your dashboard.</p>
         <div className="flex gap-3">
           <Link href="/login" className={buttonVariants({ variant: "default" })}>
