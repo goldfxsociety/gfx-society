@@ -6,8 +6,8 @@
  */
 export const DEFAULT_CAMPAIGN = "gold_pilot_2026q4";
 
-/** TODO(founder): the GFX Society Messenger community invite link. Null = button hidden. */
-export const MESSENGER_INVITE_URL: string | null = null;
+/** GFX Society Messenger community invite link. Null = button hidden. */
+export const MESSENGER_INVITE_URL: string | null = "https://m.me/cm/DT8JPfkzsMUWMvYy/";
 
 const SOURCES: Record<string, string> = {
   fb: "facebook",
