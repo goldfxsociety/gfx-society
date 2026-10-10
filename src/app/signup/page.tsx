@@ -157,7 +157,7 @@ export default function SignupPage() {
                 checked={consentRequired}
                 onChange={(e) => setConsentRequired(e.target.checked)}
                 required
-                className="mt-0.5"
+                className="mt-0.5 h-6 w-6 shrink-0 accent-primary"
               />
               <label htmlFor="consentRequired">
                 I am 18 or older, and I agree to the{" "}
@@ -179,7 +179,7 @@ export default function SignupPage() {
                 type="checkbox"
                 checked={consentMarketing}
                 onChange={(e) => setConsentMarketing(e.target.checked)}
-                className="mt-0.5"
+                className="mt-0.5 h-6 w-6 shrink-0 accent-primary"
               />
               <label htmlFor="consentMarketing">
                 (Optional) Send me GFX Society community news, event invites
