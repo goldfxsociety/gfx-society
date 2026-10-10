@@ -7,6 +7,13 @@ import { FIRST_LESSON_PATH, MESSENGER_COMMUNITY_URL } from "@/config/academy";
 export const metadata: Metadata = {
   title: "Start here",
   description: "New to trading? Your first steps with the free GFX Academy — no signup needed.",
+  alternates: { canonical: "/start" },
+  openGraph: {
+    title: "Start here",
+    description: "New to trading? Your first steps with the free GFX Academy — no signup needed.",
+    url: "/start",
+    images: ["/opengraph-image"],
+  },
 };
 
 const STEPS = [
