@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { RiskFooter } from "@/components/academy/risk-footer";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 import {
   Card,
   CardDescription,
@@ -44,7 +47,7 @@ export default async function LevelPage({
 
       <div className="flex flex-col gap-3">
         {(lessons ?? []).map((lesson, i) => (
-          <Link key={lesson.id} href={`/academy/${level.slug}/${lesson.slug}`}>
+          <Link key={lesson.id} href={`/academy/${level.slug}/${lesson.slug}`} className="block min-h-11">
             <Card className="transition-colors hover:border-primary">
               <CardHeader>
                 <CardTitle className="text-base">
@@ -60,6 +63,17 @@ export default async function LevelPage({
           </Link>
         ))}
       </div>
+
+      {lessons && lessons.length > 0 && (
+        <Link
+          href={`/academy/${level.slug}/${lessons[0].slug}`}
+          className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}
+        >
+          Start lesson 1 →
+        </Link>
+      )}
+
+      <RiskFooter />
     </div>
   );
 }

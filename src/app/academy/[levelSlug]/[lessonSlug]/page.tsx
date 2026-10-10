@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getLessonSequence } from "@/lib/academy/lesson-sequence";
+import { LessonNav } from "@/components/academy/lesson-nav";
+import { RiskFooter } from "@/components/academy/risk-footer";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { MarkCompleteButton } from "@/components/academy/mark-complete-button";
@@ -153,8 +156,14 @@ export default async function LessonPage({
     }
   }
 
+  const sequence = await getLessonSequence(supabase);
+  const idx = sequence.findIndex((l) => l.levelSlug === level.slug && l.slug === lessonSlug);
+  const prevLesson = idx > 0 ? sequence[idx - 1] : null;
+  const nextLesson = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : null;
+  const isLastInLevel = !nextLesson || nextLesson.levelSlug !== level.slug;
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
+    <div className="touch-targets mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <Link
         href={`/academy/${level.slug}`}
         className="text-sm text-muted-foreground underline"
@@ -304,6 +313,14 @@ export default async function LessonPage({
           )}
         </>
       )}
+      <LessonNav
+        prev={prevLesson}
+        next={nextLesson}
+        currentLevelTitle={level.title}
+        nextLevelTitle={isLastInLevel && nextLesson ? nextLesson.levelTitle : null}
+        isLastInLevel={isLastInLevel}
+      />
+      <RiskFooter />
     </div>
   );
 }

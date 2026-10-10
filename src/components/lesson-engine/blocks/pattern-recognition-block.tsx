@@ -10,13 +10,22 @@ import { CandleSequenceCanvas } from "@/components/lesson-engine/blocks/candle-s
 import type { PatternDef } from "@/components/lesson-engine/blocks/pattern-intro-grid";
 import { cn } from "cn";
 
-function shuffle<T>(arr: T[]): T[] {
+import { seededRandom } from "@/lib/candlestick";
+
+/** Deterministic (seeded) shuffle: identical on server and client, so no hydration mismatch. */
+function shuffle<T>(arr: T[], rand: () => number): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function hashSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 export function PatternRecognitionBlock({
@@ -36,8 +45,9 @@ export function PatternRecognitionBlock({
 }) {
   const router = useRouter();
   const order = useMemo(
-    () => shuffle(patterns).slice(0, Math.min(rounds, patterns.length)),
-    [patterns, rounds],
+    () =>
+      shuffle(patterns, seededRandom(hashSeed(lessonId))).slice(0, Math.min(rounds, patterns.length)),
+    [patterns, rounds, lessonId],
   );
   const [roundIdx, setRoundIdx] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -57,11 +67,12 @@ export function PatternRecognitionBlock({
   const options = useMemo(() => {
     if (!current) return [];
     const excluded = new Set([current.id, ...(lookalikes[current.id] ?? [])]);
-    const distractors = shuffle(patterns.filter((p) => !excluded.has(p.id)))
+    const rand = seededRandom(hashSeed(lessonId + current.id));
+    const distractors = shuffle(patterns.filter((p) => !excluded.has(p.id)), rand)
       .slice(0, 3)
       .map((p) => p.name);
-    return shuffle([current.name, ...distractors]);
-  }, [current, patterns, lookalikes]);
+    return shuffle([current.name, ...distractors], rand);
+  }, [current, patterns, lookalikes, lessonId]);
 
   if (!current) return null;
 
