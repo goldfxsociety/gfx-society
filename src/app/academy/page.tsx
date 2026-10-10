@@ -10,6 +10,9 @@ import {
 
 export default async function AcademyPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: levels } = await supabase
     .from("levels")
     .select("id, slug, title, description, order_index, lessons(count)")
@@ -39,12 +42,23 @@ export default async function AcademyPage() {
         </span>
         <span className="text-primary">→</span>
       </Link>
-      <Link
-        href="/diagnostic"
-        className="text-xs text-muted-foreground underline"
-      >
-        Already know the basics? Take the GFX Diagnostic (free account).
-      </Link>
+      {user ? (
+        <Link href="/diagnostic" className="text-sm text-muted-foreground underline">
+          Already know the basics? Take the GFX Diagnostic.
+        </Link>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Already know the basics?{" "}
+          <Link href="/login" className="underline">
+            Log in
+          </Link>{" "}
+          to take the GFX Diagnostic and save your results — or{" "}
+          <Link href="/start" className="underline">
+            start with Lesson 1
+          </Link>
+          , no signup needed.
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
         {(levels ?? []).map((level) => {

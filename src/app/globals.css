@@ -143,6 +143,14 @@
   h6 {
     @apply font-heading;
   }
+  /* Inline text links: at least 24px tall and 44px wide tap area (WCAG 2.5.8;
+     QA B8). In the base layer so any Tailwind display/size utility wins. */
+  a {
+    display: inline-block;
+    min-height: 24px;
+    min-width: 44px;
+    padding-block: 2px;
+  }
 }
 
 /* Academy lesson pages: minimum 44px touch targets (WCAG 2.5.5 / Apple HIG) */
