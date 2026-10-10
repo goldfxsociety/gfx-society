@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 
 const PRESETS = [
   { label: "$500 · 1%", bal: 500, risk: 1, sl: 30 },
-  { label: "$1,000 · 2%", bal: 1000, risk: 2, sl: 50 },
+  { label: "$1,000 · 1%", bal: 1000, risk: 1, sl: 50 },
   { label: "$5,000 · 0.5%", bal: 5000, risk: 0.5, sl: 20 },
 ];
 
@@ -60,7 +60,7 @@ export function LotSizeCalculator() {
     const lotSize = Math.round((riskAmount / (sl * PIP_VALUE_PER_STANDARD_LOT)) * 100) / 100;
 
     const warnings: string[] = [];
-    if (risk > 2) warnings.push(`⚠️ ${risk}% risk is above the recommended 1–2% max — consider lowering it.`);
+    if (risk > 1) warnings.push(`⚠️ ${risk}% risk is above the GFX 1% max per trade — consider lowering it.`);
     if (lotSize < 0.01) warnings.push("⚠️ Your risk is too small for this stop loss — it rounds to a 0.00 lot. Try a smaller SL or a higher risk %.");
     else if (lotSize > 10) warnings.push("⚠️ This is an unusually large position — double-check your numbers before using this in real trading.");
 
