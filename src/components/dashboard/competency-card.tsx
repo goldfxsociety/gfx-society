@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "cn";
 import { describeEvidence, type CompetencyEvidence } from "@/lib/competency/evidence";
-import type { CompetencyScore } from "@/lib/diagnostic/scoring";
+import { effectiveTier, MIN_ANSWERS_FOR_TIER, type CompetencyScore } from "@/lib/diagnostic/scoring";
 
 const STATUS_CLASS: Record<string, string> = {
   "No Evidence": "text-muted-foreground",
@@ -41,9 +41,11 @@ export function CompetencyCard({
         </span>
         {baseline ? (
           <>
-            <span className="text-sm font-medium text-primary">{baseline.tier}</span>
+            <span className="text-sm font-medium text-primary">
+              {effectiveTier(baseline) === "Not Enough Data" ? "Not enough data" : effectiveTier(baseline)}
+            </span>
             <span className="text-xs text-muted-foreground">
-              {baseline.confidence === "Limited data"
+              {baseline.answered < MIN_ANSWERS_FOR_TIER
                 ? `Limited data — based on ${baseline.answered} question${baseline.answered === 1 ? "" : "s"}`
                 : "Standard confidence"}
             </span>

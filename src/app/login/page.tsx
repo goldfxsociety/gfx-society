@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Friendly message when /auth/callback bounced here (QA L3).
+const CALLBACK_ERRORS: Record<string, string> = {
+  link_invalid:
+    "That sign-in link is invalid or has expired. Please log in again or request a new link.",
+  missing_code: "That sign-in link is incomplete. Please log in below.",
+};
+
+function CallbackError() {
+  const code = useSearchParams().get("error");
+  const message = code ? CALLBACK_ERRORS[code] : undefined;
+  return message ? (
+    <p role="alert" className="text-sm text-red-600">
+      {message}
+    </p>
+  ) : null;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +93,9 @@ export default function LoginPage() {
                 placeholder="Your password"
               />
             </div>
+            <Suspense fallback={null}>
+              <CallbackError />
+            </Suspense>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" disabled={loading}>
               {loading ? "Logging in..." : "Log in"}

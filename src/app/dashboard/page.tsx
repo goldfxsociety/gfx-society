@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
@@ -104,11 +105,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-          Dashboard
-        </span>
-        <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Dashboard
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
+        </div>
+        <LogoutButton />
       </div>
 
       <div className="flex flex-col gap-2">
