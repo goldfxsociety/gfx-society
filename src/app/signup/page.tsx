@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SIGNUP_CONSENT_VERSION } from "@/config/legal";
+import { signUpWithConsent } from "./actions";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -38,31 +37,23 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
+    const result = await signUpWithConsent({
+      displayName,
       email,
       password,
-      options: {
-        data: {
-          display_name: displayName,
-          experience_level: experienceLevel,
-          consent_version: SIGNUP_CONSENT_VERSION,
-          consent_required: consentRequired,
-          consent_marketing: consentMarketing,
-          consented_at: new Date().toISOString(),
-        },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      experienceLevel,
+      consentRequired,
+      consentMarketing,
     });
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
 
-    if (data.session) {
+    if (!result.needsEmailConfirmation) {
       // Email confirmation is off — the user is already logged in.
       router.push("/");
       router.refresh();
