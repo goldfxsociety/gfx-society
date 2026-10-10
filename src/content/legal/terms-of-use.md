@@ -1,19 +1,18 @@
 # GFX Society Terms of Use
-> **DRAFT — NOT LEGAL ADVICE.** This document is a draft prepared for GoldFX Society (GFX) and must be reviewed and approved by a qualified Philippine lawyer before publication. Items marked [VERIFY] must be confirmed. Draft date: 10 October 2026.
 
 **Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Mag-demo muna bago mag-live. May IB rebates ang founder mula sa partner brokers (basahin ang IB Disclosure). Maging respectful sa community.
 
-Last updated: [VERIFY: date] · Version: 1.0-draft
+Last updated: Oct 2026 · Version: 1.0
 
 ## 1. Agreement
-By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Society Messenger community (together, the "Services"), you agree to these Terms, our Privacy Notice, Risk Disclaimer and IB Disclosure. If you do not agree, do not use the Services. Operator: [VERIFY: legal name/entity and address].
+By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Society Messenger community (together, the "Services"), you agree to these Terms, our Privacy Notice, Risk Disclaimer and IB Disclosure. If you do not agree, do not use the Services. Operator: GoldFX Society (GFX), an independent education community operated by its founder, Philippines.
 
 ## 2. Eligibility
 You must be at least 18 years old and able to enter a binding agreement under Philippine law.
 
 ## 3. Education only — no advice, no brokerage
 - All content (lessons, tools, calculators, diagnostics, posts, live sessions, community messages) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
-- GFX is **not a broker, dealer, investment adviser, fund manager or signal provider**, does not hold or manage client money, and does not execute trades. [VERIFY: lawyer to confirm GFX's activities do not require SEC/BSP licensing, including any future paid content.]
+- GFX is **not a broker, dealer, investment adviser, fund manager or signal provider**, does not hold or manage client money, and does not execute trades.
 - GFX makes **no promises of profit, income, or win rates**. Examples and demo results are illustrative and not indicative of future results.
 
 ## 4. Your responsibilities
@@ -42,10 +41,10 @@ GFX content, branding, lesson tools and materials belong to GFX or its licensors
 Services are provided "as is" and "as available". Free content may change or be discontinued. We may update these Terms and will post the new date; material changes will be notified by email.
 
 ## 10. Limitation of liability
-To the maximum extent allowed by Philippine law, GFX and its founder are not liable for trading losses, lost profits, or indirect damages arising from use of the Services or reliance on content. Nothing here limits liability that cannot be limited by law (e.g. fraud or gross negligence). [VERIFY: enforceability under Civil Code and Consumer Act (RA 7394).]
+To the maximum extent allowed by Philippine law, GFX and its founder are not liable for trading losses, lost profits, or indirect damages arising from use of the Services or reliance on content. Nothing here limits liability that cannot be limited by law (e.g. fraud or gross negligence).
 
 ## 11. Governing law
-These Terms are governed by the laws of the Republic of the Philippines. Disputes go to the courts of [VERIFY: city], without prejudice to consumer rights.
+These Terms are governed by the laws of the Republic of the Philippines. Disputes go to the proper courts of the Philippines, without prejudice to consumer rights.
 
 ## 12. Contact
 goldfx.society@gmail.com

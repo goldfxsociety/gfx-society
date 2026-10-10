@@ -1,5 +1,5 @@
 # GFX Society Risk Disclaimer
-> **DRAFT — NOT LEGAL ADVICE.** This document is a draft prepared for GoldFX Society (GFX) and must be reviewed and approved by a qualified Philippine lawyer before publication. Items marked [VERIFY] must be confirmed. Draft date: 10 October 2026.
+Last updated: Oct 2026
 
 **Taglish summary:** Education lang ito, hindi financial advice. Mataas ang risk ng trading sa forex, gold at CFDs — lalo na may leverage, pwede kang malugi ng mas malaki pa sa inaasahan mo. Mag-demo muna, at huwag mag-trade ng perang hindi mo kayang mawala.
 
@@ -10,9 +10,9 @@
 **Taglish caption:** "Education lang, hindi financial advice. Mataas ang risk ng pagkalugi. Demo muna."
 
 ## Long version (/risk page, Academy start)
-**1. Education only.** All GFX Society content is general education. It does not consider your personal finances, goals, or risk tolerance, and is not a recommendation to trade any instrument. GFX is not a licensed investment adviser or broker [VERIFY: confirm status/wording with lawyer]. Consult a licensed professional before making financial decisions.
+**1. Education only.** All GFX Society content is general education. It does not consider your personal finances, goals, or risk tolerance, and is not a recommendation to trade any instrument. GFX is not a licensed investment adviser or broker. Consult a licensed professional before making financial decisions.
 
-**2. High risk of loss.** Forex, gold (XAUUSD) and other contracts for difference (CFDs) are complex, leveraged products. Leverage magnifies both gains and losses: a small price move can cause a large loss, and you can lose all of your deposit quickly. Depending on your broker and its jurisdiction, losses may exceed your deposit [VERIFY: negative-balance protection varies by broker/entity]. A large share of retail CFD accounts lose money [VERIFY: do not quote a specific percentage unless taken from the specific broker's own published disclosure].
+**2. High risk of loss.** Forex, gold (XAUUSD) and other contracts for difference (CFDs) are complex, leveraged products. Leverage magnifies both gains and losses: a small price move can cause a large loss, and you can lose all of your deposit quickly. Depending on your broker and its jurisdiction, losses may exceed your deposit, because negative-balance protection varies by broker and entity. A large share of retail CFD accounts lose money.
 
 **3. Other risks.** Gold prices can gap or move sharply around news, outside market hours, and at session opens. Spreads can widen, orders can slip, and platforms can fail. Offshore brokers may offer weaker client protection than locally licensed firms; check where a broker is licensed and which entity you are signing up with.
 

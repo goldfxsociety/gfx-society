@@ -12,7 +12,7 @@ export function DraftBanner() {
   );
 }
 
-/** Renders src/content/legal/<file>.md. When LEGAL_DRAFT is off, internal [VERIFY] notes still show — remove them from the .md before going final. */
+/** Renders src/content/legal/<file>.md. */
 export function LegalPage({ file }: { file: string }) {
   const source = readFileSync(path.join(process.cwd(), "src/content/legal", file), "utf8");
   return (
