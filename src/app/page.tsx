@@ -5,12 +5,13 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "cn";
 import { FIRST_LESSON_PATH, MESSENGER_COMMUNITY_URL } from "@/config/academy";
 
+function academyBody(lessons: number | null, levels: number | null) {
+  const size =
+    lessons && levels ? `${lessons} short lessons, ${levels} levels` : "Short lessons, step by step";
+  return `${size} — from \u201cwhat is the market?\u201d to building your own trading plan. Walang bayad.`;
+}
+
 const OFFERS = [
-  {
-    icon: "🎓",
-    title: "Free GFX Academy",
-    body: "32 short lessons, 6 levels — from \u201cwhat is the market?\u201d to building your own trading plan. Walang bayad.",
-  },
   {
     icon: "🧮",
     title: "Hands-on tools",
@@ -43,6 +44,31 @@ export default async function Home() {
       .single();
     profileName = profile?.display_name ?? null;
   }
+
+  // Published counts only; on any error fall back to copy without numbers.
+  let lessonCount: number | null = null;
+  let levelCount: number | null = null;
+  try {
+    const [lessonsRes, levelsRes] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("id, levels!inner(is_published)", { count: "exact", head: true })
+        .eq("is_published", true)
+        .eq("levels.is_published", true),
+      supabase
+        .from("levels")
+        .select("id", { count: "exact", head: true })
+        .eq("is_published", true),
+    ]);
+    if (!lessonsRes.error) lessonCount = lessonsRes.count ?? null;
+    if (!levelsRes.error) levelCount = levelsRes.count ?? null;
+  } catch {
+    // fallback copy
+  }
+  const offers = [
+    { icon: "🎓", title: "Free GFX Academy", body: academyBody(lessonCount, levelCount) },
+    ...OFFERS,
+  ];
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
@@ -85,7 +111,7 @@ export default async function Home() {
           What you get
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          {OFFERS.map((o) => (
+          {offers.map((o) => (
             <div key={o.title} className="rounded-lg border border-border bg-card p-4">
               <p className="text-sm font-semibold">
                 <span aria-hidden="true">{o.icon}</span> {o.title}
