@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLessonSequence } from "@/lib/academy/lesson-sequence";
 import { LessonNav } from "@/components/academy/lesson-nav";
+import { LessonProgressBar } from "@/components/academy/lesson-progress-bar";
 import { RiskFooter } from "@/components/academy/risk-footer";
 import { SaveProgressPrompt } from "@/components/academy/save-progress-prompt";
 import { LessonContent } from "@/lib/academy/markdownish";
@@ -205,7 +206,6 @@ export default async function LessonPage({
   // "Lesson N of M" within the current level (UX audit #5).
   const levelLessons = sequence.filter((l) => l.levelSlug === level.slug);
   const posInLevel = levelLessons.findIndex((l) => l.slug === lessonSlug) + 1;
-  const pct = levelLessons.length ? Math.round((posInLevel / levelLessons.length) * 100) : 0;
 
   return (
     <div className="touch-targets mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -224,16 +224,7 @@ export default async function LessonPage({
               Lesson {posInLevel} of {levelLessons.length} · {level.title}
               {lesson.estimated_minutes ? ` · ~${lesson.estimated_minutes} min` : ""}
             </p>
-            <div
-              role="progressbar"
-              aria-label={`Lesson ${posInLevel} of ${levelLessons.length}`}
-              aria-valuemin={0}
-              aria-valuemax={levelLessons.length}
-              aria-valuenow={posInLevel}
-              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-            >
-              <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-            </div>
+            <LessonProgressBar pos={posInLevel} total={levelLessons.length} />
           </>
         )}
       </div>

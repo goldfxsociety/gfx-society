@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -29,19 +30,19 @@ export default async function DiagnosticIntroPage() {
         <p className="text-sm text-muted-foreground">
           Brand new to trading? You don&apos;t need it — start with Lesson 1, no signup needed.
         </p>
-        <Link href="/start" className={buttonVariants({ variant: "default" })}>
+        <Link href="/start" className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}>
           Start here (no signup)
         </Link>
-        <p className="text-xs text-muted-foreground">Already have an account? Log in to save your results.</p>
-        <div className="flex gap-3">
-          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+        <p className="text-sm text-muted-foreground">Already have an account? Log in to save your results.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "h-11")}>
             Log in
           </Link>
-          <Link href="/signup" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/signup" className={cn(buttonVariants({ variant: "outline" }), "h-11")}>
             Sign up
           </Link>
         </div>
-        <Link href="/academy" className="text-sm text-muted-foreground underline">
+        <Link href="/academy" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline">
           Or go straight to the Academy
         </Link>
       </div>
