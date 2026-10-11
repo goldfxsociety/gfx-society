@@ -19,7 +19,11 @@ GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the 
 | Experience level | "Never traded", "Demo only", "Trading live" | You, at signup |
 | Learning data | Lesson progress, quiz and diagnostic answers, competency results, demo journal entries you submit | Your use of the Academy |
 | Consent records | Which boxes you ticked, consent text version, date/time, and a one-way hash of your email (so the record can be matched to you without storing the email itself) | Automatically, at signup |
-| Usage and analytics | Pages visited, events (e.g. lesson started), referral/UTM campaign tags, device and browser type, approximate location (country/city) | Automatically, via first-party analytics (Vercel Web Analytics, which is cookieless) |
+| Usage and analytics | Pages visited, custom events (e.g. button clicks on the Gold Starter page), referral/UTM campaign tags, device and browser type, country | Automatically, via Vercel Web Analytics (cookieless; see "Website analytics" below) |
+| Learning activity events (logged-in users only) | Quiz started/passed/failed, diagnostic started, "continue learning" clicks | Automatically, stored with your learning data in our database |
+
+### Website analytics
+We use **Vercel Web Analytics** (provided by Vercel Inc., our hosting provider, acting as our processor). It is cookieless: it does not set cookies or use device fingerprinting to track you, and it does not track you across other websites. It gives us **aggregate** reports of page views and of custom events (for example, button clicks on the Gold Starter page). We do not send your name, email, account ID or other personal data in these events. When you arrive through a link with UTM campaign parameters (e.g. utm_source, utm_campaign), we read those parameters, and keep them in your browser's session storage for that visit, so we can measure which links bring visitors. Vercel may process this data outside the Philippines (see Sections 5 and 6). Purpose: to understand, in aggregate, which pages and links work so we can improve the site. Legal basis: our legitimate interests (Sec. 12(f), RA 10173).
 
 We do **not** ask for your phone number, ID, bank details, broker account numbers or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
 
@@ -45,7 +49,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Provider | Purpose | Location |
 |---|---|---|
 | Supabase | Database and authentication | Singapore (ap-southeast-1) |
-| Vercel | Website hosting and cookieless analytics | United States and other regions |
+| Vercel Inc. | Website hosting and cookieless analytics (Vercel Web Analytics) | United States and other regions |
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
 | Meta (Messenger) | Community, only if you choose to join | Global |
 
@@ -63,7 +67,7 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Email list data | Until you unsubscribe or withdraw consent; then suppression record (email only) kept to honour the opt-out |
 | Inactive accounts | Deleted after 24 months of no activity, after a reminder email |
 | Consent records | For the duration of the relationship plus 3 years as evidence of consent. If you delete your account, the consent record is kept for those 3 years, linked only by the email hash |
-| Analytics | Aggregated/anonymised; raw event data kept up to 13 months |
+| Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 
 ## 8. How we protect it
 Access controls (row-level security on every database table), encrypted connections (HTTPS), hashed passwords handled by our authentication provider, and limited access to admin tools. No system is 100% secure. If a breach likely to cause you serious harm occurs, we will notify you and the NPC as required (within 72 hours of becoming aware of it, under the applicable NPC rules).
