@@ -34,7 +34,7 @@ const STEPS = [
   {
     n: 3,
     title: "Open a free DEMO account and practise",
-    body: "Demo uses virtual money on real prices. Follow the GFX rules: max 1% risk per trade, stop-loss on every trade.",
+    body: "Demo uses virtual money on real prices. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
     href: "/academy/elementary/demo-account-your-practice-ground",
     cta: "Read: Demo Account lesson",
   },

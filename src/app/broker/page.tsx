@@ -41,8 +41,9 @@ export default function BrokerPage() {
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
         <p className="font-semibold">Demo first. Risk warning.</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Start on a free demo account and follow your plan: max 1% risk per
-          trade, stop-loss on every trade. Trading forex, gold and CFDs with
+          Start on demo, then optionally a cents account with small money you
+          can afford to lose; max 1% risk per trade, stop-loss on every trade.
+          Trading forex, gold and CFDs with
           leverage carries a high risk of losing money and is not suitable for
           everyone. Education only, not financial advice. Only trade with money
           you can afford to lose.

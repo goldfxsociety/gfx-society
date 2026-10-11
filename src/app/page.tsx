@@ -20,7 +20,7 @@ const OFFERS = [
   {
     icon: "🛡️",
     title: "Risk-first, demo-first",
-    body: "We teach 1% max risk per trade and a stop-loss on every trade. Practise on demo before any real money.",
+    body: "We teach 1% max risk per trade and a stop-loss on every trade. Practise on demo first; a cents account with small money is an optional next step.",
   },
   {
     icon: "💬",
@@ -142,8 +142,9 @@ export default async function Home() {
         className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-relaxed"
       >
         <p>
-          <strong>Demo first.</strong> Practise on a free demo account. Max 1%
-          risk per trade, stop-loss on every trade.
+          <strong>Demo first.</strong> Start on demo, then optionally a cents
+          account with small money you can afford to lose; max 1% risk per
+          trade, stop-loss on every trade.
         </p>
         <p className="mt-1 text-muted-foreground">
           Education only, not financial advice. Trading gold, forex and CFDs
