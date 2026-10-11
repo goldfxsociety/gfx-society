@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { getLessonMinutes } from "@/lib/academy/lesson-minutes";
 import { FIRST_LESSON_PATH, MESSENGER_COMMUNITY_URL } from "@/config/academy";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 const STEPS = [
   {
     n: 1,
-    title: "Do Lesson 1 (3 minutes)",
+    title: "Do Lesson 1",
     body: "What is the financial market, and where does gold fit in? No account needed.",
     href: FIRST_LESSON_PATH,
     cta: "Start Lesson 1 →",
@@ -48,7 +49,10 @@ const STEPS = [
   },
 ];
 
-export default function StartPage() {
+export const revalidate = 3600;
+
+export default async function StartPage() {
+  const l1Minutes = await getLessonMinutes(FIRST_LESSON_PATH.split("/").pop()!);
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
@@ -66,6 +70,7 @@ export default function StartPage() {
           <li key={s.n} className="rounded-lg border border-border bg-card p-4">
             <p className="text-sm font-semibold">
               {s.n}. {s.title}
+              {s.n === 1 && l1Minutes ? ` (~${l1Minutes} min)` : ""}
             </p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">{s.body}</p>
             {s.external ? (

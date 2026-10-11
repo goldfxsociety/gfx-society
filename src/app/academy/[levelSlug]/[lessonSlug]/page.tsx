@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getLessonSequence } from "@/lib/academy/lesson-sequence";
 import { LessonNav } from "@/components/academy/lesson-nav";
 import { RiskFooter } from "@/components/academy/risk-footer";
+import { SaveProgressPrompt } from "@/components/academy/save-progress-prompt";
+import { LessonContent } from "@/lib/academy/markdownish";
 import { Lesson1MessengerCta } from "@/components/funnel/lesson1-messenger-cta";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { buttonVariants } from "@/components/ui/button";
@@ -93,7 +95,7 @@ export default async function LessonPage({
   const { data: lesson } = await supabase
     .from("lessons")
     .select(
-      "id, title, learning_objective, content, key_takeaways, lesson_type, interactive_config, passing_score, prerequisite_lesson_id",
+      "id, title, learning_objective, content, key_takeaways, lesson_type, interactive_config, passing_score, prerequisite_lesson_id, estimated_minutes",
     )
     .eq("level_id", level.id)
     .eq("slug", lessonSlug)
@@ -200,17 +202,41 @@ export default async function LessonPage({
   const prevLesson = idx > 0 ? sequence[idx - 1] : null;
   const nextLesson = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : null;
   const isLastInLevel = !nextLesson || nextLesson.levelSlug !== level.slug;
+  // "Lesson N of M" within the current level (UX audit #5).
+  const levelLessons = sequence.filter((l) => l.levelSlug === level.slug);
+  const posInLevel = levelLessons.findIndex((l) => l.slug === lessonSlug) + 1;
+  const pct = levelLessons.length ? Math.round((posInLevel / levelLessons.length) * 100) : 0;
 
   return (
     <div className="touch-targets mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <Link
         href={`/academy/${level.slug}`}
-        className="text-sm text-muted-foreground underline"
+        className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline"
       >
         ← Back to {level.title}
       </Link>
 
-      <h1 className="text-2xl font-bold tracking-tight">{lesson.title}</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">{lesson.title}</h1>
+        {posInLevel > 0 && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Lesson {posInLevel} of {levelLessons.length} · {level.title}
+              {lesson.estimated_minutes ? ` · ~${lesson.estimated_minutes} min` : ""}
+            </p>
+            <div
+              role="progressbar"
+              aria-label={`Lesson ${posInLevel} of ${levelLessons.length}`}
+              aria-valuemin={0}
+              aria-valuemax={levelLessons.length}
+              aria-valuenow={posInLevel}
+              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+            >
+              <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+            </div>
+          </>
+        )}
+      </div>
 
       {prerequisite && !prerequisite.completed && (
         <p className="text-xs text-muted-foreground">
@@ -232,9 +258,7 @@ export default async function LessonPage({
         </div>
       )}
 
-      <div className="whitespace-pre-line text-sm leading-7 text-foreground/90">
-        {lesson.content}
-      </div>
+      <LessonContent content={lesson.content ?? ""} />
 
       {isCandlestickPlot && candlestickConfig?.showAnatomyDiagram && (
         <CandlestickAnatomyDiagram />
@@ -299,14 +323,7 @@ export default async function LessonPage({
               passingScore={lesson.passing_score}
             />
           )}
-          {!user && (
-            <p className="text-sm text-muted-foreground">
-              <Link href="/login" className="underline">
-                Log in
-              </Link>{" "}
-              to save your quiz result.
-            </p>
-          )}
+          {!user && <SaveProgressPrompt />}
           {/* Only renders once the attempt has passed and lesson_progress is
               set — a failed attempt leaves completedAt null, so this never
               appears alongside (or instead of) the quiz's own Try Again
@@ -328,14 +345,7 @@ export default async function LessonPage({
         </>
       ) : (
         <>
-          {!user && (
-            <p className="text-sm text-muted-foreground">
-              <Link href="/login" className="underline">
-                Log in
-              </Link>{" "}
-              to save your progress on this lesson.
-            </p>
-          )}
+          {!user && <SaveProgressPrompt />}
           {user && !completedAt && <MarkCompleteButton lessonId={lesson.id} />}
           {user && completedAt && (
             <div className="flex flex-col gap-2">
@@ -364,6 +374,7 @@ export default async function LessonPage({
         currentLevelTitle={level.title}
         nextLevelTitle={isLastInLevel && nextLesson ? nextLesson.levelTitle : null}
         isLastInLevel={isLastInLevel}
+        nextIsPrimary={!isLesson1}
       />
       {!isLesson1 && <RiskFooter />}
     </div>

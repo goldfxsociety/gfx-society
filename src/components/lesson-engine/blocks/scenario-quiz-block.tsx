@@ -121,7 +121,7 @@ export function ScenarioQuizBlock({
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Log in to save this result to your account.
+            Gumawa ng free account para ma-save ang result mo (see below).
           </p>
         )}
 
