@@ -4,12 +4,12 @@ Last updated: Oct 2026
 **Taglish summary:** Ang founder ng GFX ay IB affiliate ng ACCM. Kapag nag-open ka ng account o nag-trade gamit ang link namin, pwedeng makatanggap ang GFX ng commission o rebate mula sa broker. Hindi ka obligado — pwede kang mag-trade sa kahit anong broker, o huwag mag-trade at all. Libre pa rin ang Academy.
 
 ## Short disclosure (next to every broker link or button)
-> **Disclosure:** GFX may earn a commission or rebate from partner brokers when you open an account or trade through our links. You can use any broker you choose. Education only, not financial advice.
+> **Disclosure:** GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose. Education only, not financial advice.
 
 ## Full disclosure
 **1. Our relationship.** GoldFX Society (GFX) is an independent education community operated by its founder. The founder is an Introducing Broker (IB) affiliate of ACCM, our current partner broker. GFX is not a broker and does not hold client funds, execute trades, or manage accounts.
 
-**2. How we get paid.** GFX may earn a commission or rebate from partner brokers when you open an account or trade through our links. The amount usually depends on how much you trade. This means GFX benefits financially when referred members trade more — which is why we teach demo first, a maximum of 1% risk per trade, and never encourage over-trading.
+**2. How we get paid.** GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose. The amount usually depends on how much you trade. This means GFX benefits financially when referred members trade more — which is why we teach demo first, a maximum of 1% risk per trade, and never encourage over-trading.
 
 **3. Costs.** Spreads, commissions and fees are set by the broker and vary by account type and market conditions. Check the broker's current pricing before you open an account.
 

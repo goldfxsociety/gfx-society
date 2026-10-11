@@ -25,7 +25,7 @@ export type Partner = {
 
 /** Approved neutral disclosure wording (same as the /broker hotfix, PR #12). */
 export const IB_DISCLOSURE_TEXT =
-  "GFX may earn a commission or rebate from partner brokers when you open an account or trade through our links. You can use any broker you choose.";
+  "GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose.";
 
 export const NEUTRAL_LICENSING_TEXT =
   "Check the broker's licensing for your country before opening an account.";
