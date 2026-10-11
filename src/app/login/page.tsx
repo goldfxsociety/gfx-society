@@ -80,6 +80,8 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
+                inputMode="email"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -91,19 +93,20 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
+                autoComplete="current-password"
               />
             </div>
             <Suspense fallback={null}>
               <CallbackError />
             </Suspense>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={loading}>
+            {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+            <Button type="submit" disabled={loading} className="h-12 w-full text-base">
               {loading ? "Logging in..." : "Log in"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="underline">
+            <Link href="/signup" className="inline-flex min-h-11 items-center underline">
               Sign up
             </Link>
           </p>
