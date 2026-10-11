@@ -125,20 +125,29 @@ export function ScenarioQuizBlock({
           </p>
         )}
 
-        {!passed && missed.length > 0 && (
+        {missed.length > 0 && (
           <div className="flex flex-col gap-2 rounded-md bg-muted p-3 text-left text-sm">
-            <p className="font-semibold">Review these before retrying:</p>
+            <p className="font-semibold">
+              {passed ? "Balikan ang na-miss mo:" : "Review muna ang mga ito bago mag-try ulit:"}
+            </p>
             {missed.map((m, i) => (
-              <p key={i} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{m.question}</span> — {m.explanation}
+              <p key={i} className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{m.question}</span>
+                {typeof m.correctIndex === "number" && m.options?.[m.correctIndex] && (
+                  <>
+                    {" "}
+                    <span className="text-emerald-400">Correct answer: {m.options[m.correctIndex]}.</span>
+                  </>
+                )}{" "}
+                {m.explanation}
               </p>
             ))}
           </div>
         )}
 
-        {!passed && (
-          <Button onClick={handleRetry} className="self-center">
-            Try Again
+        {(!passed || missed.length > 0) && (
+          <Button onClick={handleRetry} variant={passed ? "outline" : "default"} className="h-11 self-center">
+            Try again
           </Button>
         )}
       </div>
