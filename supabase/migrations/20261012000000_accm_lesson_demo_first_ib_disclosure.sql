@@ -7,14 +7,14 @@
 -- No quiz on this lesson (interactive_config is null): no correct_index impact.
 --
 -- Guarded + idempotent: updates only while content has today's live md5
--- b1aba773c9d9fa07df2147e622441953; after apply md5 = 8efeefd190a9c4ae11d15687c52c7094, so re-runs are no-ops.
+-- b1aba773c9d9fa07df2147e622441953; after apply md5 = 1f78b080f3a8293359c2a7a06278e54a, so re-runs are no-ops.
 -- NOT APPLIED. Sorts after every recorded version (latest 20261011130426) and
 -- after all repo migration files.
 
 update public.lessons
 set content = $gfx$This lesson shows the general steps to get started with ACCM, the broker used in the Academy's examples. You can use any broker you choose, or not trade at all.
 
-Disclosure: GFX's founder is an Introducing Broker (IB) for ACCM. If you open an ACCM account through our link or code bqqaoy, ACCM may pay us a commission or rebate, which under ACCM's IB program is usually based on trading volume. That means we earn more when referred clients trade more. That's why we teach demo first, max 1% risk, and never push over-trading. You don't have to use our link or any broker. The Academy is free. The ACCM link opens a live cents account registration (real money; check the current minimum deposit and funding methods on ACCM's site); free demos are opened in the MT5 app. Check the broker's licensing for your country before opening an account. Trading involves real risk of loss. Education only, not financial advice.
+Disclosure: GFX's founder is an Introducing Broker (IB) for ACCM. If you open an ACCM account through our link or code bqqaoy, ACCM may pay us a commission or rebate, which under ACCM's IB program is usually based on trading volume. That means we earn more when referred clients trade more. That's why we teach demo first, max 1% risk, and never push over-trading. You don't have to use our link or any broker. The Academy is free. The ACCM link opens a live cents account registration (real money). Minimum deposit: $50 (as of Oct 2026), via GCash, Maya, or other e-wallets; check ACCM's site for current terms. Free demos are opened in the MT5 app. Check the broker's licensing for your country before opening an account. Trading involves real risk of loss. Education only, not financial advice.
 
 Steps to get started:
 1. Create a free DEMO account in the MT5 app first. No ACCM registration is needed: install MT5, open the menu, choose to open a new account, search for your broker's demo server, and fill in the short demo form. Practise there for several weeks (1% max risk, stop-loss on every trade).

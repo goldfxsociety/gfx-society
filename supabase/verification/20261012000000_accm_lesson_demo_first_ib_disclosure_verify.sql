@@ -1,5 +1,5 @@
 -- Verify 20261012000000_accm_lesson_demo_first_ib_disclosure.sql (read-only). Expect every column true.
-select md5(content) = '8efeefd190a9c4ae11d15687c52c7094'                                     as content_matches_expected,
+select md5(content) = '1f78b080f3a8293359c2a7a06278e54a'                                     as content_matches_expected,
        content not ilike '%extra cost%'                          as no_extra_cost_claim,
        position('1. Create a free DEMO account in the MT5 app' in content) > 0
          and position('2. Check the broker''s licence' in content) > position('1. Create a free DEMO' in content)
@@ -9,6 +9,7 @@ select md5(content) = '8efeefd190a9c4ae11d15687c52c7094'                        
        content not ilike '%VFSC%' and content not ilike '%SEC%'  as no_unverified_regulator_claim,
        jsonb_array_length(key_takeaways) = 3                     as takeaways_3,
        interactive_config is null                                as still_no_quiz,
+       content ilike '%Minimum deposit: $50 (as of Oct 2026), via GCash, Maya, or other e-wallets; check ACCM''s site for current terms%' as deposit_line_present,
        is_published                                              as still_published
 from public.lessons where slug = 'opening-your-accm-account';
 
