@@ -23,9 +23,13 @@ export type Partner = {
   featured?: boolean;
 };
 
-/** Approved neutral disclosure wording (same as the /broker hotfix, PR #12). */
+/**
+ * Site-wide IB disclosure (compliance-baseline.md draft, 12 Oct 2026). Unverified
+ * items from the draft (ACCM entity/regulator, PH SEC status, exact minimum
+ * deposit) are deliberately left out. Never add a "no extra cost" claim (unverified).
+ */
 export const IB_DISCLOSURE_TEXT =
-  "GFX may earn a commission or rebate from partner brokers when you open an account or trade through our links. You can use any broker you choose.";
+  "GFX's founder is an Introducing Broker (IB) for ACCM. If you open an ACCM account through our link or code bqqaoy, ACCM may pay us a commission or rebate, which under ACCM's IB program is usually based on trading volume. That means we earn more when referred clients trade more. That's why we teach demo first, max 1% risk, and never push over-trading. You don't have to use our link or any broker. The Academy is free. The ACCM link opens a live cents account registration (real money; check the current minimum deposit and funding methods on ACCM's site); free demos are opened in the MT5 app. Check the broker's licensing for your country before opening an account. Trading involves real risk of loss.";
 
 export const NEUTRAL_LICENSING_TEXT =
   "Check the broker's licensing for your country before opening an account.";

@@ -53,7 +53,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
 | Meta (Messenger) | Community, only if you choose to join | Global |
 
-**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy; the broker may tell us that an account was opened via our link for rebate purposes. This report may include an account or client ID and trading volume.
+**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. **Data we receive from ACCM:** if you open an ACCM account through our IB link or code, ACCM's client agreement (section 11) provides that your personal information and trading activity are disclosed to the Introducing Broker (GFX's founder). We use this only to calculate and reconcile IB commissions/rebates, and we keep it under this notice; we do not use it to contact you about trading or to give you trade advice.
 
 We do not sell your personal data. We may disclose data if required by law, court order, or a government authority.
 
