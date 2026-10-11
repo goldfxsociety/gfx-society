@@ -89,7 +89,7 @@ export function DiagnosticFlow({
           Question {index + 1} of {questions.length}
         </p>
         {index === initialIndex && initialIndex > 0 && (
-          <p className="text-sm text-primary">Welcome back! Itinuloy natin kung saan ka tumigil.</p>
+          <p className="text-sm text-primary">Welcome back! Tuloy tayo kung saan ka tumigil.</p>
         )}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
@@ -108,7 +108,7 @@ export function DiagnosticFlow({
 
         <p className="text-base font-medium">{question.question}</p>
         <p className="text-sm text-muted-foreground">
-          Walang penalty kung hindi mo alam. Piliin ang best guess mo, o i-Skip.
+          No penalty kung hindi mo alam. Piliin ang best guess mo, o i-Skip.
         </p>
 
         <div className="flex flex-col gap-2">
@@ -144,9 +144,11 @@ export function DiagnosticFlow({
           </Button>
         </div>
       </div>
+      {(index === 0 || index === initialIndex) && (
       <p className="text-center text-sm text-muted-foreground">
         Naka-save ang bawat sagot. Pwede kang tumigil at ituloy later.
       </p>
+      )}
     </div>
   );
 }
