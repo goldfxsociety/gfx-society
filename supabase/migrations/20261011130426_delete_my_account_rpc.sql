@@ -13,7 +13,7 @@
 --
 -- Idempotent (create or replace + explicit grants). Sorts after every recorded
 -- version (latest 20261011120129) and after the pending lesson files
--- (20261011190000-20261011190300). NOT APPLIED.
+-- (20261011190000-20261011190300). APPLIED to prod 2026-10-11 as version 20261011130426 (file renamed to match).
 
 create or replace function public.delete_my_account()
 returns void

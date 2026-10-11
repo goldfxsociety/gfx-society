@@ -1,4 +1,4 @@
--- Verify 20261011200000_delete_my_account_rpc.sql (read-only).
+-- Verify 20261011130426_delete_my_account_rpc.sql (applied to prod 2026-10-11 as version 20261011130426) (read-only).
 
 -- 1) Function shape: SECURITY DEFINER, pinned search_path, owner postgres, no args. Expect 1 row, all true.
 select p.prosecdef                                   as security_definer,
