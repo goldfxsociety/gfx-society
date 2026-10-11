@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AccmLink } from "@/components/partners/accm-link";
+import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
 import { IbDisclosureFull, IbDisclosureShort } from "@/components/compliance/ib-disclosure";
@@ -53,14 +55,18 @@ export default function BrokerPage() {
       <IbDisclosureShort />
 
       {featured && (
-        <a
-          href={(featured.demoUrl ?? featured.liveUrl)!}
-          target="_blank"
-          rel="sponsored noopener noreferrer"
-          className={buttonVariants({ variant: "default" })}
-        >
-          Open Free Demo Account →
-        </a>
+        <div className="flex flex-col gap-2">
+          <AccmLink
+            href={featured.liveUrl!}
+            className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}
+          >
+            Open ACCM Cents Account →
+          </AccmLink>
+          <p className="text-sm text-muted-foreground">Real money, start small — max 1% risk per trade.</p>
+          <p className="text-sm text-muted-foreground">
+            Demo accounts are opened inside the MT5 app, not on the ACCM website.
+          </p>
+        </div>
       )}
 
       <IbDisclosureFull />
