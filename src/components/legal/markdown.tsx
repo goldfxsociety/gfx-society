@@ -41,6 +41,9 @@ export function Markdown({ source }: { source: string }) {
     if (line.startsWith("# ")) {
       blocks.push(<h1 key={k++} className="text-2xl font-bold tracking-tight">{line.slice(2)}</h1>);
       i++;
+    } else if (line.startsWith("### ")) {
+      blocks.push(<h3 key={k++} className="mt-3 font-semibold">{line.slice(4)}</h3>);
+      i++;
     } else if (line.startsWith("## ")) {
       blocks.push(<h2 key={k++} className="mt-4 text-lg font-semibold">{line.slice(3)}</h2>);
       i++;
@@ -67,6 +70,7 @@ export function Markdown({ source }: { source: string }) {
     } else {
       const buf: string[] = [];
       while (i < lines.length && lines[i].trim() && !/^(#|>|\||\s*[-*] )/.test(lines[i])) buf.push(lines[i++]);
+      if (buf.length === 0) buf.push(lines[i++]); // unrecognised line: render as text, never stall
       blocks.push(<p key={k++}>{inline(buf.join(" "))}</p>);
     }
   }
