@@ -51,10 +51,24 @@ export default async function DiagnosticIntroPage() {
 
   const { data: previousSession } = await supabase
     .from("diagnostic_sessions")
-    .select("id")
+    .select("id, status")
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const { count: questionCount } = await supabase
+    .from("diagnostic_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("is_published", true);
+  const inProgress = !!previousSession && previousSession.status !== "completed";
+  let answeredCount = 0;
+  if (inProgress) {
+    const { count } = await supabase
+      .from("diagnostic_answers")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", previousSession!.id);
+    answeredCount = count ?? 0;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -71,11 +85,28 @@ export default async function DiagnosticIntroPage() {
         <p>There&apos;s no penalty for not knowing something.</p>
         <p>It just helps us figure out where to start you.</p>
         <p>The Academy is fully open either way.</p>
+        <p className="text-muted-foreground">
+          ⏱ {questionCount ?? 30} questions · ~{Math.max(1, Math.round((questionCount ?? 30) * 0.27))}–
+          {Math.max(2, Math.ceil((questionCount ?? 30) / 3))} min. Naka-save ang bawat sagot, kaya pwede kang
+          tumigil at ituloy later.
+        </p>
       </div>
 
-      <StartDiagnosticButton previousSessionId={previousSession?.id ?? undefined} />
+      {inProgress && (
+        <Link
+          href={`/diagnostic/${previousSession!.id}`}
+          className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}
+        >
+          Ituloy ang Diagnostic ({answeredCount} of {questionCount ?? 30} done) →
+        </Link>
+      )}
 
-      <Link href="/academy" className="text-sm text-muted-foreground underline">
+      <StartDiagnosticButton
+        previousSessionId={previousSession?.id ?? undefined}
+        secondary={inProgress}
+      />
+
+      <Link href="/academy" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">
         Skip — go straight to the Academy
       </Link>
     </div>

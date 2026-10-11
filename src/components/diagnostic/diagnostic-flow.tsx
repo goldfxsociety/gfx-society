@@ -13,13 +13,18 @@ import { optionOrder } from "@/lib/diagnostic/option-order";
 export function DiagnosticFlow({
   sessionId,
   questions,
+  initialIndex = 0,
+  initialSelected = {},
 }: {
   sessionId: string;
   questions: DiagnosticQuestionPublic[];
+  /** Resume point: first unanswered question (answers are saved server-side per question). */
+  initialIndex?: number;
+  initialSelected?: Record<string, number>;
 }) {
   const router = useRouter();
-  const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<Record<string, number>>({});
+  const [index, setIndex] = useState(Math.min(initialIndex, questions.length - 1));
+  const [selected, setSelected] = useState<Record<string, number>>(initialSelected);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +88,9 @@ export function DiagnosticFlow({
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Question {index + 1} of {questions.length}
         </p>
+        {index === initialIndex && initialIndex > 0 && (
+          <p className="text-sm text-primary">Welcome back! Tuloy tayo kung saan ka tumigil.</p>
+        )}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-all"
@@ -99,6 +107,9 @@ export function DiagnosticFlow({
         )}
 
         <p className="text-base font-medium">{question.question}</p>
+        <p className="text-sm text-muted-foreground">
+          No penalty kung hindi mo alam. Piliin ang best guess mo, o i-Skip.
+        </p>
 
         <div className="flex flex-col gap-2">
           {order.map((i) => (
@@ -108,7 +119,7 @@ export function DiagnosticFlow({
               onClick={() => setSelected((s) => ({ ...s, [question.id]: i }))}
               disabled={submitting}
               className={cn(
-                "rounded-md border px-4 py-2 text-left text-sm transition-colors hover:border-primary",
+                "min-h-12 rounded-md border px-4 py-2 text-left text-base transition-colors hover:border-primary",
                 chosen === i ? "border-primary bg-primary/10" : "border-border",
               )}
             >
@@ -118,21 +129,26 @@ export function DiagnosticFlow({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
 
       <div className="flex items-center justify-between gap-2">
-        <Button variant="outline" onClick={handleBack} disabled={index === 0 || submitting}>
+        <Button variant="outline" onClick={handleBack} disabled={index === 0 || submitting} className="h-11">
           Back
         </Button>
         <div className="flex gap-2">
-          <Button variant="ghost" onClick={handleSkip} disabled={submitting}>
+          <Button variant="ghost" onClick={handleSkip} disabled={submitting} className="h-11">
             Skip
           </Button>
-          <Button onClick={handleContinue} disabled={submitting}>
+          <Button onClick={handleContinue} disabled={submitting} className="h-11 px-4">
             {submitting ? "Saving..." : isLast ? "See results" : "Continue"}
           </Button>
         </div>
       </div>
+      {(index === 0 || index === initialIndex) && (
+      <p className="text-center text-sm text-muted-foreground">
+        Naka-save ang bawat sagot. Pwede kang tumigil at ituloy later.
+      </p>
+      )}
     </div>
   );
 }
