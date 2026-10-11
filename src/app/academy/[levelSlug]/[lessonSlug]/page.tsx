@@ -325,11 +325,8 @@ export default async function LessonPage({
               <p className="text-sm font-medium text-emerald-600">
                 ✓ Completed on {new Date(completedAt).toLocaleDateString()}
               </p>
-              <Link
-                href="/learning"
-                className={cn(buttonVariants({ variant: "default" }), "self-start")}
-              >
-                Continue to My Learning Path
+              <Link href="/learning" className="inline-flex min-h-11 items-center self-start text-sm underline">
+                Continue to My Learning Path →
               </Link>
             </div>
           )}
@@ -343,11 +340,8 @@ export default async function LessonPage({
               <p className="text-sm font-medium text-emerald-600">
                 ✓ Completed on {new Date(completedAt).toLocaleDateString()}
               </p>
-              <Link
-                href="/learning"
-                className={cn(buttonVariants({ variant: "default" }), "self-start")}
-              >
-                Back to My Learning Path
+              <Link href="/learning" className="inline-flex min-h-11 items-center self-start text-sm underline">
+                Back to My Learning Path →
               </Link>
             </div>
           )}
