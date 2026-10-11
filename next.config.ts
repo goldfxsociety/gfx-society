@@ -36,7 +36,20 @@ const securityHeaders = [
   },
 ];
 
+// Short vanity links (temporary 307 redirects; edit this list to change targets).
+// Keep them out of the sitemap. Destinations keep their UTM tags.
+const SHORT_LINKS: { source: string; destination: string }[] = [
+  {
+    source: "/tt",
+    destination:
+      "/academy/gold-starter?utm_source=tiktok&utm_medium=bio&utm_campaign=gold_pilot_2026q4&utm_content=tt_bio",
+  },
+];
+
 const nextConfig: NextConfig = {
+  async redirects() {
+    return SHORT_LINKS.map((l) => ({ ...l, permanent: false }));
+  },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
