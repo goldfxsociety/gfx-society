@@ -42,9 +42,9 @@ export function Lesson1MessengerCta() {
       </h2>
       {a ? (
         <p className="mt-2 text-sm leading-relaxed">
-          Ang pinakamabilis matuto ay ang ipaliwanag sa iba ang natutunan mo. Sumali sa libreng GFX Society Messenger
-          community at i-post ang Lesson 1 takeaway mo sa <strong>Start Here</strong>. Isang sentence lang ay okay na,
-          halimbawa: &quot;Ang XAUUSD ay presyo ng 1 troy ounce ng gold sa US dollars.&quot;
+          The fastest way to learn? I-explain mo sa iba. Join the free GFX Society Messenger community at i-post ang
+          Lesson 1 takeaway mo sa <strong>Start Here</strong>. Isang sentence lang, okay na. Example: &quot;Ang XAUUSD
+          ay price ng 1 troy ounce ng gold in US dollars.&quot;
         </p>
       ) : (
         <p className="mt-2 text-sm leading-relaxed">
@@ -58,12 +58,12 @@ export function Lesson1MessengerCta() {
         variant={LESSON1_CTA_VARIANT}
         className={cn(buttonVariants({ size: "lg" }), "mt-4 min-h-12 w-full sm:w-auto")}
       >
-        {a ? "Sumali sa Free Community →" : "Join GFX Society sa Messenger →"}
+        {a ? "Join sa Free Community →" : "Join GFX Society sa Messenger →"}
         <span className="sr-only"> (bubukas sa bagong tab)</span>
       </MessengerLink>
       <p className="mt-2 text-xs text-muted-foreground">
         {a
-          ? "Libre. Bubukas sa Messenger. Education lang ito, walang signals at walang binebenta. Demo muna bago live."
+          ? "Free. Bubukas sa Messenger. Education lang ito: no signals, walang binebenta. Demo muna bago live."
           : "Free community · Bubukas sa bagong tab · Process ang pinag-uusapan, hindi P&L. Trading involves real risk of loss; education only, not financial advice."}
       </p>
     </section>

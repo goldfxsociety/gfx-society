@@ -143,7 +143,7 @@ export default function SignupPage() {
                 onChange={(e) => setExperienceLevel(e.target.value)}
                 className="h-11 rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
-                <option value="">Choose one (optional)</option>
+                <option value="">Pumili ng isa (optional)</option>
                 <option value="never_traded">Never traded</option>
                 <option value="demo_only">Demo only</option>
                 <option value="trading_live">Trading live</option>
@@ -151,7 +151,7 @@ export default function SignupPage() {
             </div>
             <p className="-mb-2 text-sm font-semibold">
               <span className="mr-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">Required</span>
-              18+ at pumapayag sa Terms at Privacy
+              18+ ako at agree ako sa Terms at Privacy Notice
             </p>
             <div className="flex items-start gap-3 text-sm leading-relaxed">
               <input
@@ -172,13 +172,13 @@ export default function SignupPage() {
                 <Link href="/privacy" className="underline" target="_blank">Privacy Notice</Link>.
                 I can unsubscribe or withdraw consent anytime.
                 <span className="mt-1 block text-muted-foreground">
-                  Kailangan ito para magawa ang account mo at maipadala ang starter kit.
+                  Required ito para ma-create ang account mo at ma-send namin ang Starter Kit.
                 </span>
               </label>
             </div>
             <p className="-mb-2 text-sm font-semibold">
               <span className="mr-1 rounded border border-border px-1.5 py-0.5 text-xs">Optional</span>
-              Community news
+              Community news at updates (optional ito)
             </p>
             <div className="flex items-start gap-3 text-sm leading-relaxed">
               <input
@@ -204,7 +204,7 @@ export default function SignupPage() {
             </Button>
             {!consentRequired && (
               <p id="signup-disabled-reason" className="-mt-2 text-sm text-muted-foreground">
-                I-check muna ang Required consent box para magawa ang account mo.
+                I-check muna ang Required box para ma-create ang account mo.
               </p>
             )}
           </form>
