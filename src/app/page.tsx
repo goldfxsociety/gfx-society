@@ -32,9 +32,11 @@ const OFFERS = [
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; deleted?: string }>;
 }) {
-  const isNewAccount = (await searchParams).welcome === "new";
+  const sp = await searchParams;
+  const isNewAccount = sp.welcome === "new";
+  const justDeleted = sp.deleted === "1";
   const supabase = await createClient();
   const {
     data: { user },
@@ -77,6 +79,12 @@ export default async function Home({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
+      {justDeleted && (
+        <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">
+          Na-delete na ang account mo. Salamat sa pag-aaral with GFX Society. Pwede ka pa ring mag-aral sa
+          Academy kahit walang account.
+        </p>
+      )}
       <section className="flex flex-col gap-4">
         <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           GFX Society · Free gold trading education

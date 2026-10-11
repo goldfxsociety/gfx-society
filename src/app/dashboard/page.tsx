@@ -239,7 +239,12 @@ export default async function DashboardPage() {
         </div>
       </details>
 
-      <LogoutButton className="h-11 w-full" />
+      <div className="flex flex-col gap-2">
+        <Link href="/account" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
+          Account settings
+        </Link>
+        <LogoutButton className="h-11 w-full" />
+      </div>
     </div>
   );
 }
