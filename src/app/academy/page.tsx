@@ -51,6 +51,15 @@ export default async function AcademyPage() {
         </span>
         <span className="text-primary">→</span>
       </Link>
+
+      <Link
+        href="/academy/gold-starter"
+        className="flex min-h-11 items-center gap-2 rounded-lg border p-4 text-sm transition-colors hover:border-primary"
+      >
+        <span className="font-semibold">Gold Basics Starter Kit</span>
+        <span className="text-muted-foreground">· 5-step path + 7-day checklist (Taglish)</span>
+      </Link>
+
       {user ? (
         <Link href="/diagnostic" className="text-sm text-muted-foreground underline">
           Already know the basics? Take the GFX Diagnostic.
