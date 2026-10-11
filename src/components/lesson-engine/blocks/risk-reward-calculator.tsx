@@ -80,10 +80,10 @@ export function RiskRewardCalculator() {
     let verdict: string;
     let tone: "bullish" | "bearish" | "neutral";
     if (expectancyR > 0) {
-      verdict = "Net Profit";
+      verdict = "Positive expectancy (not guaranteed)";
       tone = "bullish";
     } else if (expectancyR < 0) {
-      verdict = "Net Loss";
+      verdict = "Negative expectancy";
       tone = "bearish";
     } else {
       verdict = "Break Even";
@@ -149,7 +149,7 @@ export function RiskRewardCalculator() {
             Expectancy: {result.expectancyR >= 0 ? "+" : ""}
             {result.expectancyR.toFixed(2)}R per trade ({fmtUSD(result.expectancyUSD)}).
             <br />
-            Projected over trades entered: {fmtUSD(result.projectedTotal)}.
+            Expected over the trades entered, if this win rate and R:R held (not guaranteed): {fmtUSD(result.projectedTotal)}.
             <br />
             Break-even win rate at this RR: {result.breakevenWinRate.toFixed(1)}%.
           </p>
