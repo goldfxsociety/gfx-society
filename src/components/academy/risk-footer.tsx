@@ -11,12 +11,13 @@ export function RiskFooter() {
       className="mt-4 scroll-mt-20 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-relaxed"
     >
       <p>
-        <strong>Demo first.</strong> Practise on a free demo account and follow
-        your plan: max 1% risk per trade, stop-loss on every trade.
+        <strong>Demo first.</strong> Start on demo, then optionally a cents
+        account with small money you can afford to lose; max 1% risk per trade,
+        stop-loss on every trade.
       </p>
       <p className="mt-1 text-muted-foreground">
         Education only, not financial advice. Education lang, hindi financial
-        advice. Demo muna.
+        advice. Demo muna, tapos optional ang cents account.
       </p>
       <details className="mt-2">
         <summary className="flex min-h-11 cursor-pointer items-center font-medium underline">

@@ -18,7 +18,7 @@ Last updated: Oct 2026
 
 **4. No guarantees.** GFX never promises profits, income, or win rates. Examples, case studies, and demo or back-tested results are illustrative only and do not guarantee future performance.
 
-**5. Demo first, and manage risk.** We strongly recommend practising on a demo account until you can follow a written plan consistently. If you trade live, use a stop-loss and risk a small, fixed portion of your account per trade (GFX teaches a maximum of 1% per trade as an education standard, not as advice). Only trade money you can afford to lose entirely.
+**5. Demo first, and manage risk.** We strongly recommend practising on a demo account until you can follow a written plan consistently. After that, a cents account (a real-money account with the balance shown in cents and very small lot sizes) is an optional step to experience real-money emotions with small money you can afford to lose. Losses on a cents account are still real. If you trade live, in any account, use a stop-loss and risk a small, fixed portion of your account per trade (GFX teaches a maximum of 1% per trade as an education standard, not as advice). Only trade money you can afford to lose entirely.
 
 **6. Your responsibility.** You are solely responsible for your trading decisions and their results.
 
