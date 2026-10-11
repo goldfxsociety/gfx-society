@@ -10,7 +10,8 @@ const ITEMS = [
   { href: "/academy", label: "Academy", icon: GraduationCap },
   { href: "/resources", label: "Resources", icon: BookOpen },
   { href: "/community", label: "Community", icon: Users },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  // "Progress" (was "Dashboard"): clearer for logged-out visitors (UX audit #10).
+  { href: "/dashboard", label: "Progress", icon: LayoutDashboard },
 ];
 
 export function BottomNav() {

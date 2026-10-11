@@ -43,17 +43,25 @@ export default async function DashboardPage() {
 
   if (!user) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6 py-10">
         <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
-        <p className="text-sm text-muted-foreground">Log in to see your dashboard.</p>
-        <div className="flex gap-3">
-          <Link href="/login" className={buttonVariants({ variant: "default" })}>
-            Log in
-          </Link>
-          <Link href="/signup" className={buttonVariants({ variant: "outline" })}>
-            Sign up
-          </Link>
-        </div>
+        <p className="text-base">
+          I-save ang progress mo sa Academy gamit ang libreng account.
+        </p>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+          <li>Makita kung aling lessons at quizzes ang tapos mo na</li>
+          <li>Ituloy kung saan ka huminto, sa kahit anong device</li>
+          <li>Kunin ang GFX Diagnostic para malaman ang level mo</li>
+        </ul>
+        <Link href="/signup" className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}>
+          Create free account →
+        </Link>
+        <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
+          May account na? Log in
+        </Link>
+        <Link href="/start" className="inline-flex min-h-11 items-center justify-center text-sm underline">
+          O magsimula muna sa Lesson 1, walang sign-up
+        </Link>
       </div>
     );
   }
