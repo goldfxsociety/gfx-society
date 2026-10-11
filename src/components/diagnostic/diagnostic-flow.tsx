@@ -144,7 +144,7 @@ export function DiagnosticFlow({
           </Button>
         </div>
       </div>
-      {(index === 0 || index === initialIndex) && (
+      {index === 0 && (
       <p className="text-center text-sm text-muted-foreground">
         Naka-save ang bawat sagot. Pwede kang tumigil at ituloy later.
       </p>
