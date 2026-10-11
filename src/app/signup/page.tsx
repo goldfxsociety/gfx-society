@@ -31,7 +31,7 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!consentRequired) {
-      setError("Please tick the consent box to create your account.");
+      setError("I-check muna ang consent box para magawa ang account mo. (Please tick the required consent box.)");
       return;
     }
     setLoading(true);
@@ -75,7 +75,7 @@ export default function SignupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/login" className="text-sm underline">
+            <Link href="/login" className="inline-flex min-h-11 items-center text-sm underline">
               Go to login
             </Link>
           </CardContent>
@@ -96,12 +96,15 @@ export default function SignupPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="displayName">Name</Label>
+              <Label htmlFor="displayName">
+                Name <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
                 id="displayName"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Juan dela Cruz"
+                autoComplete="name"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -113,6 +116,8 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
+                inputMode="email"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -125,15 +130,18 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
+                autoComplete="new-password"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="experienceLevel">Trading experience</Label>
+              <Label htmlFor="experienceLevel">
+                Trading experience <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <select
                 id="experienceLevel"
                 value={experienceLevel}
                 onChange={(e) => setExperienceLevel(e.target.value)}
-                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-11 rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">Choose one (optional)</option>
                 <option value="never_traded">Never traded</option>
@@ -141,7 +149,11 @@ export default function SignupPage() {
                 <option value="trading_live">Trading live</option>
               </select>
             </div>
-            <div className="flex items-start gap-2 text-xs">
+            <p className="-mb-2 text-sm font-semibold">
+              <span className="mr-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">Required</span>
+              18+ at pumapayag sa Terms at Privacy
+            </p>
+            <div className="flex items-start gap-3 text-sm leading-relaxed">
               <input
                 id="consentRequired"
                 type="checkbox"
@@ -164,7 +176,11 @@ export default function SignupPage() {
                 </span>
               </label>
             </div>
-            <div className="flex items-start gap-2 text-xs">
+            <p className="-mb-2 text-sm font-semibold">
+              <span className="mr-1 rounded border border-border px-1.5 py-0.5 text-xs">Optional</span>
+              Community news
+            </p>
+            <div className="flex items-start gap-3 text-sm leading-relaxed">
               <input
                 id="consentMarketing"
                 type="checkbox"
@@ -177,10 +193,20 @@ export default function SignupPage() {
                 and updates. I can unsubscribe anytime.
               </label>
             </div>
-            {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-            <Button type="submit" disabled={loading || !consentRequired}>
+            {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+            <Button
+              type="submit"
+              disabled={loading || !consentRequired}
+              aria-describedby={!consentRequired ? "signup-disabled-reason" : undefined}
+              className="h-12 w-full text-base"
+            >
               {loading ? "Creating account..." : "Sign up"}
             </Button>
+            {!consentRequired && (
+              <p id="signup-disabled-reason" className="-mt-2 text-sm text-muted-foreground">
+                I-check muna ang Required consent box para magawa ang account mo.
+              </p>
+            )}
           </form>
           <p className="mt-4 text-xs text-muted-foreground">
             We use your data only as described in our{" "}
@@ -191,7 +217,7 @@ export default function SignupPage() {
           </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="underline">
+            <Link href="/login" className="inline-flex min-h-11 items-center underline">
               Log in
             </Link>
           </p>
