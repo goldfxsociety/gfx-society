@@ -207,7 +207,7 @@ export default async function DashboardPage() {
         <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-2 text-sm font-semibold">
           <span>See skills ({COMPETENCY_ORDER.length})</span>
           <span className="font-normal text-muted-foreground">
-            {assessedCount > 0 ? `${assessedCount} skills may data na` : "Wala pang data"}
+            {assessedCount > 0 ? `${assessedCount} ${assessedCount === 1 ? "skill" : "skills"} may data na` : "Wala pang data"}
           </span>
         </summary>
         {assessedCount === 0 && (

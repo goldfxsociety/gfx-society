@@ -106,7 +106,7 @@ export default async function LevelPage({
       )}
       {allDone && (
         <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
-          <p className="text-sm font-semibold">✓ Tapos mo na ang {level.title}!</p>
+          <p className="text-sm font-semibold">✓ Tapos mo na ang {level.title.replace(/^(Level \d+):\s*/, "$1 — ")}!</p>
           <Link
             href={nextLevelHref ?? "/academy"}
             className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}
