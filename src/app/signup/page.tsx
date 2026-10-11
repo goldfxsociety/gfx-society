@@ -55,7 +55,8 @@ export default function SignupPage() {
 
     if (!result.needsEmailConfirmation) {
       // Email confirmation is off — the user is already logged in.
-      router.push("/");
+      // First visit after signup: welcome (not "welcome back") + Lesson 1 (logged-in audit #4).
+      router.push("/?welcome=new");
       router.refresh();
     } else {
       // Email confirmation is required before the session is active.
