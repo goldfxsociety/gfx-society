@@ -1,6 +1,6 @@
 # GFX Society Privacy Notice
 
-**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o ibinibigay ang data mo sa mga broker maliban kung pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com.
+**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o ibinibigay ang data mo sa mga broker maliban kung pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings.
 
 Last updated: Oct 2026 · Version: 1.0
 
@@ -85,7 +85,7 @@ Under RA 10173 you have the right to:
 
 ## 10. How to make a request or delete your data
 - **Unsubscribe:** click "Unsubscribe" in any email — effective immediately.
-- **Delete your account and data:** email goldfx.society@gmail.com with subject "Data Deletion Request" from the email address on your account.
+- **Delete your account and data:** while logged in, go to **Progress → Account settings → Delete my account** and type DELETE to confirm. This immediately deletes your account, profile, lesson progress, quiz attempts, diagnostic results and activity events. Your consent record is kept for 3 years, linked only by the email hash (see Section 7). You can also email goldfx.society@gmail.com with subject "Data Deletion Request" from the email address on your account.
 - **Access, correction, portability, objection:** email goldfx.society@gmail.com with the subject "Privacy Request".
 We may ask you to confirm your identity. We will respond within 15 working days. Requests are free.
 
