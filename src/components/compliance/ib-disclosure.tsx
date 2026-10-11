@@ -27,7 +27,9 @@ export function IbDisclosureFull() {
         accounts.
       </p>
       <p>
-        <strong>2. How we get paid.</strong> {IB_DISCLOSURE_TEXT}
+        <strong>2. How we get paid.</strong> {IB_DISCLOSURE_TEXT} The amount
+        usually depends on how much you trade, which is why we teach demo first,
+        a maximum of 1% risk per trade, and never encourage over-trading.
       </p>
       <p>
         <strong>3. Costs.</strong> Spreads, commissions and fees are set by the
@@ -46,11 +48,7 @@ export function IbDisclosureFull() {
       </p>
       <p>
         <strong>6. Data.</strong> We do not give your personal data to brokers
-        unless you separately consent. If you open an account through our link,
-        ACCM&apos;s client agreement (section 11) allows ACCM to share your
-        personal information and trading activity with the IB (GFX). See our{" "}
-        <a href="/privacy" className="underline">Privacy Notice</a>. Contact:
-        goldfx.society@gmail.com
+        unless you separately consent. Contact: goldfx.society@gmail.com
       </p>
     </section>
   );
