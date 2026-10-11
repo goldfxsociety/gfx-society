@@ -29,7 +29,12 @@ const OFFERS = [
   },
 ];
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  const isNewAccount = (await searchParams).welcome === "new";
   const supabase = await createClient();
   const {
     data: { user },
@@ -78,7 +83,9 @@ export default async function Home() {
         </span>
         <h1 className="text-3xl font-bold tracking-tight">
           {user
-            ? `Welcome back${profileName ? `, ${profileName}` : ""}!`
+            ? isNewAccount
+              ? `Welcome${profileName ? `, ${profileName}` : ""}! Simulan na natin ang Lesson 1.`
+              : `Welcome back${profileName ? `, ${profileName}` : ""}!`
             : "Learn gold trading step by step — risk first, libre."}
         </h1>
         <p className="text-sm leading-6 text-muted-foreground">
@@ -102,7 +109,9 @@ export default async function Home() {
           </Link>
         </div>
         <p className="text-sm text-muted-foreground">
-          No signup needed to learn. A free account just saves your progress.
+          {user
+            ? "Naka-save na ang progress mo sa account mo."
+            : "No signup needed to learn. A free account just saves your progress."}
         </p>
       </section>
 
