@@ -1,3 +1,5 @@
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -39,44 +41,24 @@ export default async function AcademyPage() {
         </h1>
       </div>
 
-      <Link
-        href="/start"
-        className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
-      >
-        <span>
-          <span className="font-semibold">New here? Start here.</span>{" "}
-          <span className="text-muted-foreground">
-            Your first steps — no signup needed.
-          </span>
-        </span>
-        <span className="text-primary">→</span>
-      </Link>
-
-      <Link
-        href="/academy/gold-starter"
-        className="flex min-h-11 items-center gap-2 rounded-lg border p-4 text-sm transition-colors hover:border-primary"
-      >
-        <span className="font-semibold">Gold Basics Starter Kit</span>
-        <span className="text-muted-foreground">· 5-step path + 7-day checklist (Taglish)</span>
-      </Link>
-
-      {user ? (
-        <Link href="/diagnostic" className="text-sm text-muted-foreground underline">
-          Already know the basics? Take the GFX Diagnostic.
+      {/* One "Start here" door; Starter Kit folded under it (UX audit #10). */}
+      <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4">
+        <p className="text-base font-semibold">New here? Start here.</p>
+        <p className="text-sm text-muted-foreground">Your first steps, no signup needed.</p>
+        <Link href="/start" className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}>
+          Start here →
         </Link>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Already know the basics?{" "}
-          <Link href="/login" className="underline">
-            Log in
-          </Link>{" "}
-          to take the GFX Diagnostic and save your results — or{" "}
-          <Link href="/start" className="underline">
-            start with Lesson 1
-          </Link>
-          , no signup needed.
-        </p>
-      )}
+        <Link href="/academy/gold-starter" className="inline-flex min-h-11 items-center text-sm underline">
+          Or try the Gold Basics Starter Kit (Taglish, 5 steps + 7-day checklist)
+        </Link>
+      </div>
+
+      <Link
+        href="/diagnostic"
+        className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-sm")}
+      >
+        {user ? "Already know the basics? Take the GFX Diagnostic" : "Already know the basics? GFX Diagnostic (free account)"}
+      </Link>
 
       <div className="flex flex-col gap-3">
         {(levels ?? []).map((level) => {

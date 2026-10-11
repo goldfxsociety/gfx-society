@@ -101,7 +101,7 @@ export default async function Home() {
             New here? See the Start-here path
           </Link>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           No signup needed to learn. A free account just saves your progress.
         </p>
       </section>
@@ -116,7 +116,7 @@ export default async function Home() {
               <p className="text-sm font-semibold">
                 <span aria-hidden="true">{o.icon}</span> {o.title}
               </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">{o.body}</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{o.body}</p>
             </div>
           ))}
         </div>
@@ -124,7 +124,7 @@ export default async function Home() {
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">Join the GFX Society community</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Learning is easier together. Ask questions as you go through the Academy.
         </p>
         <a
@@ -139,7 +139,7 @@ export default async function Home() {
 
       <section
         aria-label="Risk warning"
-        className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-relaxed"
+        className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm leading-relaxed"
       >
         <p>
           <strong>Demo first.</strong> Start on demo, then optionally a cents
@@ -154,28 +154,28 @@ export default async function Home() {
         </p>
       </section>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
         {user ? (
           <>
-            <Link href="/dashboard" className="underline">
+            <Link href="/dashboard" className="inline-flex min-h-11 items-center underline">
               My dashboard
             </Link>
             <LogoutButton />
           </>
         ) : (
           <>
-            <Link href="/signup" className="underline">
+            <Link href="/signup" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full text-sm sm:w-auto")}>
               Create a free account
             </Link>
-            <Link href="/login" className="underline">
+            <Link href="/login" className="inline-flex min-h-11 items-center underline">
               Log in
             </Link>
           </>
         )}
-        <Link href="/resources" className="underline">
+        <Link href="/resources" className="inline-flex min-h-11 items-center underline">
           Resources
         </Link>
-        <Link href="/broker" className="underline">
+        <Link href="/broker" className="inline-flex min-h-11 items-center underline">
           Broker info
         </Link>
       </div>

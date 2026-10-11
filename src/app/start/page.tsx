@@ -67,7 +67,7 @@ export default function StartPage() {
             <p className="text-sm font-semibold">
               {s.n}. {s.title}
             </p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{s.body}</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.body}</p>
             {s.external ? (
               <a
                 href={s.href}
@@ -91,14 +91,15 @@ export default function StartPage() {
           </li>
         ))}
       </ol>
-      <p className="text-xs text-muted-foreground">
-        Already know the basics? Log in and take the{" "}
-        <Link href="/diagnostic" className="underline">
-          GFX Diagnostic
-        </Link>{" "}
-        (free account) to find your level.
-      </p>
-      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-muted-foreground">
+          Already know the basics? Take the GFX Diagnostic (free account) to find your level.
+        </p>
+        <Link href="/diagnostic" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
+          GFX Diagnostic →
+        </Link>
+      </div>
+      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
         Education only, not financial advice. Trading carries a high risk of loss. Demo first.
       </p>
     </div>
