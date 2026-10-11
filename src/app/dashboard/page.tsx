@@ -8,6 +8,7 @@ import { buildLearningContext } from "@/lib/competency/build-learning-context";
 import { computeCompetencyEvidence, type EvidenceLessonInput } from "@/lib/competency/evidence";
 import { CompetencyCard } from "@/components/dashboard/competency-card";
 import { ContinueLearningLink } from "@/components/dashboard/continue-learning-link";
+import { getLessonMinutes } from "@/lib/academy/lesson-minutes";
 
 const COMPETENCY_ORDER = [
   "foundations",
@@ -82,6 +83,9 @@ export default async function DashboardPage() {
   const overallPct = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
 
   const recommendation = recommendStartingPoint(context);
+  const nextLesson =
+    recommendation.kind === "lesson" ? lessons.find((l) => l.id === recommendation.lessonId) ?? null : null;
+  const nextMinutes = nextLesson ? await getLessonMinutes(nextLesson.slug) : null;
 
   // The levels/badges grid still groups by level — derive that grouping
   // from the shared lesson list rather than a second query.
@@ -111,18 +115,45 @@ export default async function DashboardPage() {
     hasScoredAssessment: l.hasScoredAssessment,
   }));
   const competencyEvidence = computeCompetencyEvidence(evidenceLessons, completedLessonIds, attempts);
+  const assessedCount = COMPETENCY_ORDER.filter(
+    (k) => (competencyEvidence[k]?.status ?? "No Evidence") !== "No Evidence" || baselineScores?.[k] != null,
+  ).length;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            Dashboard
-          </span>
-          <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
-        </div>
-        <LogoutButton />
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">Progress</span>
+        <h1 className="text-2xl font-bold tracking-tight">Your Progress</h1>
       </div>
+
+      {/* "Next" first (logged-in audit #2). */}
+      {recommendation.kind === "complete" ? (
+        <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
+          <p className="font-semibold">🎓 Congrats, Graduate! Natapos mo na ang lahat ng lessons sa GFX Academy.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Demo muna bago live. Kung mag-live ka, optional ang cents account na maliit na pera lang na kaya mong
+            mawala. Max 1% risk bawat trade, laging may stop loss.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-primary">Next</span>
+          <p className="text-base font-semibold">
+            {nextLesson ? nextLesson.title : "Your next lesson"}
+            {nextMinutes ? <span className="font-normal text-muted-foreground"> · ~{nextMinutes} min</span> : null}
+          </p>
+          <ContinueLearningLink
+            href={nextLesson ? `/academy/${nextLesson.levelSlug}/${nextLesson.slug}` : "/learning"}
+            lessonId={recommendation.lessonId}
+            className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}
+          >
+            Continue →
+          </ContinueLearningLink>
+          <Link href="/learning" className="inline-flex min-h-11 items-center text-sm underline">
+            See my learning path
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-sm">
@@ -135,32 +166,11 @@ export default async function DashboardPage() {
             style={{ width: `${overallPct}%` }}
           />
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {totalCompleted} of {totalLessons} lessons completed
         </p>
       </div>
 
-      {recommendation.kind === "complete" ? (
-        <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
-          <p className="font-semibold">🎓 Congratulations, Graduate!</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            You&apos;ve completed every lesson in GFX Academy.
-          </p>
-        </div>
-      ) : (
-        <ContinueLearningLink
-          href="/learning"
-          lessonId={recommendation.lessonId}
-          className="flex flex-col gap-1 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm transition-colors hover:border-primary"
-        >
-          <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-            Continue Learning
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Pick up your personalized learning path.
-          </span>
-        </ContinueLearningLink>
-      )}
 
       <div className="flex flex-col gap-3">
         <p className="text-sm font-semibold">Badges Earned</p>
@@ -192,9 +202,20 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-semibold">Your Competencies</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {/* Collapsed by default; friendlier empty state (logged-in audit #2). */}
+      <details className="rounded-lg border border-border bg-card px-4">
+        <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-2 text-sm font-semibold">
+          <span>See skills ({COMPETENCY_ORDER.length})</span>
+          <span className="font-normal text-muted-foreground">
+            {assessedCount > 0 ? `${assessedCount} skills may data na` : "Wala pang data"}
+          </span>
+        </summary>
+        {assessedCount === 0 && (
+          <p className="pb-2 text-sm text-muted-foreground">
+            Wala pang data dito. Mag-take ng lesson o ng GFX Diagnostic para makita ang skills mo.
+          </p>
+        )}
+        <div className="grid grid-cols-1 gap-3 pb-4 sm:grid-cols-2">
           {COMPETENCY_ORDER.map((key) => {
             const evidence = competencyEvidence[key] ?? {
               competencyKey: key,
@@ -216,7 +237,9 @@ export default async function DashboardPage() {
             );
           })}
         </div>
-      </div>
+      </details>
+
+      <LogoutButton className="h-11 w-full" />
     </div>
   );
 }
