@@ -53,7 +53,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
 | Meta (Messenger) | Community, only if you choose to join | Global |
 
-**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy; the broker may tell us that an account was opened via our link for rebate purposes. This report may include an account or client ID and trading volume. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
+**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
 
 We do not sell your personal data. We may disclose data if required by law, court order, or a government authority.
 
