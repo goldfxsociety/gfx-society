@@ -8,6 +8,7 @@
 
 type SlugIndex = { levels: Set<string>; lessons: Set<string> };
 
+const STATIC_ACADEMY_PAGES = new Set(["gold-starter"]);
 const TTL_MS = 5 * 60 * 1000;
 let cache: { at: number; index: SlugIndex } | null = null;
 
@@ -46,6 +47,9 @@ async function loadIndex(): Promise<SlugIndex | null> {
 
 /** Returns true only when we're sure the /academy/... path doesn't exist. */
 export async function isUnknownAcademyPath(pathname: string): Promise<boolean> {
+  const m0 = pathname.match(/^\/academy\/([^/]+)\/?$/);
+  // Static Academy pages that share the /academy/<x> shape.
+  if (m0 && STATIC_ACADEMY_PAGES.has(m0[1])) return false;
   const m = pathname.match(/^\/academy\/([^/]+)(?:\/([^/]+))?\/?$/);
   if (!m) return false;
   const index = await loadIndex();

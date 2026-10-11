@@ -4,13 +4,13 @@ import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 3600;
 
-const STATIC = ["", "/start", "/academy", "/diagnostic", "/resources", "/community", "/broker", "/signup", "/privacy", "/terms", "/risk", "/disclosure"];
+const STATIC = ["", "/start", "/academy", "/academy/gold-starter", "/diagnostic", "/resources", "/community", "/broker", "/signup", "/privacy", "/terms", "/risk", "/disclosure"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = STATIC.map((p) => ({
     url: `${SITE_URL}${p}`,
     changeFrequency: "weekly",
-    priority: p === "" ? 1 : p === "/academy" || p === "/start" ? 0.9 : 0.5,
+    priority: p === "" ? 1 : p === "/academy" || p === "/start" || p === "/academy/gold-starter" ? 0.9 : 0.5,
   }));
 
   try {
