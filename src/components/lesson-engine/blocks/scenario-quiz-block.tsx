@@ -128,7 +128,7 @@ export function ScenarioQuizBlock({
         {missed.length > 0 && (
           <div className="flex flex-col gap-2 rounded-md bg-muted p-3 text-left text-sm">
             <p className="font-semibold">
-              {passed ? "Balikan ang na-miss mo:" : "Review these before retrying:"}
+              {passed ? "Balikan ang na-miss mo:" : "Review muna ang mga ito bago mag-try ulit:"}
             </p>
             {missed.map((m, i) => (
               <p key={i} className="text-sm text-muted-foreground">
