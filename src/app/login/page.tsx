@@ -37,7 +37,7 @@ function CallbackError() {
 function loginErrorMessage(raw: string): string {
   if (/invalid login credentials/i.test(raw)) return "Mali ang email o password (invalid login). Try ulit.";
   if (/email not confirmed/i.test(raw)) return "I-confirm muna ang email mo. I-check ang inbox (pati Spam), tapos try ulit.";
-  if (/rate limit|too many/i.test(raw)) return "Masyadong maraming tries. Maghintay ng ilang minuto, tapos try ulit.";
+  if (/rate limit|too many/i.test(raw)) return "Too many tries. Maghintay ng ilang minuto, tapos try ulit.";
   return "May problema sa pag-log in. Try ulit in a moment.";
 }
 
