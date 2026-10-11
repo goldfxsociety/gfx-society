@@ -129,9 +129,10 @@ export default async function DashboardPage() {
       {/* "Next" first (logged-in audit #2). */}
       {recommendation.kind === "complete" ? (
         <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
-          <p className="font-semibold">🎓 Congratulations, Graduate!</p>
+          <p className="font-semibold">🎓 Congrats, Graduate! Natapos mo na ang lahat ng lessons sa GFX Academy.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            You&apos;ve completed every lesson in GFX Academy.
+            Demo muna bago live. Kung mag-live ka, optional ang cents account na maliit na pera lang na kaya mong
+            mawala. Max 1% risk bawat trade, laging may stop loss.
           </p>
         </div>
       ) : (
@@ -206,12 +207,12 @@ export default async function DashboardPage() {
         <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-2 text-sm font-semibold">
           <span>See skills ({COMPETENCY_ORDER.length})</span>
           <span className="font-normal text-muted-foreground">
-            {assessedCount > 0 ? `${assessedCount} may data na` : "Wala pang data"}
+            {assessedCount > 0 ? `${assessedCount} skills may data na` : "Wala pang data"}
           </span>
         </summary>
         {assessedCount === 0 && (
           <p className="pb-2 text-sm text-muted-foreground">
-            Wala pang data dito. Take a lesson o ang GFX Diagnostic para makita ang skills mo.
+            Wala pang data dito. Mag-take ng lesson o ng GFX Diagnostic para makita ang skills mo.
           </p>
         )}
         <div className="grid grid-cols-1 gap-3 pb-4 sm:grid-cols-2">
