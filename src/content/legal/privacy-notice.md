@@ -1,6 +1,6 @@
 # GFX Society Privacy Notice
 
-**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o ibinibigay ang data mo sa mga broker maliban kung pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings.
+**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings.
 
 Last updated: Oct 2026 · Version: 1.0
 

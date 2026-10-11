@@ -81,7 +81,7 @@ export default async function Home({
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
       {justDeleted && (
         <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">
-          Na-delete na ang account mo. Salamat sa pag-aaral with GFX Society. Pwede ka pa ring magbasa ng
+          Na-delete na ang account mo. Salamat sa pag-aaral with GFX Society. Pwede ka pa ring mag-aral sa
           Academy kahit walang account.
         </p>
       )}
