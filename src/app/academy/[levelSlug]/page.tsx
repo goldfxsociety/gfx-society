@@ -38,7 +38,7 @@ export default async function LevelPage({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
-        <Link href="/academy" className="text-sm text-muted-foreground underline">
+        <Link href="/academy" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">
           ← Back to Academy
         </Link>
         <h1 className="text-2xl font-bold tracking-tight">{level.title}</h1>

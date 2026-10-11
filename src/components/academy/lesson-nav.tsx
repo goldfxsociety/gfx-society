@@ -9,12 +9,15 @@ export function LessonNav({
   currentLevelTitle,
   nextLevelTitle,
   isLastInLevel,
+  nextIsPrimary = true,
 }: {
   prev: NavLesson | null;
   next: NavLesson | null;
   currentLevelTitle: string;
   nextLevelTitle: string | null;
   isLastInLevel: boolean;
+  /** false on Lesson 1, where the Messenger CTA is the single primary (UX audit #6). */
+  nextIsPrimary?: boolean;
 }) {
   const levelComplete = isLastInLevel;
   return (
@@ -52,26 +55,29 @@ export function LessonNav({
           )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      {next && !levelComplete && (
+        <Link
+          href={`/academy/${next.levelSlug}/${next.slug}`}
+          className={cn(
+            buttonVariants({ variant: nextIsPrimary ? "default" : "outline" }),
+            "h-auto min-h-12 w-full flex-col whitespace-normal py-2 text-center",
+          )}
+        >
+          <span className="text-base font-semibold">Next lesson →</span>
+          <span className="text-sm opacity-80">{next.title}</span>
+        </Link>
+      )}
+      <div>
         {prev ? (
           <Link
             href={`/academy/${prev.levelSlug}/${prev.slug}`}
-            className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 flex-col items-start whitespace-normal py-2 text-left")}
+            className={cn(buttonVariants({ variant: "ghost" }), "h-auto min-h-11 w-full flex-col items-start whitespace-normal py-2 text-left")}
           >
             <span className="text-xs text-muted-foreground">← Previous</span>
             <span className="text-sm">{prev.title}</span>
           </Link>
         ) : (
           <span />
-        )}
-        {next && !levelComplete && (
-          <Link
-            href={`/academy/${next.levelSlug}/${next.slug}`}
-            className={cn(buttonVariants({ variant: "default" }), "h-auto min-h-11 flex-col items-end whitespace-normal py-2 text-right")}
-          >
-            <span className="text-xs opacity-80">Next lesson →</span>
-            <span className="text-sm">{next.title}</span>
-          </Link>
         )}
       </div>
     </nav>
