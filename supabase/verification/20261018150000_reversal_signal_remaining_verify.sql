@@ -5,7 +5,7 @@ select slug, (key_takeaways ->> 1 = 'RSI above 70 suggests overbought, below 30 
 from public.lessons where id = 'a9ae37e8-7cb6-47cb-b040-4abc36835cd9';
 
 -- 2) SMC distractor updated; correctIndex still 0. Expect 1 row, ok = true.
-select slug, (interactive_config #>> '{scenarios,2,options,1}' = 'A guaranteed possible reversal sign'
+select slug, (interactive_config #>> '{scenarios,2,options,1}' = 'A guaranteed reversal sign'
    and interactive_config #>> '{scenarios,2,correctIndex}' = '0') as ok
 from public.lessons where id = 'd2da2c70-cab0-4003-9027-1af90404be06';
 

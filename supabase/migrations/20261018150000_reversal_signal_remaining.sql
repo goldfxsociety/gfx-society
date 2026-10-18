@@ -6,7 +6,7 @@
 --    -> "...neither is automatic; each is only a possible reversal sign."
 -- 2) smart-money-concepts-intro interactive_config scenarios[2].options[1]
 --    "A guaranteed reversal signal"
---    -> "A guaranteed possible reversal sign"
+--    -> "A guaranteed reversal sign"
 --    (incorrect distractor; correctIndex untouched)
 -- 3) diagnostic technical_tools_rsi_overbought explanation
 --    "Above 70 suggests overbought, but it's never a guaranteed reversal signal on its own."
@@ -35,7 +35,7 @@ update public.lessons
 set interactive_config = jsonb_set(
       interactive_config,
       '{scenarios,2,options,1}',
-      to_jsonb('A guaranteed possible reversal sign'::text),
+      to_jsonb('A guaranteed reversal sign'::text),
       false),
     updated_at = now()
 where id = 'd2da2c70-cab0-4003-9027-1af90404be06'
