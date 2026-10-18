@@ -40,11 +40,12 @@ Questions or deletion requests: **goldfx.society@gmail.com**, subject "Privacy R
 ### Discord VIP verification
 Optional ito. Kung mag-a-apply ka for the **@VIP role** sa Discord server namin, mag-u-upload ka ng ACCM deposit screenshot gamit ang official verification bot namin. The screenshot is used **only to verify VIP access**. VIP is community access, not trading results, and we make no income or results claims.
 
-- **Who reviews:** admins lang na may configured admin role ang makakakita ng screenshot, sa isang private channel.
-- **Screenshot:** we never store it ourselves. Dumadaan lang ito sa bot, at binubura ng bot ang screenshot sa Discord pagkatapos ng decision, o after 7 days kung hindi na-review. Pwede mong takpan ang account number mo bago mag-upload.
-- **"Need more info":** pwedeng mag-send ang admin ng note via DM kung kailangan ng mas malinaw na screenshot. Hindi namin sine-save ang note.
-- **What we log:** your Discord user ID, the reviewing admin's Discord ID, the date and time, the decision (approved, rejected, needs_info or expired) and a reason code. Wala nang iba: no image, amounts, account numbers or names.
-- **Retention:** the decision log is kept for **12 months**, then automatically deleted.
+- **Who reviews:** admins lang na may configured admin role ang makakakita ng screenshot, sa isang private review channel.
+- **Screenshot:** we never store it ourselves. Dumadaan lang ito sa bot, na nagpo-post ng copy sa review channel namin. Usually, binubura ng bot ang copy sa review channel namin right after the decision, o after 7 days kung hindi na-review. Kung i-block ng Discord ang delete, the bot retries every hour and our admins are alerted para i-delete ito manually. Ang original upload mo ay nasa Discord, under Discord's own privacy policy. Pwede mong takpan ang account number mo bago mag-upload.
+- **Admin notes:** pwedeng mag-send ang admin ng "Need more info" note, o ng optional note kasama ng rejection, via DM. Ipinapadala lang ito sa DM mo and we don't save it; nananatili ito sa Discord DMs mo.
+- **What we log:** your Discord user ID, the reviewing admin's Discord ID, the date and time, the decision (approved, rejected, needs_info or expired) and a reason code, plus technical IDs at status flags (e.g. request, server and message IDs, retry timestamps, and flags like "DM failed" or "already VIP"). Wala nang iba: no image, amounts, account numbers or names.
+- **Log channel copy:** each decision is also posted as one line in a private admin channel (#vip-log): member ID, admin ID, decision, time, reason code and flags. Binubura ito kasabay ng log after 12 months.
+- **Retention:** the decision log and its #vip-log copy are kept for **12 months**, then automatically deleted.
 - **Legal basis:** your consent when you submit (Sec. 12(a), RA 10173), plus our legitimate interest in managing community access (Sec. 12(f)).
 - **Providers:** the bot runs on Cloudflare, the log is stored in Supabase, and Discord Inc. handles the upload and the server under its own privacy policy. These providers may process data outside the Philippines (see Sections 5 and 6).
 
@@ -96,8 +97,8 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Email list data | Until you unsubscribe or withdraw consent; then suppression record (email only) kept to honour the opt-out |
 | Inactive accounts | Deleted after 24 months of no activity, after a reminder email |
 | Consent records | For the duration of the relationship plus 3 years as evidence of consent. If you delete your account, the consent record is kept for those 3 years, linked only by the email hash |
-| Discord VIP screenshot | Deleted by the bot right after the admin's decision, or after 7 days if not reviewed. We never store it ourselves |
-| Discord VIP decision log | 12 months (Discord IDs, time, decision, reason code), then automatically deleted |
+| Discord VIP screenshot (ang copy sa review channel namin) | Usually deleted by the bot right after the admin's decision, or after 7 days if not reviewed. Kung i-block ng Discord ang delete, the bot retries every hour and our admins are alerted para i-delete ito manually. We never store it ourselves; ang original upload ay nasa Discord under its policy |
+| Discord VIP decision log and #vip-log copy | 12 months (Discord IDs, time, decision, reason code, flags and technical IDs), then automatically deleted, together with the #vip-log line |
 | Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 
 ## 8. How we protect it

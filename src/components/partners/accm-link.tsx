@@ -46,7 +46,7 @@ export function AccmLink({
   // Gated: no href at all (not a link, not focusable, nothing to open), until enabled.
   if (disabled) {
     return (
-      <a className={className} aria-disabled="true">
+      <a role="link" className={className} aria-disabled="true">
         {children}
       </a>
     );
