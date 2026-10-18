@@ -15,7 +15,7 @@ Last updated: 18 Oct 2026
 
 **4. Broker status.** GFX does not vouch for any broker's licensing, solvency, or execution quality. Check the broker's licensing for your country, and which legal entity you are signing up with, before opening an account or depositing.
 
-**5. Your choice.** You are never required to use our links or a partner broker to access GFX education or the community. You can use any broker you choose, or not trade at all. Our education content is not changed by these relationships.
+**5. Your choice.** You are never required to use our links or a partner broker to access GFX education. Our Discord community is for members who registered with ACCM through our link. You can use any broker you choose, or not trade at all. Our education content is not changed by these relationships.
 
 **6. Data.** We do not give your personal data to brokers unless you separately consent. A broker may tell us that an account was opened through our link, for example an account or client ID and trading volume, so that rebates can be calculated.
 

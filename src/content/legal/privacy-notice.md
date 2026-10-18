@@ -1,11 +1,13 @@
 # GFX Society Privacy Notice
 
-**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings.
+**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings. Kung sasali ka sa Discord community namin, ginagamit lang namin ang join application answers mo para i-verify na nag-register ka sa ACCM through our link.
 
-Last updated: Oct 2026 · Version: 1.0
+Last updated: 18 Oct 2026 · Version: 1.1
+
+**What changed in v1.1 (18 Oct 2026):** the GFX Society Messenger community was replaced by the GFX Society Discord community. We added the Discord join application (section 2) and Discord Inc. as a provider (section 5). No change to how we handle your Academy account data.
 
 ## 1. Who we are (Personal Information Controller)
-GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the GFX Society Academy, and the GFX Society Messenger community. GFX is the personal information controller (PIC) under the Data Privacy Act of 2012 (Republic Act No. 10173), its Implementing Rules and Regulations, and National Privacy Commission (NPC) issuances.
+GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the GFX Society Academy, and the GFX Society Discord community, which is open to members who registered with ACCM through our link. GFX is the personal information controller (PIC) under the Data Privacy Act of 2012 (Republic Act No. 10173), its Implementing Rules and Regulations, and National Privacy Commission (NPC) issuances.
 - Controller: GoldFX Society (GFX), an independent education community operated by its founder
 - Address: Philippines
 - Privacy contact: goldfx.society@gmail.com
@@ -22,10 +24,21 @@ GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the 
 | Usage and analytics | Pages visited, custom events (e.g. button clicks on the Gold Starter page), referral/UTM campaign tags, device and browser type, country | Automatically, via Vercel Web Analytics (cookieless; see "Website analytics" below) |
 | Learning activity events (logged-in users only) | Quiz started/passed/failed, diagnostic started, "continue learning" clicks, ACCM link clicks (page only) | Automatically, stored with your learning data in our database |
 
+### Discord community join application
+Kung mag-a-apply ka sa Discord community namin, hihingin ng join application ang: (1) sino ang nag-invite sa'yo, (2) kung registered ka na sa ACCM through our link (yes/no), (3) ang ACCM User ID mo o ang pangalan sa ACCM account mo, at (4) pag-agree sa community rules.
+
+We use these answers **only to verify that you registered with ACCM through our link**, by comparing them with the client list in our ACCM introducing-broker (IB) portal, and then to approve or decline your join request. We don't use them for marketing, and we don't sell or share them with anyone else. Hindi namin hihingin ang password, OTP, ID documents, o balance mo.
+
+Who can see your answers: Discord and the admins of our Discord community. Retention: deleted from our records 30 days after your application is decided.
+
+Discord itself is run by Discord Inc., and **Discord's own Privacy Policy (https://discord.com/privacy) applies** to your Discord account and everything you post there.
+
+Questions or deletion requests: **goldfx.society@gmail.com**, subject "Privacy Request".
+
 ### Website analytics
 We use **Vercel Web Analytics** (provided by Vercel Inc., our hosting provider, acting as our processor). It is cookieless: it does not set cookies or use device fingerprinting to track you, and it does not track you across other websites. It gives us **aggregate** reports of page views and of custom events (for example, button clicks on the Gold Starter page). We do not send your name, email, account ID or other personal data in these events. When you arrive through a link with UTM campaign parameters (e.g. utm_source, utm_campaign), we read those parameters, and keep them in your browser's session storage for that visit, so we can measure which links bring visitors. Vercel may process this data outside the Philippines (see Sections 5 and 6). Purpose: to understand, in aggregate, which pages and links work so we can improve the site. Legal basis: our legitimate interests (Sec. 12(f), RA 10173).
 
-We do **not** ask for your phone number, ID, bank details, broker account numbers or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
+We do **not** ask for your phone number, ID, bank details, broker account numbers (other than the ACCM User ID in the Discord join application above) or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
 
 ## 3. Why we use it (purposes)
 1. To create and manage your account and give you access to the Academy, diagnostic and dashboard.
@@ -51,7 +64,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Supabase | Database and authentication | Singapore (ap-southeast-1) |
 | Vercel Inc. | Website hosting and cookieless analytics (Vercel Web Analytics) | United States and other regions |
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
-| Meta (Messenger) | Community, only if you choose to join | Global |
+| Discord Inc. | Discord community and join application, only if you apply to join | United States and other regions |
 
 **We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
 

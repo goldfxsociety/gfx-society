@@ -41,7 +41,7 @@ export function IbDisclosureFull() {
       </p>
       <p>
         <strong>5. Your choice.</strong> You never need a broker account or our
-        links to use GFX education or the community. You can use any broker you
+        links to use GFX education. Our Discord community is for members who registered with ACCM through our link. You can use any broker you
         choose, or not trade at all.
       </p>
       <p>

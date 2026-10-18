@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
-import { MESSENGER_INVITE_URL, resolveGoCode } from "@/lib/links/go-codes";
+import { cn } from "cn";
+import { GO_NEXT_STEP_HREF, resolveGoCode } from "@/lib/links/go-codes";
+import { NextStepLink } from "@/components/funnel/next-step-link";
 import { GoRedirect } from "./go-redirect";
 
 export const metadata: Metadata = {
@@ -28,14 +30,13 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
       <Link href={target.href} className={`${buttonVariants({ variant: "default" })} min-h-11`}>
         Start learning →
       </Link>
-      {MESSENGER_INVITE_URL && (
-        <a
-          href={MESSENGER_INVITE_URL}
-          rel="noopener noreferrer"
-          className={`${buttonVariants({ variant: "outline" })} min-h-11`}
+      {GO_NEXT_STEP_HREF && (
+        <NextStepLink
+          location="go"
+          className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 whitespace-normal py-2 text-center")}
         >
-          Join the GFX Messenger community
-        </a>
+          Next step: guided training sa partner community namin
+        </NextStepLink>
       )}
       <p className="text-xs text-muted-foreground">
         Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
