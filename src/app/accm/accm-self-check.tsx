@@ -16,7 +16,8 @@ export const SELF_CHECK = [
   "Ako mismo ang nag-check sa broker: licence para sa bansa ko, fees at terms.",
 ];
 
-export function CodeChip() {
+/** `duplicate`: a second, visual-only copy of the chip; hidden from screen readers and keyboard so the code is announced once. */
+export function CodeChip({ duplicate = false }: { duplicate?: boolean }) {
   const [copied, setCopied] = useState<"" | "ok" | "manual">("");
   const copy = async () => {
     try {
@@ -28,16 +29,17 @@ export function CodeChip() {
     setTimeout(() => setCopied(""), 2000);
   };
   return (
-    <span className="inline-flex flex-col">
+    <span className="inline-flex flex-col" aria-hidden={duplicate || undefined}>
       <button
         type="button"
+        tabIndex={duplicate ? -1 : undefined}
         onClick={copy}
         aria-label={`Copy invitation code ${CODE}`}
         className={cn(buttonVariants({ variant: "outline" }), "h-11 font-mono select-all")}
       >
         Code: {CODE} ⧉
       </button>
-      <span aria-live="polite" className="text-xs text-muted-foreground">
+      <span aria-live={duplicate ? undefined : "polite"} className="text-xs text-muted-foreground">
         {copied === "ok" ? "Copied! ✓" : copied === "manual" ? "Long-press para i-copy" : ""}
       </span>
     </span>
@@ -114,7 +116,7 @@ export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: 
         <AccmLink href={href} disabled={!ready} className={cn(btn, !ready && "cursor-not-allowed opacity-50")}>
           Open cents account →
         </AccmLink>
-        <CodeChip />
+        <CodeChip duplicate />
       </div>
       {!ready && <p className="text-xs text-muted-foreground">I-tick muna ang 5 sa taas.</p>}
       <p className="text-xs text-muted-foreground">

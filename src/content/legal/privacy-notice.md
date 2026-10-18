@@ -1,8 +1,10 @@
 # GFX Society Privacy Notice
 
-**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings. Kung sasali ka sa Discord community namin, ginagamit lang namin ang join application answers mo para i-verify na nag-register ka sa ACCM through our link.
+**Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings. Kung sasali ka sa Discord community namin, ginagamit lang namin ang join application answers mo para i-verify na nag-register ka sa ACCM through our link. Kung mag-a-apply ka for @VIP, ang deposit screenshot mo ay para lang sa verification, binubura ito ng bot, at isang decision log lang ang tinatago namin.
 
-Last updated: 18 Oct 2026 · Version: 1.1
+Last updated: 18 Oct 2026 · Version: 1.2
+
+**What changed in v1.2 (18 Oct 2026):** we added the optional Discord VIP verification (section 2), Cloudflare as a provider and the VIP log in Supabase (section 5), and the VIP retention rules (section 7). It only applies if you choose to apply for @VIP. Walang nagbago sa ibang paggamit namin ng data mo.
 
 **What changed in v1.1 (18 Oct 2026):** the GFX Society Messenger community was replaced by the GFX Society Discord community. We added the Discord join application (section 2) and Discord Inc. as a provider (section 5). No change to how we handle your Academy account data.
 
@@ -35,10 +37,23 @@ Discord itself is run by Discord Inc., and **Discord's own Privacy Policy (https
 
 Questions or deletion requests: **goldfx.society@gmail.com**, subject "Privacy Request".
 
+### Discord VIP verification
+Optional ito. Kung mag-a-apply ka for the **@VIP role** sa Discord server namin, mag-u-upload ka ng ACCM deposit screenshot gamit ang official verification bot namin. The screenshot is used **only to verify VIP access**. VIP is community access, not trading results, and we make no income or results claims.
+
+- **Who reviews:** admins lang na may configured admin role ang makakakita ng screenshot, sa isang private channel.
+- **Screenshot:** we never store it ourselves. Dumadaan lang ito sa bot, at binubura ng bot ang screenshot sa Discord pagkatapos ng decision, o after 7 days kung hindi na-review. Pwede mong takpan ang account number mo bago mag-upload.
+- **"Need more info":** pwedeng mag-send ang admin ng note via DM kung kailangan ng mas malinaw na screenshot. Hindi namin sine-save ang note.
+- **What we log:** your Discord user ID, the reviewing admin's Discord ID, the date and time, the decision (approved, rejected, needs_info or expired) and a reason code. Wala nang iba: no image, amounts, account numbers or names.
+- **Retention:** the decision log is kept for **12 months**, then automatically deleted.
+- **Legal basis:** your consent when you submit (Sec. 12(a), RA 10173), plus our legitimate interest in managing community access (Sec. 12(f)).
+- **Providers:** the bot runs on Cloudflare, the log is stored in Supabase, and Discord Inc. handles the upload and the server under its own privacy policy. These providers may process data outside the Philippines (see Sections 5 and 6).
+
+Questions or requests: **goldfx.society@gmail.com**, subject "Privacy Request".
+
 ### Website analytics
 We use **Vercel Web Analytics** (provided by Vercel Inc., our hosting provider, acting as our processor). It is cookieless: it does not set cookies or use device fingerprinting to track you, and it does not track you across other websites. It gives us **aggregate** reports of page views and of custom events (for example, button clicks on the Gold Starter page). We do not send your name, email, account ID or other personal data in these events. When you arrive through a link with UTM campaign parameters (e.g. utm_source, utm_campaign), we read those parameters, and keep them in your browser's session storage for that visit, so we can measure which links bring visitors. Vercel may process this data outside the Philippines (see Sections 5 and 6). Purpose: to understand, in aggregate, which pages and links work so we can improve the site. Legal basis: our legitimate interests (Sec. 12(f), RA 10173).
 
-We do **not** ask for your phone number, ID, bank details, broker account numbers (other than the ACCM User ID in the Discord join application above) or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
+We do **not** ask for your phone number, ID, bank details, broker account numbers (other than the ACCM User ID in the Discord join application above; you can cover account numbers in a VIP screenshot) or account size. Please do not send us sensitive personal information (e.g. government IDs, financial account details, health information). We do not knowingly collect data from anyone under 18.
 
 ## 3. Why we use it (purposes)
 1. To create and manage your account and give you access to the Academy, diagnostic and dashboard.
@@ -61,10 +76,11 @@ We do not use your data for automated decisions that produce legal or similarly 
 We share personal data only with service providers that help us run GFX, under agreements requiring them to protect it:
 | Provider | Purpose | Location |
 |---|---|---|
-| Supabase | Database and authentication | Singapore (ap-southeast-1) |
+| Supabase | Database and authentication; Discord VIP decision log | Singapore (ap-southeast-1) |
 | Vercel Inc. | Website hosting and cookieless analytics (Vercel Web Analytics) | United States and other regions |
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
-| Discord Inc. | Discord community and join application, only if you apply to join | United States and other regions |
+| Discord Inc. | Discord community and join application, only if you apply to join; VIP verification upload and messages, only if you apply for @VIP | United States and other regions |
+| Cloudflare, Inc. | Runs the Discord VIP verification bot (the screenshot passes through memory only and is never saved), only if you apply for @VIP | Global network |
 
 **We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
 
@@ -80,6 +96,8 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Email list data | Until you unsubscribe or withdraw consent; then suppression record (email only) kept to honour the opt-out |
 | Inactive accounts | Deleted after 24 months of no activity, after a reminder email |
 | Consent records | For the duration of the relationship plus 3 years as evidence of consent. If you delete your account, the consent record is kept for those 3 years, linked only by the email hash |
+| Discord VIP screenshot | Deleted by the bot right after the admin's decision, or after 7 days if not reviewed. We never store it ourselves |
+| Discord VIP decision log | 12 months (Discord IDs, time, decision, reason code), then automatically deleted |
 | Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 
 ## 8. How we protect it
