@@ -100,7 +100,7 @@ export class Db {
    */
   async decide(
     requestId: string,
-    decision: "approved" | "rejected" | "expired",
+    decision: "approved" | "rejected" | "needs_info" | "expired",
     adminId: string | null,
     decidedAtIso: string,
     reason: ReasonCode | null = null,
@@ -125,9 +125,28 @@ export class Db {
     );
   }
 
-  /** After the card is deleted: drop the message id and record outcome flags. */
-  finalize(requestId: string, flags: LogFlag[]): Promise<unknown> {
-    return this.call("PATCH", `?request_id=eq.${requestId}`, { approval_message_id: null, flags }, "return=minimal");
+  /** After the card is deleted: drop the card id, record outcome flags and the #vip-log mirror message id. */
+  finalize(requestId: string, flags: LogFlag[], logMessageId: string | null): Promise<unknown> {
+    return this.call(
+      "PATCH",
+      `?request_id=eq.${requestId}`,
+      { approval_message_id: null, flags, log_message_id: logMessageId },
+      "return=minimal",
+    );
+  }
+
+  /** Decided rows older than the retention cutoff (12 months), oldest first. */
+  decidedBefore(cutoffIso: string, limit: number): Promise<Pick<RequestRow, "request_id" | "log_message_id">[]> {
+    return this.call(
+      "GET",
+      `?select=request_id,log_message_id&status=neq.pending&decided_at=lt.${encodeURIComponent(cutoffIso)}&order=decided_at.asc&limit=${limit}`,
+    );
+  }
+
+  /** Hard-delete log rows (retention purge). Only rows that are no longer pending. */
+  deleteDecided(requestIds: string[]): Promise<unknown> {
+    if (requestIds.length === 0) return Promise.resolve();
+    return this.call("DELETE", `?request_id=in.(${requestIds.join(",")})&status=neq.pending`, undefined, "return=minimal");
   }
 
   stalePending(olderThanIso: string, limit: number): Promise<RequestRow[]> {

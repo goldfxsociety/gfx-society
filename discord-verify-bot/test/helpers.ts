@@ -25,7 +25,7 @@ export function config(over: Partial<Config> = {}): Config {
     appId: IDS.app,
     guildId: IDS.guild,
     vipRoleId: IDS.vip,
-    adminRoleIds: [],
+    adminRoleIds: [IDS.adminRole],
     verifyChannelId: IDS.verify,
     approvalsChannelId: IDS.approvals,
     logChannelId: IDS.logs,
@@ -52,6 +52,9 @@ export class FakeSupabase {
       out = out.filter((r) => {
         const cell = (r as unknown as Record<string, unknown>)[k];
         if (op === "eq") return String(cell) === val;
+        if (op === "neq") return String(cell) !== val;
+        if (op === "in") return val.replace(/^\(|\)$/g, "").split(",").includes(String(cell));
+        if (cell === null || cell === undefined) return false;
         if (op === "gte") return String(cell) >= val;
         if (op === "lt") return String(cell) < val;
         return true;
@@ -60,6 +63,7 @@ export class FakeSupabase {
     const order = params.get("order");
     if (order?.startsWith("created_at.desc")) out.sort((a, b) => b.created_at.localeCompare(a.created_at));
     if (order?.startsWith("created_at.asc")) out.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    if (order?.startsWith("decided_at.asc")) out.sort((a, b) => String(a.decided_at).localeCompare(String(b.decided_at)));
     const limit = params.get("limit");
     return limit ? out.slice(0, Number(limit)) : out;
   }
@@ -83,6 +87,7 @@ export class FakeSupabase {
         reason_code: null,
         flags: [],
         approval_message_id: null,
+        log_message_id: null,
         created_at: now().toISOString(),
         decided_at: null,
       };
@@ -215,7 +220,8 @@ export function uploadSubmit(memberId = IDS.member, over: Partial<Interaction> =
   };
 }
 
-export function button(customId: string, adminId = IDS.admin, perms = String(1n << 28n), over: Partial<Interaction> = {}): Interaction {
+/** Admin click. By default the clicker has the configured admin role and NO special permissions. */
+export function button(customId: string, adminId = IDS.admin, perms = "0", over: Partial<Interaction> = {}, roles: string[] = [IDS.adminRole]): Interaction {
   return {
     id: nextId(),
     application_id: IDS.app,
@@ -223,10 +229,21 @@ export function button(customId: string, adminId = IDS.admin, perms = String(1n 
     token: "tok-" + nextId(),
     guild_id: IDS.guild,
     channel_id: IDS.approvals,
-    member: member(adminId, [], perms),
+    member: member(adminId, roles, perms),
     message: { id: "700000000000000000" },
     data: { custom_id: customId, component_type: 2 },
     ...over,
+  };
+}
+
+export function infoSubmit(requestId: string, note: string, adminId = IDS.admin): Interaction {
+  return {
+    ...button(`vip:infomodal:${requestId}`, adminId),
+    type: 5,
+    data: {
+      custom_id: `vip:infomodal:${requestId}`,
+      components: [{ type: 18, id: 1, component: { type: 4, id: 2, custom_id: "vip:note", value: note } }],
+    },
   };
 }
 

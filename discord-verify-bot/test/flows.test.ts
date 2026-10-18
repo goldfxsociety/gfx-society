@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { APPROVE_DM, MSG } from "../src/copy";
-import { expireStale, handleInteraction, rateDecision } from "../src/handlers";
-import { button, CDN_URL, harness, IDS, member, nextId, rejectSubmit, uploadSubmit } from "./helpers";
+import { APPROVE_DM, APPROVER_GUIDANCE, IB_DISCLOSURE, MSG } from "../src/copy";
+import { expireStale, handleInteraction, LIMITS, maintenance, purgeOldLogs, rateDecision, retentionCutoff } from "../src/handlers";
+import { button, CDN_URL, harness, IDS, infoSubmit, member, nextId, rejectSubmit, uploadSubmit } from "./helpers";
 
 async function submit(h: ReturnType<typeof harness>, memberId = IDS.member) {
   const i = uploadSubmit(memberId);
@@ -53,7 +53,8 @@ describe("submit screenshot", () => {
     const payload = uploads[0]!.json as { content: string; attachments: Array<{ filename: string }>; components: Array<{ components: Array<{ custom_id: string }> }> };
     expect(payload.attachments[0]!.filename).toBe(`vip-${i.id}.png`); // member's filename (may contain a name) is dropped
     expect(payload.content).not.toContain("cdn.discordapp.com");
-    expect(payload.components[0]!.components.map((b) => b.custom_id)).toEqual([`vip:approve:${i.id}`, `vip:reject:${i.id}`]);
+    expect(payload.components[0]!.components.map((b) => b.custom_id)).toEqual([`vip:approve:${i.id}`, `vip:info:${i.id}`, `vip:reject:${i.id}`]);
+    expect(payload.content).toContain(APPROVER_GUIDANCE);
     expect(h.sb.rows).toHaveLength(1);
     expect(h.sb.rows[0]).toMatchObject({ request_id: i.id, member_id: IDS.member, status: "pending" });
     // Nothing sent to Supabase contains an image URL, filename or bytes.
@@ -64,9 +65,9 @@ describe("submit screenshot", () => {
   it("rejects non-images / too-big files immediately (no download)", () => {
     const h = harness();
     const pdf = uploadSubmit(IDS.member, {}, { content_type: "application/pdf" });
-    expect((handleInteraction(pdf, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Image lang/);
+    expect((handleInteraction(pdf, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Images only/);
     const big = uploadSubmit(IDS.member, {}, { size: 50 * 1024 * 1024 });
-    expect((handleInteraction(big, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Image lang/);
+    expect((handleInteraction(big, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Images only/);
     const offCdn = uploadSubmit(IDS.member, {}, { url: "https://evil.example/x.png" });
     expect((handleInteraction(offCdn, h.deps, h.ctx) as { data: { content: string } }).data.content).toBe(MSG.error);
     expect(h.cdnFetches).toHaveLength(0);
@@ -77,7 +78,7 @@ describe("submit screenshot", () => {
     await submit(h);
     expect(h.dc.calls.filter((c) => c.form)).toHaveLength(0);
     expect(h.sb.rows).toHaveLength(0);
-    expect(editedAck(h)[0]).toMatch(/Image lang/);
+    expect(editedAck(h)[0]).toMatch(/Images only/);
   });
 
   it("one pending request per member", async () => {
@@ -147,13 +148,21 @@ describe("approve", () => {
     }
   });
 
-  it("non-admins get an ephemeral refusal and nothing happens", async () => {
+  it("non-admins (incl. Manage Roles / Administrator without the admin role) get an ephemeral refusal on all 3 buttons", async () => {
     const h = harness();
     const { i } = await submit(h);
-    const r = handleInteraction(button(`vip:approve:${i.id}`, IDS.member, "0"), h.deps, h.ctx) as { data: { content: string } };
-    expect(r.data.content).toBe(MSG.notAdmin);
+    for (const perms of ["0", String(1n << 28n), String(1n << 3n)]) {
+      for (const action of ["approve", "info", "reject"]) {
+        const r = handleInteraction(button(`vip:${action}:${i.id}`, IDS.admin2, perms, {}, []), h.deps, h.ctx) as { type: number; data: { content: string } };
+        expect(r.type).toBe(4);
+        expect(r.data.content).toBe(MSG.notAdmin);
+      }
+    }
+    const r2 = handleInteraction({ ...infoSubmit(i.id, "more pls", IDS.admin2), member: member(IDS.admin2, [], String(1n << 3n)) }, h.deps, h.ctx) as { data: { content: string } };
+    expect(r2.data.content).toBe(MSG.notAdmin);
     await h.flush();
     expect(h.sb.rows[0]!.status).toBe("pending");
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
   });
 
   it("admins can't decide their own request", async () => {
@@ -230,8 +239,9 @@ describe("reject", () => {
     expect(r).toEqual({ type: 6 });
     await h.flush();
     const dm = h.dc.find("POST", new RegExp(`/channels/${IDS.dmChannel}/messages`))[0]!.json as { content: string };
-    expect(dm.content).toMatch(/malabo o naka-crop/);
-    expect(dm.content).toMatch(/Note mula sa admin: Paki-crop/);
+    expect(dm.content).toMatch(/blurry o naka-crop/);
+    expect(dm.content).toContain(IB_DISCLOSURE);
+    expect(dm.content).toMatch(/Note from the admin: Paki-crop/);
     expect(dm.content).not.toContain("@everyone");
     expect(h.sb.rows[0]).toMatchObject({ status: "rejected", reason_code: "unclear", admin_id: IDS.admin });
     for (const b of h.sb.bodies) expect(b).not.toContain("Paki-crop"); // note is never stored
@@ -255,6 +265,95 @@ describe("reject", () => {
     await h.flush();
     expect(h.sb.rows[0]!.status).toBe("rejected");
     expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
+  });
+});
+
+describe("need more info", () => {
+  it("opens a note form, DMs a Taglish request with the note + how to resubmit + IB line, sets needs_info, logs it", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    const modal = handleInteraction(button(`vip:info:${i.id}`), h.deps, h.ctx) as { type: number; data: { custom_id: string } };
+    expect(modal.type).toBe(9);
+    expect(modal.data.custom_id).toBe(`vip:infomodal:${i.id}`);
+    expect(handleInteraction(infoSubmit(i.id, "Pakita ang ACCM User ID sa screenshot"), h.deps, h.ctx)).toEqual({ type: 6 });
+    await h.flush();
+    const dm = (h.dc.find("POST", new RegExp(`/channels/${IDS.dmChannel}/messages`))[0]!.json as { content: string }).content;
+    expect(dm).toMatch(/Kailangan pa namin ng konting info/);
+    expect(dm).toMatch(/Note from the admin: Pakita ang ACCM User ID/);
+    expect(dm).toMatch(/\/verify-deposit/);
+    expect(dm).toContain(IB_DISCLOSURE);
+    expect(h.sb.rows[0]).toMatchObject({ status: "needs_info", admin_id: IDS.admin, reason_code: null, approval_message_id: null });
+    for (const b of h.sb.bodies) expect(b).not.toContain("Pakita"); // note never stored
+    const logs = h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`));
+    expect((logs[0]!.json as { content: string }).content).toMatch(/needs_info/);
+    expect(h.dc.find("DELETE", new RegExp(`/channels/${IDS.approvals}/messages/`))).toHaveLength(1);
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
+  });
+
+  it("lets the member resubmit right away (no cooldown)", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    handleInteraction(infoSubmit(i.id, "clearer screenshot please"), h.deps, h.ctx);
+    await h.flush();
+    await submit(h);
+    expect(h.sb.rows.filter((r) => r.status === "pending")).toHaveLength(1);
+  });
+
+  it("closed DMs → no-details #verify mention + /verify-status explains", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.dmClosed = true;
+    handleInteraction(infoSubmit(i.id, "clearer screenshot please"), h.deps, h.ctx);
+    await h.flush();
+    expect(h.dc.find("POST", new RegExp(`/channels/${IDS.verify}/messages$`))).toHaveLength(1);
+    expect(h.sb.rows[0]!.flags).toEqual(["dm_failed"]);
+    const cmd = { id: nextId(), application_id: IDS.app, type: 2, token: "tok-s", guild_id: IDS.guild, channel_id: IDS.verify, member: member(IDS.member), data: { name: "verify-status" } };
+    handleInteraction(cmd, h.deps, h.ctx);
+    await h.flush();
+    expect(editedAck(h).at(-1)).toMatch(/needs more info/);
+  });
+
+  it("self need-more-info is blocked", async () => {
+    const h = harness();
+    const { i } = await submit(h, IDS.admin);
+    handleInteraction(infoSubmit(i.id, "x".repeat(10), IDS.admin), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.status).toBe("pending");
+  });
+});
+
+describe("12-month retention purge", () => {
+  it("deletes log rows older than 12 months and their #vip-log mirror messages; keeps newer rows", async () => {
+    const h = harness({ now: new Date("2025-09-01T00:00:00Z") });
+    const { i: oldReq } = await submit(h);
+    handleInteraction(button(`vip:approve:${oldReq.id}`), h.deps, h.ctx);
+    await h.flush();
+    const oldLogId = h.sb.rows[0]!.log_message_id;
+    expect(oldLogId).toMatch(/^\d+$/);
+    h.setNow(new Date("2026-10-01T00:00:00Z"));
+    const { i: newReq } = await submit(h, IDS.admin2);
+    handleInteraction(rejectSubmit(newReq.id, "unclear"), h.deps, h.ctx);
+    await h.flush();
+    expect(await purgeOldLogs(h.deps)).toBe(1);
+    expect(h.sb.rows.map((r) => r.request_id)).toEqual([newReq.id]);
+    expect(h.dc.find("DELETE", new RegExp(`/channels/${IDS.logs}/messages/${oldLogId}$`))).toHaveLength(1);
+    expect(await purgeOldLogs(h.deps)).toBe(0); // idempotent
+  });
+
+  it("never purges pending rows and never removes @VIP", async () => {
+    const h = harness({ now: new Date("2025-01-01T00:00:00Z") });
+    await submit(h);
+    h.setNow(new Date("2026-10-01T00:00:00Z"));
+    // maintenance first expires the stale pending row (7 days), which is then only purged 12 months after its decision
+    await maintenance(h.deps);
+    expect(h.sb.rows[0]!.status).toBe("expired");
+    expect(h.dc.calls.filter((c) => /\/roles\//.test(c.path) && c.method !== "PUT")).toHaveLength(0);
+    expect(h.dc.calls.filter((c) => c.method === "DELETE" && /\/members\//.test(c.path))).toHaveLength(0);
+  });
+
+  it("cutoff is 12 calendar months; batches stay under 50 subrequests", () => {
+    expect(retentionCutoff(new Date("2026-10-18T04:00:00Z")).toISOString()).toBe("2025-10-18T04:00:00.000Z");
+    expect(1 + LIMITS.expireBatch * 4 + 1 + LIMITS.purgeBatch + 1).toBeLessThanOrEqual(50);
   });
 });
 

@@ -19,7 +19,8 @@ export function loadConfig(env: Env): Config {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  if (adminRoleIds.some((r) => !SNOWFLAKE.test(r))) bad.push("ADMIN_ROLE_IDS");
+  // Required: only members with one of these roles may approve / reject / ask for more info.
+  if (adminRoleIds.length === 0 || adminRoleIds.some((r) => !SNOWFLAKE.test(r))) bad.push("ADMIN_ROLE_IDS");
   for (const k of ["DISCORD_PUBLIC_KEY", "DISCORD_BOT_TOKEN", "SUPABASE_SERVICE_ROLE_KEY"] as const) {
     if (!env[k]) bad.push(k);
   }

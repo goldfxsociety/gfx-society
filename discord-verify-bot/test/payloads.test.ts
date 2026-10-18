@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { checkAttachmentMeta, isDiscordCdnUrl, sniffImageType } from "../src/attachments";
 import * as copy from "../src/copy";
-import { approvalCard, commandDefinitions, decisionButtons, parseDecisionId, rejectModal, uploadModal, verifyPanel } from "../src/payloads";
+import { approvalCard, commandDefinitions, decisionButtons, infoModal, parseDecisionId, rejectModal, uploadModal, verifyPanel } from "../src/payloads";
 import { PNG } from "./helpers";
 
 describe("payload builders", () => {
@@ -20,7 +20,8 @@ describe("payload builders", () => {
     const m = rejectModal("800000000000000001");
     expect(m.data.title.length).toBeLessThanOrEqual(45);
     const sel = m.data.components[0]!.component as { options: Array<{ value: string }> };
-    expect(sel.options.map((o) => o.value)).toEqual(["unclear", "wrong_screen", "cant_confirm", "other"]);
+    expect(sel.options.map((o) => o.value)).toEqual(["unclear", "wrong_screen", "not_accm", "too_old", "cant_confirm", "other"]);
+    for (const o of sel.options as unknown as Array<{ label: string }>) expect(o.label.length).toBeLessThanOrEqual(100);
     for (const c of m.data.components) {
       expect(c.label.length).toBeLessThanOrEqual(45);
       if ("description" in c && c.description) expect(c.description.length).toBeLessThanOrEqual(100);
@@ -37,6 +38,14 @@ describe("payload builders", () => {
       expect(parseDecisionId(b.custom_id)?.requestId).toBe(rid);
     }
     expect(parseDecisionId(`vip:rejectmodal:${rid}`)).toEqual({ action: "rejectModal", requestId: rid });
+    expect(parseDecisionId(`vip:info:${rid}`)).toEqual({ action: "info", requestId: rid });
+    expect(parseDecisionId(`vip:infomodal:${rid}`)).toEqual({ action: "infoModal", requestId: rid });
+    expect(decisionButtons(rid)[0]!.components.map((b) => b.label)).toEqual(["Approve VIP", "Need more info", "Reject"]);
+    const im = infoModal(rid);
+    expect(im.data.title.length).toBeLessThanOrEqual(45);
+    expect(im.data.components[0]!.label.length).toBeLessThanOrEqual(45);
+    expect(im.data.components[0]!.description.length).toBeLessThanOrEqual(100);
+    expect(im.data.components[0]!.component).toMatchObject({ type: 4, required: true, max_length: 300 });
     expect(parseDecisionId("vip:approve:abc")).toBeNull();
   });
 
@@ -51,6 +60,7 @@ describe("payload builders", () => {
   it("panel has the Verify deposit button and privacy notice", () => {
     const p = verifyPanel();
     expect(p.content).toContain(copy.PRIVACY_NOTICE);
+    expect(p.content).toContain(copy.VALID_DEPOSIT_MEMBER);
     expect(p.components[0]!.components[0]!.custom_id).toBe("vip:start");
   });
 });
@@ -80,44 +90,86 @@ describe("attachments", () => {
 });
 
 describe("copy compliance", () => {
-  const all: string[] = [];
-  const collect = (v: unknown) => {
-    if (typeof v === "string") all.push(v);
-    else if (typeof v === "function") {
-      try {
-        all.push(String((v as (...a: string[]) => unknown)("500000000000000008", "x")));
-      } catch {
-        /* ignore */
-      }
-    } else if (v && typeof v === "object") Object.values(v).forEach(collect);
-  };
-  collect(copy);
-  for (const r of ["unclear", "wrong_screen", "cant_confirm", "other"] as const) all.push(copy.rejectDm(r, "note"));
+  const reasons = Object.keys(copy.REASONS) as Array<keyof typeof copy.REASONS>;
+  const statuses = ["pending", "approved", "rejected", "needs_info", "expired"] as const;
+  /** Every MEMBER-facing message the bot can send (each one is a single Discord message/modal). */
+  const member: string[] = [
+    JSON.stringify(uploadModal()),
+    verifyPanel().content,
+    copy.APPROVE_DM,
+    copy.dmFallback("500000000000000008"),
+    copy.needsInfoDm("Pakita ang ACCM User ID"),
+    copy.needsInfoDm(""),
+    ...reasons.map((r) => copy.rejectDm(r, "note")),
+    ...reasons.flatMap((r) => statuses.map((st) => copy.statusText(st, r))),
+    ...Object.values(copy.MSG)
+      .filter((v) => typeof v === "string" || typeof v === "function")
+      .map((v) => (typeof v === "function" ? String((v as (a: never) => unknown)(8 as never)) : v)),
+    ...commandDefinitions().map((c) => c.description),
+  ];
+  const admin: string[] = [copy.approvalCardText("1", "2", 3), JSON.stringify(rejectModal("800000000000000001")), JSON.stringify(infoModal("800000000000000001"))];
+  const withoutIb = (t: string) => t.split(copy.IB_DISCLOSURE).join("");
 
-  it("no income / profit / win-rate / guarantee claims", () => {
-    for (const s of all) {
-      expect(s).not.toMatch(/\b(profit|kumita|kikita|income|win[- ]?rate|sure ?win|guaranteed (profit|returns?|income))\b/i);
-      expect(s.replace(/Walang guaranteed results/g, "")).not.toMatch(/guarantee/i);
+  it("no income / profit / win-rate / guaranteed-results claims (outside the IB disclosure)", () => {
+    for (const s of [...member, ...admin].map(withoutIb)) {
+      expect(s).not.toMatch(/\b(profit|kumita|kikita|kitain|income|win[- ]?rate|sure ?win|ROI)\b/i);
+      expect(s.replace(/Walang guaranteed results/g, "").replace(/A guaranteed/g, "")).not.toMatch(/guarantee/i);
     }
   });
-  it("any copy naming ACCM includes the IB disclosure", () => {
-    for (const s of all) if (/ACCM/.test(s) && s !== copy.IB_DISCLOSURE) expect(s).toContain(copy.IB_DISCLOSURE);
+
+  it("every member-facing message that names ACCM carries the one-line IB disclosure", () => {
+    let named = 0;
+    for (const s of member) {
+      if (!withoutIb(s).includes("ACCM")) continue;
+      named++;
+      expect(s).toContain(copy.IB_DISCLOSURE);
+    }
+    expect(named).toBeGreaterThanOrEqual(4); // panel, modal, reject/needs-info DMs, status
+    expect(copy.IB_DISCLOSURE).not.toMatch(/\n/);
+    expect(copy.withIb("no broker here")).toBe("no broker here");
   });
-  it("privacy notice says: verification only, deleted after review, decision log only, contact email", () => {
-    expect(copy.PRIVACY_NOTICE).toMatch(/para lang sa VIP verification/);
-    expect(copy.PRIVACY_NOTICE).toMatch(/buburahin ito pagkatapos ng review/);
+
+  it("slash command descriptions don't name ACCM (no room for the disclosure in 100 chars)", () => {
+    for (const c of commandDefinitions()) expect(c.description).not.toMatch(/ACCM/);
+  });
+
+  it("balanced Taglish: member messages mix English and Tagalog", () => {
+    const tl = /\b(ang|ng|mo|ka|lang|na|ito|namin|kung|puwede|paki|ulit|muna|bago|dito|kita|hindi|wala|para|sa|ay)\b/i;
+    const en = /\b(the|your|you|please|is|only|after|review|screenshot|submit|request|again|with|using|wait)\b/i;
+    const long = [copy.APPROVE_DM, copy.PRIVACY_NOTICE, copy.needsInfoDm("x"), copy.rejectDm("unclear"), verifyPanel().content, copy.MSG.received, copy.dmFallback("1")];
+    for (const s of long) {
+      expect(s).toMatch(tl);
+      expect(s).toMatch(en);
+    }
+  });
+
+  it("privacy notice: verification only, deleted after review, decision log only, contact email", () => {
+    expect(copy.PRIVACY_NOTICE).toMatch(/only for VIP verification/);
+    expect(copy.PRIVACY_NOTICE).toMatch(/deletes it after the review/);
     expect(copy.PRIVACY_NOTICE).toMatch(/Decision log lang/);
     expect(copy.PRIVACY_NOTICE).toContain("goldfx.society@gmail.com");
+    expect(JSON.stringify(uploadModal())).toContain("goldfx.society@gmail.com");
   });
-  it("approve DM is education-only with risk reminders", () => {
-    expect(copy.APPROVE_DM).toMatch(/education lang ito, hindi financial advice/);
+
+  it("approve DM is education-only with risk reminders; VIP framed as community access", () => {
+    expect(copy.APPROVE_DM).toMatch(/education lang ito, not financial advice/);
     expect(copy.APPROVE_DM).toMatch(/max 1% risk per trade/);
+    expect(verifyPanel().content).toMatch(/community access, not trading results/);
   });
+
+  it("approval card tells admins the valid-deposit rule and that the bot doesn't auto-check", () => {
+    const card = copy.approvalCardText("1", "2", 3);
+    expect(card).toMatch(/ACCM screenshot showing the member's name or ACCM User ID, dated within the last 30 days/);
+    expect(card).toMatch(/Admins judge the amount/);
+    expect(card).toMatch(/does \*\*not\*\* auto-check/);
+  });
+
   it("log line has ids only", () => {
     const l = copy.logLine({ requestId: "1", memberId: "2", adminId: "3", decision: "rejected", decidedAt: "2026-10-18T04:00:00.000Z", reason: "unclear", flags: ["dm_failed"] });
     expect(l).toBe("`1` · member 2 · admin 3 · rejected · 2026-10-18T04:00:00.000Z · reason unclear · dm_failed");
   });
+
   it("never names the founder", () => {
-    for (const s of all) expect(s).not.toMatch(/\bBen\b/);
+    for (const s of [...member, ...admin]) expect(s).not.toMatch(/\bBen\b/);
   });
 });

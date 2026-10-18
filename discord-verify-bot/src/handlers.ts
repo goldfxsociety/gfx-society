@@ -1,6 +1,6 @@
 import { checkAdmin } from "./admin";
 import { attachmentsFromModal, checkAttachmentMeta, isDiscordCdnUrl, sniffImageType } from "./attachments";
-import { APPROVE_DM, approvalCardText, dmFallback, logLine, MSG, REASONS, rejectDm, statusText } from "./copy";
+import { APPROVE_DM, approvalCardText, dmFallback, logLine, MSG, needsInfoDm, REASONS, rejectDm, statusText } from "./copy";
 import type { Db } from "./db";
 import { type Discord, DiscordCode, DiscordError } from "./discord";
 import {
@@ -10,6 +10,7 @@ import {
   deferEphemeral,
   deferUpdate,
   ephemeral,
+  infoModal,
   modalValue,
   NO_MENTIONS,
   parseDecisionId,
@@ -31,7 +32,12 @@ export const LIMITS = {
   maxPerDay: 5,
   cooldownAfterRejectMs: 10 * 60 * 1000,
   pendingExpiryMs: 7 * 24 * 60 * 60 * 1000,
-  expireBatch: 10,
+  /** Decision-log retention (decided default): 12 months. */
+  retentionMonths: 12,
+  // Per hourly cron run, sized to stay under the Workers Free limit of 50 subrequests:
+  // expiry ≤ 1 + 5×4 = 21, purge ≤ 1 + 20 + 1 = 22.
+  expireBatch: 5,
+  purgeBatch: 20,
 } as const;
 
 const log = (msg: string, e?: unknown) => console.error(`[vip-bot] ${msg}${e instanceof Error ? `: ${e.message}` : ""}`);
@@ -57,10 +63,11 @@ export function handleInteraction(i: Interaction, deps: Deps, ctx: WaitCtx): unk
     const cid = i.data?.custom_id;
     if (cid === CID.start) return startVerification(i, cfg);
     const d = parseDecisionId(cid);
-    if (!d || d.action === "rejectModal") return ephemeral(MSG.error);
+    if (!d || d.action === "rejectModal" || d.action === "infoModal") return ephemeral(MSG.error);
     const admin = checkAdmin(i, cfg);
     if (!admin.ok) return ephemeral(admin.reason === "wrong_channel" ? MSG.notInApprovals : MSG.notAdmin);
     if (d.action === "reject") return rejectModal(d.requestId);
+    if (d.action === "info") return infoModal(d.requestId);
     ctx.waitUntil(runApprove(i, d.requestId, admin.adminId, deps));
     return deferUpdate();
   }
@@ -77,6 +84,13 @@ export function handleInteraction(i: Interaction, deps: Deps, ctx: WaitCtx): unk
       const reason: ReasonCode = code && code in REASONS ? code : "other";
       const note = modalValue(i.data?.components as never, CID.note);
       ctx.waitUntil(runReject(i, d.requestId, admin.adminId, reason, typeof note === "string" ? note : undefined, deps));
+      return deferUpdate();
+    }
+    if (d?.action === "infoModal") {
+      const admin = checkAdmin(i, cfg);
+      if (!admin.ok) return ephemeral(admin.reason === "wrong_channel" ? MSG.notInApprovals : MSG.notAdmin);
+      const note = modalValue(i.data?.components as never, CID.note);
+      ctx.waitUntil(runNeedsInfo(i, d.requestId, admin.adminId, typeof note === "string" ? note : "", deps));
       return deferUpdate();
     }
     return ephemeral(MSG.error);
@@ -220,8 +234,7 @@ async function notifyMember(deps: Deps, memberId: string, content: string, flags
 async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, flags: LogFlag[]) {
   const { discord, db, cfg } = deps;
   if (messageId) await discord.deleteOwnMessage(cfg.approvalsChannelId, messageId).catch((e) => log("delete card failed", e));
-  await db.finalize(row.request_id, flags).catch((e) => log("finalize failed", e));
-  await discord
+  const mirror = await discord
     .createMessage(cfg.logChannelId, {
       content: logLine({
         requestId: row.request_id,
@@ -234,7 +247,12 @@ async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, f
       }),
       allowed_mentions: NO_MENTIONS,
     })
-    .catch((e) => log("log mirror failed", e));
+    .catch((e) => {
+      log("log mirror failed", e);
+      return null;
+    });
+  // Store the mirror's id so the 12-month purge can delete it too.
+  await db.finalize(row.request_id, flags, mirror?.id ?? null).catch((e) => log("finalize failed", e));
 }
 
 export async function runApprove(i: Interaction, requestId: string, adminId: string, deps: Deps): Promise<void> {
@@ -320,6 +338,76 @@ export async function runReject(
     log("reject failed", e);
     await adminNotice(deps, i, MSG.error);
   }
+}
+
+/** "Need more info": closes this request as needs_info (member may resubmit right away, no cooldown), DMs the note. */
+export async function runNeedsInfo(i: Interaction, requestId: string, adminId: string, note: string, deps: Deps): Promise<void> {
+  try {
+    const pre = await precheck(i, requestId, adminId, deps);
+    if (!pre) return;
+    const result = await deps.db.decide(requestId, "needs_info", adminId, deps.now().toISOString());
+    if (!result.won) {
+      await adminNotice(deps, i, MSG.alreadyDecided(result.row?.admin_id ?? null));
+      return;
+    }
+    const row = result.row;
+    const messageId = row.approval_message_id ?? i.message?.id ?? null;
+    await lockCard(deps, row, messageId);
+    const flags: LogFlag[] = [];
+    await notifyMember(deps, row.member_id, needsInfoDm(note), flags);
+    await closeOut(deps, row, messageId, flags);
+  } catch (e) {
+    log("needs-info failed", e);
+    await adminNotice(deps, i, MSG.error);
+  }
+}
+
+/** 12 months before `now` (calendar months, UTC). */
+export function retentionCutoff(now: Date): Date {
+  const d = new Date(now.getTime());
+  d.setUTCMonth(d.getUTCMonth() - LIMITS.retentionMonths);
+  return d;
+}
+
+/**
+ * Cron: delete decision-log rows older than 12 months and their #vip-log mirror messages.
+ * Uses single-message DELETE on the bot's OWN messages (works at any age; bulk delete only works for
+ * messages < 14 days old, so it is not used). A row is kept for the next run only if Discord rate-limits us.
+ * Never touches roles: @VIP is permanent.
+ */
+export async function purgeOldLogs(deps: Deps): Promise<number> {
+  const cutoff = retentionCutoff(deps.now()).toISOString();
+  const rows = await deps.db.decidedBefore(cutoff, LIMITS.purgeBatch);
+  const done: string[] = [];
+  for (const r of rows) {
+    if (r.log_message_id) {
+      try {
+        await deps.discord.deleteOwnMessage(deps.cfg.logChannelId, r.log_message_id);
+      } catch (e) {
+        if (e instanceof DiscordError && e.status === 429) {
+          log("purge rate-limited; will retry next run", e);
+          break;
+        }
+        log("purge: mirror delete failed (row deleted anyway)", e);
+      }
+    }
+    done.push(r.request_id);
+  }
+  await deps.db.deleteDecided(done);
+  return done.length;
+}
+
+/** Hourly cron: expiry + retention purge. */
+export async function maintenance(deps: Deps): Promise<{ expired: number; purged: number }> {
+  const expired = await expireStale(deps).catch((e) => {
+    log("expiry failed", e);
+    return 0;
+  });
+  const purged = await purgeOldLogs(deps).catch((e) => {
+    log("purge failed", e);
+    return 0;
+  });
+  return { expired, purged };
 }
 
 /** Cron: expire pending requests older than 7 days and delete their cards (and so the screenshot). */

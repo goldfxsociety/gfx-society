@@ -122,8 +122,8 @@ export interface Interaction {
   };
 }
 
-export type RequestStatus = "pending" | "approved" | "rejected" | "expired";
-export type ReasonCode = "unclear" | "wrong_screen" | "cant_confirm" | "other";
+export type RequestStatus = "pending" | "approved" | "rejected" | "needs_info" | "expired";
+export type ReasonCode = "unclear" | "wrong_screen" | "not_accm" | "too_old" | "cant_confirm" | "other";
 export type LogFlag = "dm_failed" | "already_vip" | "member_left";
 
 /** One row of public.discord_vip_requests. Ids only. No images, URLs, names or amounts. */
@@ -136,6 +136,8 @@ export interface RequestRow {
   reason_code: ReasonCode | null;
   flags: LogFlag[];
   approval_message_id: string | null;
+  /** Id of the bot's one-line #vip-log mirror message (so the 12-month purge can delete it). */
+  log_message_id: string | null;
   created_at: string;
   decided_at: string | null;
 }

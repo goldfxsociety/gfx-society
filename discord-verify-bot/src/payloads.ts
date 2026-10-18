@@ -1,10 +1,10 @@
 /** Pure builders for Discord payloads (unit-tested). */
 import {
   approvalCardText,
+  MODAL_NOTICE,
   MODAL_TITLE,
   PANEL_BUTTON,
   PANEL_TEXT,
-  PRIVACY_NOTICE,
   REASONS,
   UPLOAD_DESCRIPTION,
   UPLOAD_LABEL,
@@ -18,6 +18,8 @@ export const CID = {
   approve: "vip:approve:",
   reject: "vip:reject:",
   rejectModal: "vip:rejectmodal:",
+  info: "vip:info:",
+  infoModal: "vip:infomodal:",
   reason: "vip:reason",
   note: "vip:note",
 } as const;
@@ -32,7 +34,7 @@ export function ephemeral(content: string) {
 export const deferEphemeral = () => ({ type: CallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: EPHEMERAL } });
 export const deferUpdate = () => ({ type: CallbackType.DEFERRED_UPDATE_MESSAGE });
 
-/** Upload modal: privacy notice (Text Display) shown above the File Upload (Label → File Upload, images only, 1 file). */
+/** Upload modal: requirement + privacy notice + IB line (Text Display) shown above the File Upload (Label → File Upload, images only, 1 file). */
 export function uploadModal() {
   return {
     type: CallbackType.MODAL,
@@ -40,7 +42,7 @@ export function uploadModal() {
       custom_id: CID.submitModal,
       title: MODAL_TITLE,
       components: [
-        { type: ComponentType.TEXT_DISPLAY, content: PRIVACY_NOTICE },
+        { type: ComponentType.TEXT_DISPLAY, content: MODAL_NOTICE },
         {
           type: ComponentType.LABEL,
           label: UPLOAD_LABEL,
@@ -90,12 +92,32 @@ export function rejectModal(requestId: string) {
   };
 }
 
+/** "Need more info" modal: short admin note (required). The note goes into the DM only, never stored. */
+export function infoModal(requestId: string) {
+  return {
+    type: CallbackType.MODAL,
+    data: {
+      custom_id: CID.infoModal + requestId,
+      title: "Need more info",
+      components: [
+        {
+          type: ComponentType.LABEL,
+          label: "Ano ang kailangan from the member?",
+          description: "Kasama lang sa DM. Hindi ito sine-save. Huwag maglagay ng amount o account details.",
+          component: { type: ComponentType.TEXT_INPUT, custom_id: CID.note, style: 2, required: true, min_length: 5, max_length: 300 },
+        },
+      ],
+    },
+  };
+}
+
 export function decisionButtons(requestId: string, disabled = false) {
   return [
     {
       type: ComponentType.ACTION_ROW,
       components: [
         { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Approve VIP", custom_id: CID.approve + requestId, disabled },
+        { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Need more info", custom_id: CID.info + requestId, disabled },
         { type: ComponentType.BUTTON, style: ButtonStyle.DANGER, label: "Reject", custom_id: CID.reject + requestId, disabled },
       ],
     },
@@ -136,26 +158,28 @@ export function commandDefinitions() {
     {
       name: "verify-deposit",
       type: 1,
-      description: "I-upload ang deposit screenshot para sa VIP verification (admins lang ang makakakita).",
+      description: "Upload your deposit screenshot para sa VIP verification (admins lang ang makakakita).",
       contexts: [0],
       integration_types: [0],
     },
     {
       name: "verify-status",
       type: 1,
-      description: "Tingnan ang status ng VIP verification mo (ikaw lang ang makakakita).",
+      description: "Check the status ng VIP verification mo (ikaw lang ang makakakita).",
       contexts: [0],
       integration_types: [0],
     },
   ];
 }
 
-export function parseDecisionId(customId: string | undefined): { action: "approve" | "reject" | "rejectModal"; requestId: string } | null {
+export type DecisionAction = "approve" | "reject" | "rejectModal" | "info" | "infoModal";
+
+export function parseDecisionId(customId: string | undefined): { action: DecisionAction; requestId: string } | null {
   if (!customId) return null;
-  const m = /^vip:(approve|reject|rejectmodal):([0-9]{17,20})$/.exec(customId);
+  const m = /^vip:(approve|reject|rejectmodal|info|infomodal):([0-9]{17,20})$/.exec(customId);
   if (!m) return null;
-  const action = m[1] === "rejectmodal" ? "rejectModal" : (m[1] as "approve" | "reject");
-  return { action, requestId: m[2]! };
+  const map: Record<string, DecisionAction> = { approve: "approve", reject: "reject", rejectmodal: "rejectModal", info: "info", infomodal: "infoModal" };
+  return { action: map[m[1]!]!, requestId: m[2]! };
 }
 
 /** Reads a value from a submitted modal by custom_id (Label → child). */

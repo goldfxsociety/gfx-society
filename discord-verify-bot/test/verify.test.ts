@@ -44,7 +44,7 @@ describe("HTTP endpoint", () => {
       DISCORD_APP_ID: IDS.app,
       GUILD_ID: IDS.guild,
       VIP_ROLE_ID: IDS.vip,
-      ADMIN_ROLE_IDS: "",
+      ADMIN_ROLE_IDS: IDS.adminRole,
       VERIFY_CHANNEL_ID: IDS.verify,
       APPROVALS_CHANNEL_ID: IDS.approvals,
       LOG_CHANNEL_ID: IDS.logs,
@@ -82,7 +82,7 @@ describe("HTTP endpoint", () => {
     const { env } = await setup();
     const res = await handleRequest(
       new Request("https://x/", { method: "POST", body: "{}" }),
-      { ...env, DISCORD_BOT_TOKEN: "" },
+      { ...env, ADMIN_ROLE_IDS: "" },
       { waitUntil: () => undefined },
     );
     expect(res.status).toBe(500);
