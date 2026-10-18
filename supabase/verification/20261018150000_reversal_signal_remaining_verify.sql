@@ -1,7 +1,7 @@
 -- Verify 20261018150000_reversal_signal_remaining.sql (read-only).
 
 -- 1) Moving averages takeaway updated. Expect 1 row, ok = true.
-select slug, (key_takeaways ->> 1 = 'RSI above 70 suggests overbought, below 30 suggests oversold — neither is automatic; each is only a possible reversal sign.') as ok
+select slug, (key_takeaways ->> 1 = 'RSI above 70 suggests overbought, below 30 suggests oversold — possible reversal sign lang, hindi automatic na buy o sell.') as ok
 from public.lessons where id = 'a9ae37e8-7cb6-47cb-b040-4abc36835cd9';
 
 -- 2) SMC distractor updated; correctIndex still 0. Expect 1 row, ok = true.

@@ -3,7 +3,7 @@
 --
 -- 1) moving-averages-and-rsi key_takeaways[1]
 --    "...neither is a guaranteed reversal signal."
---    -> "...neither is automatic; each is only a possible reversal sign."
+--    -> "...possible reversal sign lang, hindi automatic na buy o sell."
 -- 2) smart-money-concepts-intro interactive_config scenarios[2].options[1]
 --    "A guaranteed reversal signal"
 --    -> "A guaranteed reversal sign"
@@ -22,7 +22,7 @@ update public.lessons
 set key_takeaways = jsonb_set(
       key_takeaways,
       '{1}',
-      to_jsonb('RSI above 70 suggests overbought, below 30 suggests oversold — neither is automatic; each is only a possible reversal sign.'::text),
+      to_jsonb('RSI above 70 suggests overbought, below 30 suggests oversold — possible reversal sign lang, hindi automatic na buy o sell.'::text),
       false),
     updated_at = now()
 where id = 'a9ae37e8-7cb6-47cb-b040-4abc36835cd9'
