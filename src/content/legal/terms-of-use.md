@@ -1,8 +1,8 @@
 # GFX Society Terms of Use
 
-**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Mag-demo muna bago mag-live. May IB rebates ang founder mula sa partner brokers (basahin ang IB Disclosure). Maging respectful sa community.
+**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner brokers (basahin ang IB Disclosure). Maging respectful sa community.
 
-Last updated: Oct 2026 · Version: 1.0
+Last updated: 18 Oct 2026 · Version: 1.1
 
 ## 1. Agreement
 By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Society Messenger community (together, the "Services"), you agree to these Terms, our Privacy Notice, Risk Disclaimer and IB Disclosure. If you do not agree, do not use the Services. Operator: GoldFX Society (GFX), an independent education community operated by its founder, Philippines.
@@ -13,7 +13,7 @@ You must be at least 18 years old and able to enter a binding agreement under Ph
 ## 3. Education only — no advice, no brokerage
 - All content (lessons, tools, calculators, diagnostics, posts, live sessions, community messages) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
 - GFX is **not a broker, dealer, investment adviser, fund manager or signal provider**, does not hold or manage client money, and does not execute trades.
-- GFX makes **no promises of profit, income, or win rates**. Examples and demo results are illustrative and not indicative of future results.
+- GFX makes **no promises of profit, income, or win rates**. Examples and demo or cents-account results are illustrative and not indicative of future results.
 
 ## 4. Your responsibilities
 - You alone decide whether and how to trade, and you bear all gains and losses.

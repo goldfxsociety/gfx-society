@@ -14,9 +14,9 @@ export default function OgImage() {
         }}
       >
         <div style={{ fontSize: 40, color: "#d4af37", fontWeight: 700 }}>GFX Society</div>
-        <div style={{ fontSize: 72, fontWeight: 700, marginTop: 20 }}>Learn gold trading the safe way.</div>
+        <div style={{ fontSize: 72, fontWeight: 700, marginTop: 20 }}>Learn gold trading, risk-first.</div>
         <div style={{ fontSize: 32, marginTop: 24, color: "#bbb" }}>
-          Free Academy · Demo first · 1% risk · Education only
+          Free Academy · Start small · Max 1% risk · Education only
         </div>
       </div>
     ),

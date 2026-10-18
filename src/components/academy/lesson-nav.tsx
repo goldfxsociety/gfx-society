@@ -30,7 +30,7 @@ export function LessonNav({
           {next && nextLevelTitle ? (
             <>
               <p className="mt-1 text-xs text-muted-foreground">
-                Up next: {nextLevelTitle}. Keep practising on demo as you go.
+                Up next: {nextLevelTitle}. Tuloy lang sa plan mo: max 1% risk, laging may stop loss.
               </p>
               <Link
                 href={`/academy/${next.levelSlug}/${next.slug}`}
@@ -42,8 +42,7 @@ export function LessonNav({
           ) : (
             <>
               <p className="mt-1 text-xs text-muted-foreground">
-                You&apos;ve finished the GFX Academy. Keep journaling your demo
-                trades and join the community to keep learning.
+                Natapos mo na ang GFX Academy! Keep journaling every trade, at sumali sa community para tuloy ang learning.
               </p>
               <Link
                 href="/community"

@@ -13,9 +13,9 @@ import {
 
 export const metadata: Metadata = {
   title: "GFX Academy — Free Gold Trading Course",
-  description: "Free, beginner-friendly gold (XAUUSD) trading lessons for Filipinos: basics, risk management, demo practice. Education only.",
+  description: "Free, beginner-friendly gold (XAUUSD) trading lessons para sa mga Pinoy: basics, risk management, at paano mag-start small. Education only.",
   alternates: { canonical: "/academy" },
-  openGraph: { title: "GFX Academy — Free Gold Trading Course", description: "Free, beginner-friendly gold (XAUUSD) trading lessons for Filipinos: basics, risk management, demo practice. Education only.", url: "/academy", images: ["/opengraph-image"] },
+  openGraph: { title: "GFX Academy — Free Gold Trading Course", description: "Free, beginner-friendly gold (XAUUSD) trading lessons para sa mga Pinoy: basics, risk management, at paano mag-start small. Education only.", url: "/academy", images: ["/opengraph-image"] },
 };
 
 

@@ -131,8 +131,7 @@ export default async function DashboardPage() {
         <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
           <p className="font-semibold">🎓 Congrats, Graduate! Natapos mo na ang lahat ng lessons sa GFX Academy.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Demo muna bago live. Kung mag-live ka, optional ang cents account na maliit na pera lang na kaya mong
-            mawala. Max 1% risk bawat trade, laging may stop loss.
+            Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss. Education only, walang profit promises.
           </p>
         </div>
       ) : (
