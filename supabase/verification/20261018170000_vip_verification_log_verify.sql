@@ -1,4 +1,4 @@
--- Verify 20261018160000_vip_verification_log.sql (read-only). Run after applying.
+-- Verify 20261018170000_vip_verification_log.sql (read-only). Run after applying.
 
 -- 1) Table exists with RLS on. Expect 1 row, ok = true.
 select c.relname, (c.relrowsecurity) as ok

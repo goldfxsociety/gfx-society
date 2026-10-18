@@ -35,7 +35,7 @@ Daily cron (03:17 UTC) ──► expire pending > 7 days and delete their cards 
   - `src/payloads.ts`: modal, card, button and command builders.
   - `src/copy.ts`: all Taglish copy.
   - `src/attachments.ts`: type/size checks, magic-byte sniffing, CDN allow-list.
-- **State and log:** `public.discord_vip_requests` (migration `supabase/migrations/20261018160000_vip_verification_log.sql`, **not applied**) plus a human-readable mirror in **#vip-log**.
+- **State and log:** `public.discord_vip_requests` (migration `supabase/migrations/20261018170000_vip_verification_log.sql`, **not applied**) plus a human-readable mirror in **#vip-log**.
   - Ids, status, timestamps, reason code and outcome flags only.
   - No images, URLs, filenames, usernames, amounts, account numbers or admin notes.
 - **Idempotency**
@@ -182,7 +182,7 @@ Do these yourself, in order. **Never paste the token, public key or Supabase key
 
 **B. Supabase (after you approve the migration)**
 
-1. Apply `supabase/migrations/20261018160000_vip_verification_log.sql` (see *Migration apply steps* below). Run `supabase/verification/20261018160000_vip_verification_log_verify.sql`: every `ok` must be `true` and the counts 0.
+1. Apply `supabase/migrations/20261018170000_vip_verification_log.sql` (see *Migration apply steps* below). Run `supabase/verification/20261018170000_vip_verification_log_verify.sql`: every `ok` must be `true` and the counts 0.
 2. Go to Supabase dashboard → Project Settings → API Keys and **create a dedicated secret key** named `discord-verify-bot`, so it can be revoked alone. Copy it **straight into** `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY`.
 
 **C. Cloudflare Workers (free plan)**
@@ -238,9 +238,9 @@ Do these yourself, in order. **Never paste the token, public key or Supabase key
 
 ## Migration apply steps (only after the founder's OK)
 
-1. Read `supabase/migrations/20261018160000_vip_verification_log.sql`. It creates one table and three indexes, enables RLS with no policies, revokes anon/authenticated and grants service_role. It touches nothing else.
+1. Read `supabase/migrations/20261018170000_vip_verification_log.sql`. It creates one table and three indexes, enables RLS with no policies, revokes anon/authenticated and grants service_role. It touches nothing else.
 2. Apply it (Supabase SQL editor or `apply_migration` with name `vip_verification_log`). It's re-runnable: a second run is a no-op.
-3. Run `supabase/verification/20261018160000_vip_verification_log_verify.sql`. Expect 9 results: checks 1, 4–8 `ok = true`; check 2 `policies = 0`; check 3 returns 0 rows; check 9 `bad = 0`.
+3. Run `supabase/verification/20261018170000_vip_verification_log_verify.sql`. Expect 9 results: checks 1, 4–8 `ok = true`; check 2 `policies = 0`; check 3 returns 0 rows; check 9 `bad = 0`.
 4. Only then set the Worker secret and deploy.
 
 ## Open questions for Ben
