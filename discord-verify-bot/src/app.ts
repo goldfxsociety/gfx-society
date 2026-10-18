@@ -1,3 +1,5 @@
+/** Workers throws "Illegal invocation" if fetch is called as a method of another object. */
+const boundFetch: typeof fetch = (input, init) => fetch(input, init);
 /** Request handling for the Worker (kept out of index.ts: a Worker entry module may only export handlers). */
 import { ConfigError, loadConfig } from "./config";
 import { Db } from "./db";
@@ -12,7 +14,7 @@ export const MAX_BODY_BYTES = 256 * 1024;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-export function makeDeps(env: Env, fetchImpl: typeof fetch = fetch): Deps {
+export function makeDeps(env: Env, fetchImpl: typeof fetch = boundFetch): Deps {
   const cfg = loadConfig(env);
   return {
     cfg,
@@ -23,7 +25,7 @@ export function makeDeps(env: Env, fetchImpl: typeof fetch = fetch): Deps {
   };
 }
 
-export async function handleRequest(req: Request, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }, fetchImpl: typeof fetch = fetch): Promise<Response> {
+export async function handleRequest(req: Request, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }, fetchImpl: typeof fetch = boundFetch): Promise<Response> {
   const url = new URL(req.url);
   if (req.method === "GET" && url.pathname === "/") return new Response("GFX verify bot: ok", { status: 200 });
   if (req.method !== "POST" || (url.pathname !== "/" && url.pathname !== "/interactions")) return new Response("Not found", { status: 404 });

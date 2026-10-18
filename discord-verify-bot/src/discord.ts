@@ -28,7 +28,7 @@ export class Discord {
   constructor(
     private token: string,
     private appId: string,
-    private fetchImpl: typeof fetch = fetch,
+    private fetchImpl: typeof fetch = (input, init) => fetch(input, init),
     /** Interactions: one short in-request retry on 429. Cron: false (stop and leave the rest for the next run). */
     private retry429 = true,
   ) {}

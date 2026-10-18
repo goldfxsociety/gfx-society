@@ -23,7 +23,7 @@ export class Db {
   constructor(
     private url: string,
     private key: string,
-    private fetchImpl: typeof fetch = fetch,
+    private fetchImpl: typeof fetch = (input, init) => fetch(input, init),
   ) {}
 
   private headers(extra: Record<string, string> = {}): Record<string, string> {
