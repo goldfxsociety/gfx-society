@@ -46,13 +46,13 @@ export default function CommunityPage() {
           href="https://m.me/cm/DT8JPfkzsMUWMvYy/"
           target="_blank"
           rel="noopener noreferrer"
-          className={buttonVariants({ variant: "default" })}
+          className={`${buttonVariants({ variant: "default" })} min-h-11`}
         >
           Join Messenger Community →
         </a>
       </div>
 
-      <Link href="/" className="text-sm text-muted-foreground underline">
+      <Link href="/" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline">
         ← Back to home
       </Link>
     </div>

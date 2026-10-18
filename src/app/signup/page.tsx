@@ -165,12 +165,12 @@ export default function SignupPage() {
               />
               <label htmlFor="consentRequired">
                 I am 18 or older, and I agree to the{" "}
-                <Link href="/terms" className="underline" target="_blank">Terms of Use</Link>{" "}
+                <Link href="/terms" className="-my-3 inline-block py-3 underline" target="_blank">Terms of Use</Link>{" "}
                 and consent to GoldFX Society processing my name, email and
                 experience level to create my account, give me Academy access,
                 and send me the Starter Kit and GFX education emails, as
                 described in the{" "}
-                <Link href="/privacy" className="underline" target="_blank">Privacy Notice</Link>.
+                <Link href="/privacy" className="-my-3 inline-block py-3 underline" target="_blank">Privacy Notice</Link>.
                 I can unsubscribe or withdraw consent anytime.
                 <span className="mt-1 block text-muted-foreground">
                   Required ito para ma-create ang account mo at ma-send namin ang Starter Kit.
@@ -211,7 +211,7 @@ export default function SignupPage() {
           </form>
           <p className="mt-4 text-xs text-muted-foreground">
             We use your data only as described in our{" "}
-            <Link href="/privacy" className="underline">Privacy Notice</Link>. We
+            <Link href="/privacy" className="-my-3.5 inline-block py-3.5 underline">Privacy Notice</Link>. We
             never sell your data or share it with brokers without your consent.
             Education only — not financial advice.{" "}
             <Link href="/risk" className="underline">Risk warning</Link>.
