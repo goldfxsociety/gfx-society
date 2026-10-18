@@ -38,7 +38,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
         </a>
       )}
       <p className="text-xs text-muted-foreground">
-        Education only, not financial advice. High risk of loss. Demo first.
+        Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
       </p>
       <GoRedirect href={target.href} />
     </div>

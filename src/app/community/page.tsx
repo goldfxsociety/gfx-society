@@ -4,9 +4,9 @@ import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Community",
-  description: "Join the GFX Society community of Filipino gold traders learning with demo-first discipline.",
+  description: "Join the GFX Society community ng Filipino gold traders na risk-first: start small, max 1% risk, laging may stop loss.",
   alternates: { canonical: "/community" },
-  openGraph: { title: "Community", description: "Join the GFX Society community of Filipino gold traders learning with demo-first discipline.", url: "/community", images: ["/opengraph-image"] },
+  openGraph: { title: "Community", description: "Join the GFX Society community ng Filipino gold traders na risk-first: start small, max 1% risk, laging may stop loss.", url: "/community", images: ["/opengraph-image"] },
 };
 
 

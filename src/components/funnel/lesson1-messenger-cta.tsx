@@ -63,7 +63,7 @@ export function Lesson1MessengerCta() {
       </MessengerLink>
       <p className="mt-2 text-xs text-muted-foreground">
         {a
-          ? "Free. Bubukas sa Messenger. Education lang ito: no signals, walang binebenta. Demo muna bago live."
+          ? "Free. Bubukas sa Messenger. Education lang ito: no signals, walang binebenta, walang profit promises."
           : "Free community · Bubukas sa bagong tab · Process ang pinag-uusapan, hindi P&L. Trading involves real risk of loss; education only, not financial advice."}
       </p>
     </section>

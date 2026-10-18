@@ -3,4 +3,4 @@ export const SITE_URL = (
 ).replace(/\/$/, "");
 export const SITE_NAME = "GFX Society";
 export const SITE_DESCRIPTION =
-  "Free Gold/XAUUSD trading education and community for Filipino traders. Demo first, 1% risk, education only.";
+  "Free Gold/XAUUSD trading education at community para sa Filipino traders. Start small, max 1% risk, laging may stop loss. Education only.";

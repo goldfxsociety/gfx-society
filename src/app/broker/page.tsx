@@ -8,9 +8,9 @@ import { IbDisclosureFull, IbDisclosureShort } from "@/components/compliance/ib-
 
 export const metadata: Metadata = {
   title: "Choosing a Broker",
-  description: "Education-first broker info with IB disclosure. Demo first; you can use any broker.",
+  description: "Education-first broker info with IB disclosure. Start small, max 1% risk; you can use any broker.",
   alternates: { canonical: "/broker" },
-  openGraph: { title: "Choosing a Broker", description: "Education-first broker info with IB disclosure. Demo first; you can use any broker.", url: "/broker", images: ["/opengraph-image"] },
+  openGraph: { title: "Choosing a Broker", description: "Education-first broker info with IB disclosure. Start small, max 1% risk; you can use any broker.", url: "/broker", images: ["/opengraph-image"] },
 };
 
 export default function BrokerPage() {
@@ -41,10 +41,9 @@ export default function BrokerPage() {
       )}
 
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-        <p className="font-semibold">Demo first. Risk warning.</p>
+        <p className="font-semibold">Start small. Risk warning.</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Start on demo, then optionally a cents account with small money you
-          can afford to lose; max 1% risk per trade, stop-loss on every trade.
+          Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.
           Trading forex, gold and CFDs with
           leverage carries a high risk of losing money and is not suitable for
           everyone. Education only, not financial advice. Only trade with money
@@ -64,7 +63,7 @@ export default function BrokerPage() {
           </AccmLink>
           <p className="text-sm text-muted-foreground">Real money, start small — max 1% risk per trade.</p>
           <p className="text-sm text-muted-foreground">
-            Demo accounts are opened inside the MT5 app, not on the ACCM website.
+            Optional: may free demo sa loob ng MT5 app kung gusto mo lang matutunan ang buttons (Buy, Sell, SL/TP, Close). Hindi ito required, at hindi nito tine-train ang emotions mo.
           </p>
         </div>
       )}

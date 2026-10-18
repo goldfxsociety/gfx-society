@@ -19,8 +19,8 @@ const OFFERS = [
   },
   {
     icon: "🛡️",
-    title: "Risk-first, demo-first",
-    body: "We teach 1% max risk per trade and a stop-loss on every trade. Practise on demo first; a cents account with small money is an optional next step.",
+    title: "Risk-first, start small",
+    body: "We teach max 1% risk per trade at laging may stop loss. Kung magte-trade ka, start sa cents account na pera lang na kaya mong mawala, para ma-train ang emotions mo. Walang profit promises.",
   },
   {
     icon: "💬",
@@ -159,15 +159,10 @@ export default async function Home({
         className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm leading-relaxed"
       >
         <p>
-          <strong>Demo first.</strong> Start on demo, then optionally a cents
-          account with small money you can afford to lose; max 1% risk per
-          trade, stop-loss on every trade.
+          <strong>Start small.</strong> Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.
         </p>
         <p className="mt-1 text-muted-foreground">
-          Education only, not financial advice. Trading gold, forex and CFDs
-          with leverage carries a high risk of losing money quickly. Never trade
-          money you can&apos;t afford to lose. Education lang, hindi financial
-          advice — demo muna.
+          Education only, not financial advice. Trading gold, forex and CFDs with leverage carries a high risk of losing money quickly. Never trade money you can&apos;t afford to lose. Education lang, hindi financial advice, at walang profit promises.
         </p>
       </section>
 
