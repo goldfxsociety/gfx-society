@@ -1,0 +1,283 @@
+import { describe, expect, it } from "vitest";
+import { APPROVE_DM, MSG } from "../src/copy";
+import { expireStale, handleInteraction, rateDecision } from "../src/handlers";
+import { button, CDN_URL, harness, IDS, member, nextId, rejectSubmit, uploadSubmit } from "./helpers";
+
+async function submit(h: ReturnType<typeof harness>, memberId = IDS.member) {
+  const i = uploadSubmit(memberId);
+  const resp = handleInteraction(i, h.deps, h.ctx) as { type: number };
+  await h.flush();
+  return { i, resp };
+}
+
+const editedAck = (h: ReturnType<typeof harness>) =>
+  h.dc.find("PATCH", /^\/webhooks\/\d+\/[^/]+\/messages\/@original$/).map((c) => (c.json as { content: string }).content);
+
+describe("start: /verify-deposit and the panel button", () => {
+  it("opens the upload modal (privacy notice above the file field) in #verify", () => {
+    const h = harness();
+    const cmd = { id: nextId(), application_id: IDS.app, type: 2, token: "t", guild_id: IDS.guild, channel_id: IDS.verify, member: member(IDS.member), data: { name: "verify-deposit" } };
+    const r = handleInteraction(cmd, h.deps, h.ctx) as { type: number; data: { components: Array<{ type: number }> } };
+    expect(r.type).toBe(9);
+    expect(r.data.components[0]!.type).toBe(10);
+    expect(r.data.components[1]!.type).toBe(18);
+    const btn = { ...cmd, type: 3, data: { custom_id: "vip:start" } };
+    expect((handleInteraction(btn, h.deps, h.ctx) as { type: number }).type).toBe(9);
+  });
+
+  it("tells existing VIPs they're already VIP (no modal, nothing forwarded)", () => {
+    const h = harness();
+    const cmd = { id: nextId(), application_id: IDS.app, type: 2, token: "t", guild_id: IDS.guild, channel_id: IDS.verify, member: member(IDS.member, [IDS.vip]), data: { name: "verify-deposit" } };
+    const r = handleInteraction(cmd, h.deps, h.ctx) as { type: number; data: { content: string; flags: number } };
+    expect(r.type).toBe(4);
+    expect(r.data.content).toBe(MSG.alreadyVip);
+    expect(r.data.flags).toBe(64);
+  });
+
+  it("only works in #verify", () => {
+    const h = harness();
+    const cmd = { id: nextId(), application_id: IDS.app, type: 2, token: "t", guild_id: IDS.guild, channel_id: IDS.approvals, member: member(IDS.member), data: { name: "verify-deposit" } };
+    expect((handleInteraction(cmd, h.deps, h.ctx) as { type: number }).type).toBe(4);
+  });
+});
+
+describe("submit screenshot", () => {
+  it("defers (type 5, ephemeral), re-uploads bytes to #vip-approvals with buttons, stores only ids", async () => {
+    const h = harness();
+    const { i, resp } = await submit(h);
+    expect(resp).toEqual({ type: 5, data: { flags: 64 } });
+    const uploads = h.dc.calls.filter((c) => c.form);
+    expect(uploads).toHaveLength(1);
+    expect(uploads[0]!.path).toBe(`/channels/${IDS.approvals}/messages`);
+    expect(uploads[0]!.fileBytes).toBeGreaterThan(0);
+    const payload = uploads[0]!.json as { content: string; attachments: Array<{ filename: string }>; components: Array<{ components: Array<{ custom_id: string }> }> };
+    expect(payload.attachments[0]!.filename).toBe(`vip-${i.id}.png`); // member's filename (may contain a name) is dropped
+    expect(payload.content).not.toContain("cdn.discordapp.com");
+    expect(payload.components[0]!.components.map((b) => b.custom_id)).toEqual([`vip:approve:${i.id}`, `vip:reject:${i.id}`]);
+    expect(h.sb.rows).toHaveLength(1);
+    expect(h.sb.rows[0]).toMatchObject({ request_id: i.id, member_id: IDS.member, status: "pending" });
+    // Nothing sent to Supabase contains an image URL, filename or bytes.
+    for (const b of h.sb.bodies) expect(b).not.toMatch(/cdn|discordapp|\.png|Juan/);
+    expect(editedAck(h)).toEqual([MSG.received]);
+  });
+
+  it("rejects non-images / too-big files immediately (no download)", () => {
+    const h = harness();
+    const pdf = uploadSubmit(IDS.member, {}, { content_type: "application/pdf" });
+    expect((handleInteraction(pdf, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Image lang/);
+    const big = uploadSubmit(IDS.member, {}, { size: 50 * 1024 * 1024 });
+    expect((handleInteraction(big, h.deps, h.ctx) as { data: { content: string } }).data.content).toMatch(/Image lang/);
+    const offCdn = uploadSubmit(IDS.member, {}, { url: "https://evil.example/x.png" });
+    expect((handleInteraction(offCdn, h.deps, h.ctx) as { data: { content: string } }).data.content).toBe(MSG.error);
+    expect(h.cdnFetches).toHaveLength(0);
+  });
+
+  it("rejects a renamed non-image after sniffing bytes, and creates no request", async () => {
+    const h = harness({ cdnBytes: new TextEncoder().encode("%PDF-1.7 not an image") });
+    await submit(h);
+    expect(h.dc.calls.filter((c) => c.form)).toHaveLength(0);
+    expect(h.sb.rows).toHaveLength(0);
+    expect(editedAck(h)[0]).toMatch(/Image lang/);
+  });
+
+  it("one pending request per member", async () => {
+    const h = harness();
+    await submit(h);
+    await submit(h);
+    expect(h.sb.rows).toHaveLength(1);
+    expect(editedAck(h)).toEqual([MSG.received, MSG.pending]);
+  });
+
+  it("re-upload failure: no request is created and the member is asked to retry", async () => {
+    const h = harness();
+    h.dc.failUpload = true;
+    await submit(h);
+    expect(h.sb.rows).toHaveLength(0);
+    expect(editedAck(h)).toEqual([MSG.error]);
+  });
+
+  it("10-min cooldown after a rejection and max 5 per 24 h", () => {
+    const now = new Date("2026-10-18T04:00:00Z");
+    const r = (status: "rejected" | "approved" | "pending", minsAgo: number) => ({
+      status,
+      created_at: new Date(now.getTime() - minsAgo * 60000).toISOString(),
+      decided_at: status === "pending" ? null : new Date(now.getTime() - minsAgo * 60000).toISOString(),
+    });
+    expect(rateDecision([], now)).toBe("ok");
+    expect(rateDecision([r("rejected", 5)], now)).toBe("cooldown");
+    expect(rateDecision([r("rejected", 11)], now)).toBe("ok");
+    expect(rateDecision([r("pending", 1)], now)).toBe("pending");
+    expect(rateDecision([1, 2, 3, 4, 5].map((m) => r("rejected", 60 * m)), now)).toBe("daily_cap");
+  });
+});
+
+describe("approve", () => {
+  it("assigns @VIP, DMs the member, deletes the card, logs one line", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    const cardId = h.sb.rows[0]!.approval_message_id!;
+    const resp = handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    expect(resp).toEqual({ type: 6 });
+    await h.flush();
+    expect(h.dc.find("PUT", new RegExp(`/members/${IDS.member}/roles/${IDS.vip}$`))).toHaveLength(1);
+    const dm = h.dc.find("POST", new RegExp(`/channels/${IDS.dmChannel}/messages`));
+    expect((dm[0]!.json as { content: string }).content).toBe(APPROVE_DM);
+    expect(h.dc.find("DELETE", new RegExp(`/channels/${IDS.approvals}/messages/${cardId}$`))).toHaveLength(1);
+    const logs = h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`));
+    expect(logs).toHaveLength(1);
+    expect((logs[0]!.json as { content: string }).content).toMatch(new RegExp(`member ${IDS.member} · admin ${IDS.admin} · approved`));
+    expect(h.sb.rows[0]).toMatchObject({ status: "approved", admin_id: IDS.admin, approval_message_id: null, flags: [] });
+  });
+
+  it("is idempotent: double-click / two admins at once → one role add, one DM, loser told who decided", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    handleInteraction(button(`vip:approve:${i.id}`, IDS.admin), h.deps, h.ctx);
+    handleInteraction(button(`vip:approve:${i.id}`, IDS.admin2), h.deps, h.ctx);
+    handleInteraction(button(`vip:approve:${i.id}`, IDS.admin), h.deps, h.ctx);
+    await h.flush();
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(1);
+    expect(h.dc.find("POST", new RegExp(`/channels/${IDS.dmChannel}/messages`))).toHaveLength(1);
+    expect(h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`))).toHaveLength(1);
+    const followups = h.dc.find("POST", /^\/webhooks\/\d+\/[^/]+$/).map((c) => (c.json as { content: string; flags: number }));
+    expect(followups.length).toBe(2);
+    for (const f of followups) {
+      expect(f.flags).toBe(64);
+      expect(f.content).toMatch(/Na-decide na/);
+    }
+  });
+
+  it("non-admins get an ephemeral refusal and nothing happens", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    const r = handleInteraction(button(`vip:approve:${i.id}`, IDS.member, "0"), h.deps, h.ctx) as { data: { content: string } };
+    expect(r.data.content).toBe(MSG.notAdmin);
+    await h.flush();
+    expect(h.sb.rows[0]!.status).toBe("pending");
+  });
+
+  it("admins can't decide their own request", async () => {
+    const h = harness();
+    const { i } = await submit(h, IDS.admin);
+    handleInteraction(button(`vip:approve:${i.id}`, IDS.admin), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.status).toBe("pending");
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
+  });
+
+  it("DMs closed (50007): decision applies, #verify gets a no-details notice, log flag dm_failed", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.dmClosed = true;
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    const notice = h.dc.find("POST", new RegExp(`/channels/${IDS.verify}/messages$`));
+    expect(notice).toHaveLength(1);
+    const n = notice[0]!.json as { content: string; allowed_mentions: { users: string[] } };
+    expect(n.content).toContain(`<@${IDS.member}>`);
+    expect(n.content).not.toMatch(/approved|rejected|deposit/i);
+    expect(n.allowed_mentions.users).toEqual([IDS.member]);
+    expect(h.sb.rows[0]).toMatchObject({ status: "approved", flags: ["dm_failed"] });
+  });
+
+  it("already VIP: no role PUT, flag already_vip", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.memberRoles = [IDS.vip];
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
+    expect(h.sb.rows[0]!.flags).toEqual(["already_vip"]);
+  });
+
+  it("member left: no DM, card deleted, flag member_left", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.memberRoles = null;
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    expect(h.dc.find("POST", /\/users\/@me\/channels/)).toHaveLength(0);
+    expect(h.dc.find("DELETE", /\/messages\//)).toHaveLength(1);
+    expect(h.sb.rows[0]!.flags).toEqual(["member_left"]);
+  });
+
+  it("role hierarchy error (50013): reverts to pending, re-enables buttons, alerts admins, keeps the card", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.roleHierarchyBroken = true;
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]).toMatchObject({ status: "pending", admin_id: null, decided_at: null });
+    expect(h.dc.find("DELETE", /\/messages\//)).toHaveLength(0);
+    const alerts = h.dc.find("POST", new RegExp(`/channels/${IDS.approvals}/messages$`)).filter((c) => !c.form);
+    expect((alerts[0]!.json as { content: string }).content).toBe(MSG.hierarchy);
+    // Fixed hierarchy → retry works.
+    h.dc.roleHierarchyBroken = false;
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.status).toBe("approved");
+  });
+});
+
+describe("reject", () => {
+  it("opens a reason modal, then DMs the reason + note, deletes the card, stores only the reason code", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    const modal = handleInteraction(button(`vip:reject:${i.id}`), h.deps, h.ctx) as { type: number; data: { custom_id: string } };
+    expect(modal.type).toBe(9);
+    expect(modal.data.custom_id).toBe(`vip:rejectmodal:${i.id}`);
+    const r = handleInteraction(rejectSubmit(i.id, "unclear", "Paki-crop nang mas malinaw @everyone"), h.deps, h.ctx);
+    expect(r).toEqual({ type: 6 });
+    await h.flush();
+    const dm = h.dc.find("POST", new RegExp(`/channels/${IDS.dmChannel}/messages`))[0]!.json as { content: string };
+    expect(dm.content).toMatch(/malabo o naka-crop/);
+    expect(dm.content).toMatch(/Note mula sa admin: Paki-crop/);
+    expect(dm.content).not.toContain("@everyone");
+    expect(h.sb.rows[0]).toMatchObject({ status: "rejected", reason_code: "unclear", admin_id: IDS.admin });
+    for (const b of h.sb.bodies) expect(b).not.toContain("Paki-crop"); // note is never stored
+    expect(h.dc.find("DELETE", /\/messages\//)).toHaveLength(1);
+  });
+
+  it("unknown reason codes fall back to 'other'", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    handleInteraction(rejectSubmit(i.id, "drop table"), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.reason_code).toBe("other");
+  });
+
+  it("approve after reject is a no-op", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    handleInteraction(rejectSubmit(i.id, "wrong_screen"), h.deps, h.ctx);
+    await h.flush();
+    handleInteraction(button(`vip:approve:${i.id}`, IDS.admin2), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.status).toBe("rejected");
+    expect(h.dc.find("PUT", /\/roles\//)).toHaveLength(0);
+  });
+});
+
+describe("cron expiry", () => {
+  it("expires pending requests older than 7 days and deletes their cards", async () => {
+    const h = harness({ now: new Date("2026-10-01T00:00:00Z") });
+    await submit(h);
+    h.setNow(new Date("2026-10-09T00:00:00Z"));
+    expect(await expireStale(h.deps)).toBe(1);
+    expect(h.sb.rows[0]).toMatchObject({ status: "expired", admin_id: null, approval_message_id: null });
+    expect(h.dc.find("DELETE", /\/messages\//)).toHaveLength(1);
+  });
+});
+
+describe("/verify-status", () => {
+  it("answers ephemerally with the latest status", async () => {
+    const h = harness();
+    await submit(h);
+    const cmd = { id: nextId(), application_id: IDS.app, type: 2, token: "tok-status", guild_id: IDS.guild, channel_id: IDS.verify, member: member(IDS.member), data: { name: "verify-status" } };
+    expect(handleInteraction(cmd, h.deps, h.ctx)).toEqual({ type: 5, data: { flags: 64 } });
+    await h.flush();
+    expect(editedAck(h).at(-1)).toMatch(/Pending/);
+  });
+});
+
+void CDN_URL;

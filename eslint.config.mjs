@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Cloudflare Worker project with its own tsconfig/tests (not part of the website).
+    "discord-verify-bot/**",
   ]),
 ]);
 

@@ -1,0 +1,39 @@
+# GFX Discord VIP verification bot — Cloudflare Worker config.
+# PLACEHOLDERS ONLY. Nothing here is secret. Do not commit real tokens or keys.
+#
+# Secrets are NEVER put in this file or in the website (Vercel) env. Set them on the Worker with:
+#   npx wrangler secret put DISCORD_PUBLIC_KEY
+#   npx wrangler secret put DISCORD_BOT_TOKEN
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# (or Cloudflare dashboard → Workers & Pages → gfx-discord-verify-bot → Settings → Variables and Secrets → type "Secret").
+
+name = "gfx-discord-verify-bot"
+main = "src/index.ts"
+compatibility_date = "2026-04-20"
+workers_dev = true
+
+# Expire pending requests older than 7 days (deletes the approval message + screenshot). 03:17 UTC daily = 11:17 AM PHT.
+[triggers]
+crons = ["17 3 * * *"]
+
+[observability]
+enabled = true
+
+[vars]
+# Discord Application ID (public, from Developer Portal → General Information).
+DISCORD_APP_ID = "REPLACE_WITH_APPLICATION_ID"
+# PDE x GFX Society server (guild) id.
+GUILD_ID = "REPLACE_WITH_GUILD_ID"
+# @VIP role id. The bot's own role must sit directly ABOVE this role.
+VIP_ROLE_ID = "REPLACE_WITH_VIP_ROLE_ID"
+# Optional, comma-separated. If set, only members with one of these roles (or Administrator) can approve/reject.
+# If empty, anyone with Manage Roles (or Administrator) in #vip-approvals can approve/reject.
+ADMIN_ROLE_IDS = ""
+# Channel ids.
+VERIFY_CHANNEL_ID = "REPLACE_WITH_VERIFY_CHANNEL_ID"
+APPROVALS_CHANNEL_ID = "REPLACE_WITH_VIP_APPROVALS_CHANNEL_ID"
+LOG_CHANNEL_ID = "REPLACE_WITH_VIP_LOG_CHANNEL_ID"
+# Supabase project URL (not secret). The service key is a Worker secret.
+SUPABASE_URL = "https://REPLACE_WITH_PROJECT_REF.supabase.co"
+# Max screenshot size in bytes (also capped by Discord's attachment_size_limit). 8 MiB.
+MAX_UPLOAD_BYTES = "8388608"

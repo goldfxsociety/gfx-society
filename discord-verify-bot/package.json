@@ -1,0 +1,25 @@
+{
+  "name": "gfx-discord-verify-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GFX Society Discord VIP deposit verification bot (Cloudflare Worker, HTTP interactions). Separate from the website.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test",
+    "build:dry": "wrangler deploy --dry-run --outdir .wrangler/dry",
+    "register-commands": "tsx scripts/register-commands.ts",
+    "post-verify-panel": "tsx scripts/post-verify-panel.ts",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5",
+    "vitest": "^3.2.0",
+    "wrangler": "^4"
+  }
+}
