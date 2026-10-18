@@ -12,7 +12,7 @@ import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-check
 // no broker names, logos or partner links on this page (spec 08).
 const TITLE = "Gold Basics Starter Kit (Free) | GFX Society Academy";
 const DESCRIPTION =
-  "Libreng 5-step na simula sa Gold (XAUUSD) trading para sa mga Pinoy: basics, demo account, stop loss, at ang 1% rule. Education only.";
+  "Libreng 5-step na simula sa Gold (XAUUSD) trading para sa mga Pinoy: basics, cents account, stop loss, at ang 1% rule. Education only.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 const RISK_LINE =
-  "Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.";
+  "Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.";
 
 const PATH = [
   {
@@ -42,9 +42,9 @@ const PATH = [
   },
   {
     level: "elementary",
-    slug: "demo-account-your-practice-ground",
-    title: "3. Demo Account: Ang Practice Ground Mo",
-    desc: "Paano mag-practice gamit ang virtual money bago mag-live.",
+    slug: "cents-account-your-first-real-money-practice",
+    title: "3. Cents Account: Ang Unang Real-Money Practice Mo",
+    desc: "Paano mag-start small with real money para ma-train ang emotions mo.",
   },
   {
     level: "highschool",
@@ -82,21 +82,19 @@ const DAYS: Day[] = [
     href: "/academy/foundations/stocks-vs-forex-vs-gold",
   },
   {
-    title: "Day 3: Buksan ang practice ground mo",
+    title: "Day 3: Kilalanin ang cents account",
     body: (
       <>
-        Basahin ang Demo Account lesson. Magbukas ng <strong>demo account</strong> (virtual money, walang totoong
-        pera). Hanapin ang XAUUSD sa platform, at tingnan ang bid/ask at chart. Huwag munang mag-trade.
+        Basahin ang Cents Account lesson. Alamin kung paano gumagana ang <strong>cents account</strong> (real money pero maliit lang) at mag-set ng budget na kaya mong mawala. Optional: buksan ang MT5 demo para lang ma-explore ang buttons, at hanapin ang XAUUSD, bid/ask at chart. Huwag munang mag-trade.
       </>
     ),
-    href: "/academy/elementary/demo-account-your-practice-ground",
+    href: "/academy/elementary/cents-account-your-first-real-money-practice",
   },
   {
     title: "Day 4: Plan ang labasan bago pumasok",
     body: (
       <>
-        Basahin ang Stop Loss at Take Profit. Sa demo, mag-practice: maglagay ng order na may stop loss at take
-        profit <strong>bago</strong> pumasok. Isulat kung bakit doon mo inilagay ang SL.
+        Basahin ang Stop Loss at Take Profit. Sa MT5, alamin kung paano maglagay ng order na may stop loss at take profit <strong>bago</strong> pumasok (puwede sa optional demo, para sa buttons lang). Isulat kung bakit doon mo inilagay ang SL.
       </>
     ),
     href: "/academy/highschool/stop-loss-and-take-profit",
@@ -112,10 +110,10 @@ const DAYS: Day[] = [
     href: "/academy/highschool/position-sizing-and-lot-calculation",
   },
   {
-    title: "Day 6: Unang demo trades + journal",
+    title: "Day 6: Unang small trade (optional) + journal",
     body: (
       <>
-        Gumawa ng 1–3 demo trades gamit ang plan mo (may SL, max 1% risk). Para sa bawat trade, i-journal ang:
+        Kung may cents account ka na at ready ka, gumawa ng 1–3 small trades gamit ang plan mo (may SL, max 1% risk, pera lang na kaya mong mawala). Kung hindi pa, i-journal muna ang 1–3 trade ideas mo. Para sa bawat trade o idea, i-journal ang:
         <ul className="my-1 list-disc pl-5">
           <li>Petsa at oras</li>
           <li>Bakit ka pumasok (1 sentence)</li>
@@ -148,7 +146,7 @@ const FAQ = [
   },
   {
     q: "Saan ako magte-trade?",
-    a: "Hindi kami nagre-recommend ng broker dito. Sa Lesson 3, demo account muna, at matututunan mong mag-evaluate nang sarili mo.",
+    a: "Hindi kami nagre-recommend ng broker dito. Sa Lesson 3, malalaman mo kung paano gumagana ang cents account, at matututunan mong mag-evaluate ng broker nang sarili mo.",
   },
   {
     q: "Kikita ba ako dito?",
@@ -156,7 +154,7 @@ const FAQ = [
   },
   {
     q: "Magkano ang kailangan para magsimula?",
-    a: "Sa demo, zero. Pagkatapos ng demo, optional ang cents account na maliit na pera lang na kaya mong mawala, at max 1% risk per trade, laging may stop loss.",
+    a: "Para matuto, zero: libre ang lessons. Kung magte-trade ka, cents account na maliit na pera lang na kaya mong mawala (may minimum deposit ang bawat broker), max 1% risk per trade, laging may stop loss.",
   },
 ];
 
@@ -244,12 +242,11 @@ export default async function GoldStarterPage() {
         </p>
         <SevenDayChecklist days={DAYS} />
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-          <p className="font-semibold">🟡 Bago mag-live</p>
+          <p className="font-semibold">🟡 Bago ang unang real-money trade mo</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 leading-relaxed">
-            <li>Ilang linggo muna sa demo hanggang consistent mong nasusunod ang plan mo.</li>
+            <li>Basahin muna ang Stop Loss at Position Sizing lessons, at isulat ang plan mo.</li>
             <li>
-              Pagkatapos ng demo, <strong>optional ang cents account</strong> na maliit lang ang pera,{" "}
-              <strong>max 1% risk per trade, laging may stop loss.</strong>
+              <strong>Start small sa cents account</strong>: real money pero maliit lang,{" "} <strong>max 1% risk per trade, laging may stop loss.</strong>
             </li>
             <li>Pera lang na kaya mong mawala. Huwag gamitin ang pambayad sa bills, utang, o emergency fund.</li>
             <li>Walang shortcut. Kung may nangangako ng &quot;sure profit,&quot; red flag iyan.</li>
@@ -266,7 +263,7 @@ export default async function GoldStarterPage() {
         <p className="mt-1">
           <strong>{RISK_LINE}</strong>
         </p>
-        <p className="mt-1">Demo muna. Pera lang na kaya mong mawala ang gamitin.</p>
+        <p className="mt-1">Start small. Pera lang na kaya mong mawala ang gamitin.</p>
       </section>
 
       {/* 6. Community (secondary) */}
@@ -294,8 +291,7 @@ export default async function GoldStarterPage() {
       {/* 8. Footer */}
       <footer className="border-t pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
-          <strong>Disclaimer:</strong> Trading involves real risk of loss. GFX provides education only, not financial
-          advice. Practice on a demo account first.
+          <strong>Disclaimer:</strong> Trading involves real risk of loss. GFX provides education only, not financial advice. If you trade, start small (e.g., a cents account), max 1% risk per trade, always with a stop loss.
         </p>
         <p className="mt-1">
           <strong>Privacy:</strong> Wala kaming kinokolektang personal info sa page na ito. Privacy questions:{" "}

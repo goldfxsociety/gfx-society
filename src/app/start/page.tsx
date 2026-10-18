@@ -34,10 +34,10 @@ const STEPS = [
   },
   {
     n: 3,
-    title: "Open a free DEMO account and practise",
-    body: "Demo uses virtual money on real prices. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
-    href: "/academy/elementary/demo-account-your-practice-ground",
-    cta: "Read: Demo Account lesson",
+    title: "Alamin ang cents account: small real money, real lessons",
+    body: "Real money ito pero maliit lang, kaya ma-train mo ang emotions at money habits mo. Pera lang na kaya mong mawala, max 1% risk per trade, laging may stop loss. Optional ang MT5 demo, para lang matutunan ang buttons.",
+    href: "/academy/elementary/cents-account-your-first-real-money-practice",
+    cta: "Basahin: Cents Account lesson →",
   },
   {
     n: 4,
@@ -105,7 +105,7 @@ export default async function StartPage() {
         </Link>
       </div>
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-        Education only, not financial advice. Trading carries a high risk of loss. Demo first.
+        Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
       </p>
     </div>
   );

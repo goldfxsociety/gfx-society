@@ -46,9 +46,24 @@ const SHORT_LINKS: { source: string; destination: string }[] = [
   },
 ];
 
+/** Permanent (301) redirects for renamed lesson slugs (cents pivot, Oct 2026). Lesson ids unchanged. */
+const RENAMED_LESSONS: { source: string; destination: string }[] = [
+  {
+    source: "/academy/elementary/demo-account-your-practice-ground",
+    destination: "/academy/elementary/cents-account-your-first-real-money-practice",
+  },
+  {
+    source: "/academy/graduation/demo-vs-live-account",
+    destination: "/academy/graduation/real-money-and-your-emotions",
+  },
+];
+
 const nextConfig: NextConfig = {
   async redirects() {
-    return SHORT_LINKS.map((l) => ({ ...l, permanent: false }));
+    return [
+      ...SHORT_LINKS.map((l) => ({ ...l, permanent: false as const })),
+      ...RENAMED_LESSONS.map((l) => ({ ...l, statusCode: 301 as const })),
+    ];
   },
   poweredByHeader: false,
   async headers() {

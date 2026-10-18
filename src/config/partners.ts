@@ -13,8 +13,6 @@ export type Partner = {
   entity: string | null;
   /** Verified licensing statement (otherwise null). */
   regulatorStatus: string | null;
-  /** Demo account sign-up link (shown first when present). */
-  demoUrl: string | null;
   /** IB/referral account link. */
   liveUrl: string | null;
   isIbAffiliate: boolean;
@@ -36,7 +34,6 @@ export const partners: Partner[] = [
     name: "ACCM",
     entity: null,
     regulatorStatus: null,
-    demoUrl: null,
     liveUrl:
       "https://accm.global/account/register?shareUserSetId=3a59d46d63f04393b&utm_source=gfx_site&utm_medium=broker_page&utm_campaign=gold_pilot_2026q4&utm_content=accm",
     isIbAffiliate: true,
@@ -49,7 +46,6 @@ export const partners: Partner[] = [
     name: "Vantage",
     entity: null,
     regulatorStatus: null,
-    demoUrl: null,
     liveUrl: null,
     isIbAffiliate: true,
     enabled: false,
@@ -58,4 +54,4 @@ export const partners: Partner[] = [
 
 /** Enabled partners that have a link to show. */
 export const activePartners = () =>
-  partners.filter((p) => p.enabled && (p.demoUrl ?? p.liveUrl));
+  partners.filter((p) => p.enabled && p.liveUrl);

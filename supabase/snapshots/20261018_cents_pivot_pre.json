@@ -1,0 +1,1307 @@
+{
+ "lessons": [
+  {
+   "id": "d0f2dc2d-bad5-4b7e-9bbb-6a9efd672d65",
+   "slug": "backtesting-your-strategy",
+   "title": "Backtesting Your Strategy",
+   "learning_objective": "Understand what backtesting is and practice applying a trading rule consistently to historical price action.",
+   "content": "Backtesting = testing your rules on historical data before risking real money.\n\nSimple process:\n1. Open XAUUSD on TradingView\n2. Go back 3 to 6 months\n3. Apply your entry rules bar by bar\n4. Log each trade and calculate win rate",
+   "key_takeaways": [
+    "Backtesting tests your rules against historical data before you risk real money.",
+    "A backtest only proves useful if you apply your rule consistently — skipping non-matching setups is as important as taking matching ones."
+   ],
+   "examples": [],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "chart": [
+       {
+        "c": 51,
+        "h": 54,
+        "l": 30,
+        "o": 52
+       }
+      ],
+      "options": [
+       "Enter — this matches the rule",
+       "Skip — doesn't match",
+       "Wait for a different pattern",
+       "Double the position size"
+      ],
+      "question": "Your rule is \"buy on a bullish pin bar at support.\" This candle formed right at support (see chart). What do you do?",
+      "explanation": "A backtest only works if you follow your own rule consistently — this is a textbook match.",
+      "correctIndex": 0
+     },
+     {
+      "chart": [
+       {
+        "c": 42,
+        "h": 45,
+        "l": 38,
+        "o": 41
+       }
+      ],
+      "options": [
+       "Skip — no signal here",
+       "Enter anyway, it looks bullish",
+       "Enter with a smaller size",
+       "Change your rule on the spot"
+      ],
+      "question": "This candle formed in the middle of a range, not at any support or resistance zone (see chart). Your rule is \"buy on a bullish pin bar at support.\" What do you do?",
+      "explanation": "Skipping trades that don't match your rule is just as important as taking the ones that do — that discipline is what backtesting builds.",
+      "correctIndex": 0
+     },
+     {
+      "chart": [
+       {
+        "c": 49,
+        "h": 70,
+        "l": 46,
+        "o": 48
+       }
+      ],
+      "options": [
+       "Skip — wrong signal type for this system",
+       "Enter — it's still a reversal pattern",
+       "Enter but reverse the direction",
+       "Skip the whole session"
+      ],
+      "question": "This is a shooting star at resistance (see chart). Your rule is \"buy on a bullish pin bar at support.\" What do you do?",
+      "explanation": "A shooting star at resistance is a bearish signal — it doesn't match a buy-only rule, even though it's a valid pattern.",
+      "correctIndex": 0
+     },
+     {
+      "icon": "📈",
+      "options": [
+       "A positive expectancy in the test — worth practising on demo next (not guaranteed live)",
+       "No — below 50% win rate means it loses",
+       "Cannot tell without more data",
+       "Only if you increase the RR further"
+      ],
+      "question": "Your backtest shows a 42% win rate at 1:2 RR over 100 trades. What does this backtest suggest?",
+      "explanation": "42% win rate at 1:2 RR: 42 wins x 2R = 84R, 58 losses x 1R = 58R. Net = +26R over those 100 test trades: a positive expectancy even under a 50% win rate, but not a guarantee of future results. Practise it on demo with 1% risk before going live.",
+      "correctIndex": 0
+     },
+     {
+      "icon": "🔬",
+      "options": [
+       "Test whether your rules showed an edge on historical data, without risking real money",
+       "Guarantee your strategy will win in the future",
+       "Make trading feel more exciting",
+       "Copy what other traders are doing"
+      ],
+      "question": "The main point of backtesting before going live is to:",
+      "explanation": "Backtesting doesn't guarantee future results, but it tells you whether your rules had any edge at all before you risk real capital on them.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "aa8e5847f3a18750dce13c154b8f8ac0",
+   "m_kt": "e8abf828970dff4b2c1d50deedddf4d7",
+   "m_ex": "d751713988987e9331980363e24189ce",
+   "m_ic": "0abc97b1164eecc37c0e83bcdfbe419a",
+   "m_lo": "8c6ee15631b917247ac54213e7b3002e",
+   "m_title": "55de0872ad62211a3605b22a4d7c8ee2"
+  },
+  {
+   "id": "a1caf3d9-689a-4696-9443-f9f947a1dd05",
+   "slug": "pips-lots-and-leverage",
+   "title": "Pips, Lots & Leverage",
+   "learning_objective": "Calculate pip value and position size for gold and understand how leverage amplifies risk.",
+   "content": "Pips\nA pip is the unit used to measure price change. In GFX lessons, for XAUUSD, a $0.01 move = 1 pip, so a $1.00 move = 100 pips. Many brokers instead call $0.10 one pip; the dollar math stays the same if you work in price moves.\n\nLots\nLot size is the size of your position. Common convention for gold: 1 standard lot = 100 oz, 0.10 lot (mini) = 10 oz, 0.01 lot (micro) = 1 oz. Value per $0.01 move: $1 for 1 lot, $0.10 for 0.10 lot, $0.01 for 0.01 lot. Equivalently, a $1.00 move = $100 per standard lot, $1 per micro lot.\n\nLeverage\nLeverage lets you control a position larger than your deposit; the broker requires only a portion as margin. Leverage does not change how much each price move is worth; it only changes how much margin is held. It makes it easy to open positions far too large for your account, which magnifies losses as much as gains.\n\nSizing from risk, not from leverage\nDecide your maximum loss first (GFX standard: max 1% of your account), set your stop loss at a logical level, then calculate the lot size that fits. Never pick a lot size because leverage allows it.\n\nMargin in simple terms\nMargin is the amount the broker sets aside from your balance to keep a position open. With 1:100 leverage, a hypothetical 0.01 lot of gold at 2,350.00 (value about $2,350) would need roughly $23.50 in margin. Low margin requirements don't make a trade safer; your risk is still decided by your stop distance and position size. If losses reduce your free margin too far, the broker may close positions automatically (a margin call or stop-out).\n\nQuick recap\nPips measure price movement, lots measure position size, and leverage only affects margin. To size a trade: choose your stop level, measure the distance, calculate the loss per 0.01 lot, then divide your 1% risk amount by that number and round down.\n\nGold example (hypothetical): Sizing a gold trade with 1% risk\n• Hypothetical demo account: $1,000. Max risk 1% = $10.\n• Plan: buy XAUUSD at 2,350.00 with stop loss at 2,345.00 → stop distance $5.00 (500 pips at $0.01 = 1 pip).\n• Loss per 0.01 lot (1 oz) if stopped = $5.00 × 1 = $5.\n• Lot size = $10 ÷ $5 per 0.01 lot = 0.02 lot (2 oz).\n• Check: $5.00 × 2 oz = $10 = 1% of the account. A 1-lot position would risk $500 (50% of the account), which leverage might allow but your risk rule never should.\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nPip = sukat ng galaw ng presyo (sa GFX lessons, $0.01 = 1 pip sa Gold). Lot = laki ng position: 1 lot = 100 oz, 0.01 lot = 1 oz. Ang leverage ay nagpapalaki ng position na kaya mong buksan, kaya delikado. Tamang proseso: unahin ang 1% max risk, ilagay ang stop loss, saka i-compute ang lot size. Hindi dahil kaya ng leverage.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "In the common convention, 1 standard lot of gold = 100 oz, and a $0.01 move = $1 per lot; check your broker's specs.",
+    "Leverage changes margin, not the value of each move, and it makes oversized positions dangerously easy.",
+    "Size every trade from max 1% risk and your stop distance, never from available leverage."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical demo account: $1,000. Max risk 1% = $10.",
+      "Plan: buy XAUUSD at 2,350.00 with stop loss at 2,345.00 → stop distance $5.00 (500 pips at $0.01 = 1 pip).",
+      "Loss per 0.01 lot (1 oz) if stopped = $5.00 × 1 = $5.",
+      "Lot size = $10 ÷ $5 per 0.01 lot = 0.02 lot (2 oz).",
+      "Check: $5.00 × 2 oz = $10 = 1% of the account. A 1-lot position would risk $500 (50% of the account), which leverage might allow but your risk rule never should."
+     ],
+     "title": "Sizing a gold trade with 1% risk",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "100 oz",
+       "10 oz",
+       "1 oz",
+       "0.01 oz"
+      ],
+      "question": "Under the common convention, what is 0.01 lot of XAUUSD?",
+      "explanation": "1 standard lot = 100 oz, so 0.01 lot = 1 oz. Check your broker's contract specs.",
+      "correctIndex": 2
+     },
+     {
+      "options": [
+       "0.02 lot",
+       "0.20 lot",
+       "1 lot",
+       "2 lots"
+      ],
+      "question": "Hypothetical: $1,000 account, 1% risk, stop distance $5.00. What lot size?",
+      "explanation": "Risk $10 ÷ ($5.00 × 1 oz per 0.01 lot = $5) = 2 × 0.01 = 0.02 lot.",
+      "correctIndex": 0
+     },
+     {
+      "options": [
+       "1%",
+       "1-2%",
+       "5%",
+       "Depends on leverage"
+      ],
+      "question": "What is the maximum risk per trade under the GFX standard?",
+      "explanation": "The GFX standard is max 1% per trade, always with a stop loss. Leverage should never decide your size.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "1c15c6f12c03528b97af712e5c78f0bf",
+   "m_kt": "32041a5a2404aef459c1cf93cd4a5075",
+   "m_ex": "cfb1b89f8c202758a751cd27f1a06c47",
+   "m_ic": "a150efc1c3824253ca32bb2e1fdc0659",
+   "m_lo": "f5c8ad0dfbfd1ebe716df945c67e4d0e",
+   "m_title": "aad81f07181c31461a41a4228004a232"
+  },
+  {
+   "id": "d7926520-c96b-4d61-bd1e-0078b3b718a8",
+   "slug": "candlestick-anatomy",
+   "title": "Candlestick Anatomy",
+   "learning_objective": "Read the open, high, low and close of a candlestick.",
+   "content": "What a candle shows\nEach candlestick summarizes price over one period (for example 1 hour). It shows four prices: open, high, low and close (OHLC).\n\nBody and wicks\nThe body spans the open and close. A bullish candle (often green) closed higher than it opened; a bearish candle (often red) closed lower. The thin lines above and below are wicks (shadows), showing the highest and lowest prices reached.\n\nReading the story\nA long upper wick means buyers pushed price up but it was pushed back down before the close. A long lower wick shows the opposite. A small body means little net change between open and close.\n\nContext matters\nA single candle is only one piece of information. Read it together with the trend, key levels, and timeframe, and never treat one candle as a guaranteed signal.\n\nTimeframes and candles\nThe same price action looks different depending on the timeframe you choose. One daily candle contains the information of 24 one-hour candles. A big bullish daily candle may include several bearish hourly candles inside it. When you describe a candle, always say which timeframe it is from, for example 'the 1-hour candle closed bullish.'\n\nBid charts and gaps\nMost charts are drawn using bid prices, so the high and low you see may not exactly match where a buy order could have filled. Also, when the market reopens after the weekend, the first candle may open far from the previous close; this is called a gap, and stop losses can be filled at the gap price instead of their exact level.\n\nPractice\nOn a demo chart, pick five candles and write down open, high, low, close, body size and wick sizes for each. Doing this by hand a few times builds the reading skill you will use in every later lesson.\n\nQuick recap\nEvery candle answers four questions: where did price start, how high did it go, how low did it go, and where did it finish? Answer those four first, every time, before you try to interpret anything else on the chart.\n\nGold example (hypothetical): Reading one hypothetical 1-hour gold candle\n• Open 2,350.00, High 2,356.00, Low 2,347.00, Close 2,354.00.\n• Close is above open → bullish candle. Body = 2,354.00 − 2,350.00 = $4.00.\n• Upper wick = 2,356.00 − 2,354.00 = $2.00; lower wick = 2,350.00 − 2,347.00 = $3.00.\n• Total range = 2,356.00 − 2,347.00 = $9.00. On 0.01 lot (1 oz), that hour's full range equals $9.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nBawat candle may 4 na presyo: Open, High, Low, Close. Ang body ay mula open hanggang close; green kung tumaas, red kung bumaba. Ang wicks ay nagpapakita ng pinakamataas at pinakamababang naabot. Pero isang candle lang 'yan, laging tingnan ang context (trend, levels), at hindi ito garantiya.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "Each candle shows open, high, low and close (OHLC) for one time period.",
+    "The body shows open-to-close; wicks show the high and low reached.",
+    "Read candles in context, since a single candle is never a guaranteed signal."
+   ],
+   "examples": [
+    {
+     "note": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "steps": [
+      "Open 2,350.00, High 2,356.00, Low 2,347.00, Close 2,354.00.",
+      "Close is above open → bullish candle. Body = 2,354.00 − 2,350.00 = $4.00.",
+      "Upper wick = 2,356.00 − 2,354.00 = $2.00; lower wick = 2,350.00 − 2,347.00 = $3.00.",
+      "Total range = 2,356.00 − 2,347.00 = $9.00. On 0.01 lot (1 oz), that hour's full range equals $9."
+     ],
+     "title": "Reading one hypothetical 1-hour gold candle",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "presets": [
+     {
+      "c": 2322,
+      "h": 2325,
+      "l": 2298,
+      "o": 2300,
+      "label": "Strong Bullish"
+     },
+     {
+      "c": 2300.5,
+      "h": 2312,
+      "l": 2288,
+      "o": 2300,
+      "label": "Doji"
+     },
+     {
+      "c": 2298,
+      "h": 2300,
+      "l": 2278,
+      "o": 2290,
+      "label": "Bullish Pin Bar"
+     },
+     {
+      "c": 2300,
+      "h": 2325,
+      "l": 2298,
+      "o": 2322,
+      "label": "Bearish"
+     },
+     {
+      "c": 2297.5,
+      "h": 2325,
+      "l": 2296,
+      "o": 2306,
+      "label": "Shooting Star"
+     }
+    ],
+    "scenarios": [
+     {
+      "options": [
+       "Bearish",
+       "Bullish",
+       "Neutral by definition",
+       "Invalid"
+      ],
+      "question": "A candle opens at 2,350.00 and closes at 2,354.00. It is…",
+      "explanation": "It closed above its open, so it is a bullish candle.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$4",
+       "$6",
+       "$9",
+       "$11"
+      ],
+      "question": "High 2,356.00, Low 2,347.00. What is the candle's range?",
+      "explanation": "Range = high − low = 2,356.00 − 2,347.00 = $9.00.",
+      "correctIndex": 2
+     },
+     {
+      "options": [
+       "Price never went higher than the body",
+       "Buyers pushed price up but it was pushed back down before the close",
+       "The market was closed",
+       "A guaranteed reversal"
+      ],
+      "question": "What does a long upper wick usually show?",
+      "explanation": "The wick shows price traded higher but did not hold there; it is information, not a guarantee.",
+      "correctIndex": 1
+     }
+    ],
+    "showAnatomyDiagram": true,
+    "includeFreehandPractice": true
+   },
+   "m_content": "b7cf7e8dcab1def3efd3e4881a2d65d1",
+   "m_kt": "bc34641c550ccdf6613615e6774abcba",
+   "m_ex": "899f6fc430f2e7484c930af514c2fd2d",
+   "m_ic": "cf3ce76727cc0fc964a5be60921cd8cb",
+   "m_lo": "007b1bb85c693ca1e1b4db1aa31dd651",
+   "m_title": "f9b86b98ce75d190db0f44986114aff8"
+  },
+  {
+   "id": "5698278e-2b5c-4706-8032-50cd517df741",
+   "slug": "stocks-vs-forex-vs-gold",
+   "title": "Stocks vs Forex vs Gold",
+   "learning_objective": "Compare stocks, forex and gold, and understand what moves the gold price.",
+   "content": "## TL;DR sa Taglish\nStocks = share sa isang company. Forex = trading ng isang currency against another, like USD vs PHP. Gold (XAUUSD) = price ng gold in US dollars. Gumagalaw ang gold dahil sa fear, inflation, interest rates at lakas ng US dollar, at minsan sobrang bilis, lalo na sa big US news. Kaya smaller lot muna, laging may stop loss, at iwas muna sa big news habang nagpa-practice sa demo.\nDemo muna. Pagkatapos, optional ang cents account na maliit na pera lang na kaya mong mawala. Max 1% risk bawat trade, laging may stop loss.\n\n## Three common markets\nStocks are shares of ownership in a company; their prices react to company results and the wider economy. Forex (foreign exchange) is the trading of one currency against another, for example USD against PHP. Gold is a commodity; XAUUSD is gold priced in US dollars and is usually traded on forex-style platforms.\nSa Taglish: Stocks follow ang company results, forex ay currency vs currency, at ang gold ay commodity na usually tine-trade sa forex-style platforms.\n\n## What moves gold\nGold often reacts to: fear and uncertainty (some investors buy gold as a perceived safe haven), inflation expectations, interest-rate expectations, and the strength of the US dollar. Major US economic releases (like inflation or jobs data) can cause sharp, fast moves within minutes.\nSa Taglish: Fear, inflation, interest rates at ang US dollar ang madalas nagpapagalaw sa gold, at ang big US news pwedeng magpa-spike ng price within minutes.\n\n## Why gold is popular, and why it needs care\nGold is very liquid and trades nearly around the clock on weekdays, which makes it accessible. But it can also move quickly and widely. That speed cuts both ways: losses can grow as fast as gains. For beginners that means smaller position sizes, a stop loss on every trade, and avoiding trading right at big news releases until you have practiced on demo.\nSa Taglish: Liquid ang gold at open halos buong weekdays, pero mabilis gumalaw: kasing-bilis ng gains ang losses. Kaya small size, stop loss, at demo muna.\n\n## Comparing them simply\nStocks: tied to company performance, trade during exchange hours. Forex: tied to economies and interest rates, trades 24/5. Gold: tied to fear, inflation, rates and the dollar, trades nearly 24/5 and is often more volatile than major currency pairs.\nSa Taglish: Stocks = company at exchange hours; forex = economies at 24/5; gold = fear, inflation, rates at dollar, halos 24/5 at madalas mas volatile.\n\n## What you actually trade on a platform\nMost retail gold trading happens through contracts (often CFDs) that follow the gold price. You don't receive physical gold; you gain or lose based on how the price moves while your position is open. This makes it easy to go long or short, but it also means leverage and costs apply, so the same risk rules matter here as in any market.\nSa Taglish: Usually CFD ang tine-trade mo, hindi physical gold. Pwede kang long o short, pero may leverage at costs, kaya same risk rules pa rin.\n\n## Before you trade any market\nWhichever market you choose, the basics don't change: understand what moves it, know its trading hours and typical volatility, check all costs, and size every position so that a loss stays within 1% of your account. For now, focus on one market, gold, and learn it well on a demo account before adding anything else.\nSa Taglish: Alamin kung ano ang nagpapagalaw, ang trading hours at costs, at i-size ang bawat trade para max 1% lang ang talo. Focus muna sa gold, sa demo.\n\n## Gold example (hypothetical): How a news spike can look\n• Hypothetical: XAUUSD is at 2,340.00 a few minutes before a US inflation report.\n• The report surprises the market and gold jumps to 2,352.00 within minutes, a $12.00 move.\n• On 1 standard lot (100 oz), a $12.00 move equals $1,200; on 0.01 lot (1 oz), it equals $12.\n• The same move in the opposite direction would be a loss of the same size, which is why position size and a stop loss matter.\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nSa Taglish: Ang $12 na galaw ay $1,200 sa 1 standard lot pero $12 lang sa 0.01 lot, at ganoon din kalaki ang talo kung pabaliktad. Kaya mahalaga ang size at stop loss.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
+   "key_takeaways": [
+    "Stocks follow companies, forex follows currencies and economies, and gold follows fear, inflation, rates and the US dollar.",
+    "Gold is liquid and trades almost 24/5, but it can move very fast, especially around major US news.",
+    "Fast markets require smaller positions, a stop loss on every trade, and demo practice first."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical: XAUUSD is at 2,340.00 a few minutes before a US inflation report.",
+      "The report surprises the market and gold jumps to 2,352.00 within minutes, a $12.00 move.",
+      "On 1 standard lot (100 oz), a $12.00 move equals $1,200; on 0.01 lot (1 oz), it equals $12.",
+      "The same move in the opposite direction would be a loss of the same size, which is why position size and a stop loss matter."
+     ],
+     "title": "How a news spike can look",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "A company's quarterly earnings",
+       "Inflation and interest-rate expectations",
+       "The number of followers a trader has",
+       "The color of the chart"
+      ],
+      "question": "Which factor commonly moves the gold price?",
+      "explanation": "Gold often reacts to inflation, interest-rate expectations, risk sentiment and the US dollar.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$0.12",
+       "$1.20",
+       "$12",
+       "$1,200"
+      ],
+      "question": "Hypothetically, gold moves $12.00. What is the change on 0.01 lot (1 oz)?",
+      "explanation": "0.01 lot = 1 oz in the common convention, so a $12.00 move changes the position by $12. (Conventions vary by broker.)",
+      "correctIndex": 2
+     },
+     {
+      "options": [
+       "Use a large lot to catch big moves",
+       "Trade every news release",
+       "Use small positions, always a stop loss, and practice on demo",
+       "Remove the stop loss so you aren't stopped out"
+      ],
+      "question": "What is a sensible beginner approach to a fast market like gold?",
+      "explanation": "Speed means losses can grow quickly. Small size, a stop loss, and demo practice are the safe starting point.",
+      "correctIndex": 2
+     }
+    ]
+   },
+   "m_content": "e6128ae9f482de66481ad6ea5ea3e6c1",
+   "m_kt": "19eddb30da848705b1c7c78e98860509",
+   "m_ex": "3e53d05093c03733cfdab1341fc6e567",
+   "m_ic": "c375fc15e99a9f29527b4d5f0698ae25",
+   "m_lo": "fb400cc86a6ef1f7d86b8341f2942a8f",
+   "m_title": "5e0b4bc33df145119f2f3d1fa1b6255f"
+  },
+  {
+   "id": "ad3d52a1-544d-47e0-91d9-337503678387",
+   "slug": "bull-market-vs-bear-market",
+   "title": "Bull Market vs Bear Market",
+   "learning_objective": "Recognize bullish, bearish and sideways conditions on a gold chart.",
+   "content": "## TL;DR sa Taglish\nBull market = generally pataas ang price, with higher highs at higher lows. Bear market = pababa, with lower highs at lower lows. Madalas sideways lang ang market, at dito natatalo ang maraming beginners na pinipilit mag-trade. Pwedeng magbago ang trend anytime, kaya kahit sumasabay ka sa trend, laging may stop loss.\nDemo muna. Pagkatapos, optional ang cents account na maliit na pera lang na kaya mong mawala. Max 1% risk bawat trade, laging may stop loss.\n\n## Bull market\nA bull market is a period when prices are generally rising. On a chart you typically see higher highs and higher lows: each rally goes a bit higher, and each pullback stops above the previous low.\nSa Taglish: Pataas ang price: bawat rally mas mataas, at bawat pullback humihinto above the previous low.\n\n## Bear market\nA bear market is a period when prices are generally falling, with lower highs and lower lows.\nSa Taglish: Pababa ang price, with lower highs at lower lows.\n\n## Sideways (range)\nOften the market is neither clearly rising nor falling but moving between a ceiling and a floor. Many beginners lose money by forcing trades in choppy ranges.\nSa Taglish: Minsan nasa pagitan lang ng ceiling at floor ang price. Huwag pilitin mag-trade sa choppy range.\n\n## Trends change\nA trend can end at any time. Identifying the current direction helps you plan, but it is not a guarantee. That is why every trade needs a stop loss, even when you are trading with the trend.\nSa Taglish: Walang guarantee ang trend; pwede itong matapos anytime, kaya kailangan pa rin ng stop loss.\n\n## Timeframes change the picture\nA market can look bullish on a daily chart and bearish on a 15-minute chart at the same time. Short timeframes show small swings inside the bigger move. Beginners often get confused by switching between charts. A simple habit is to check one higher timeframe for overall direction, then use one lower timeframe to plan entries, and to write down which timeframes you use in your plan.\nSa Taglish: Pwedeng bullish sa daily pero bearish sa 15-minute. Gumamit ng isang higher timeframe para sa direction at isang lower para sa entries, at isulat ito sa plan mo.\n\n## Don't trade the label\nCalling a market 'bullish' doesn't mean you must buy. Sometimes the best decision is to wait, especially when price is in the middle of a range, right before major news, or when you can't find a logical place for your stop loss. Waiting costs nothing; a forced trade can cost you up to your full planned risk.\nSa Taglish: Hindi porke \"bullish\" ay kailangan mong mag-buy. Okay lang maghintay, lalo na sa gitna ng range, bago ang big news, o kung walang logical na stop loss.\n\n## Practice idea\nOn a demo chart, mark the last three swing highs and lows on two different timeframes and decide: bullish, bearish or sideways? Write your answer, then check how price behaved afterward. You are training your eyes, not trying to predict.\nSa Taglish: Sa demo chart, i-mark ang last 3 swing highs at lows sa dalawang timeframes, isulat kung bullish, bearish o sideways, tapos i-check after. Training ito ng mata, hindi prediction.\n\n## Quick recap\nBullish means higher highs and higher lows, bearish means lower highs and lower lows, and sideways means price is stuck between a ceiling and a floor. Identify the structure first, decide whether there is a clear, low-risk plan, and only then think about a trade, always with a stop loss and max 1% risk.\nSa Taglish: Structure muna: bullish, bearish o sideways? Tapos tingnan kung may clear, low-risk plan, laging may stop loss at max 1% risk.\n\n## Gold example (hypothetical): Spotting higher highs and higher lows\n• Hypothetical swings on XAUUSD: low 2,320 → high 2,340 → low 2,330 → high 2,352 → low 2,341.\n• Each high is higher (2,340 → 2,352) and each low is higher (2,320 → 2,330 → 2,341): this is a bullish structure.\n• If price later breaks below 2,341 and then fails to make a new high, the bullish structure may be ending.\n• A stop loss placed below a recent higher low (e.g. below 2,341) limits the loss if the trend fails.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nSa Taglish: Higher highs at higher lows = bullish structure. Kapag nabasag ang 2,341 at walang bagong high, baka patapos na ito; ang stop loss below the higher low ay naglilimit ng talo.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
+   "key_takeaways": [
+    "Bull markets show higher highs and higher lows; bear markets show lower highs and lower lows.",
+    "Sideways ranges are common, and forcing trades in choppy markets is a frequent beginner mistake.",
+    "Trends can end without warning, so every trade still needs a stop loss."
+   ],
+   "examples": [
+    {
+     "note": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "steps": [
+      "Hypothetical swings on XAUUSD: low 2,320 → high 2,340 → low 2,330 → high 2,352 → low 2,341.",
+      "Each high is higher (2,340 → 2,352) and each low is higher (2,320 → 2,330 → 2,341): this is a bullish structure.",
+      "If price later breaks below 2,341 and then fails to make a new high, the bullish structure may be ending.",
+      "A stop loss placed below a recent higher low (e.g. below 2,341) limits the loss if the trend fails."
+     ],
+     "title": "Spotting higher highs and higher lows",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "Lower highs and lower lows",
+       "Higher highs and higher lows",
+       "Flat line",
+       "Random dots"
+      ],
+      "question": "Which pattern describes a bull market?",
+      "explanation": "A bullish trend makes higher highs and higher lows.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Lower lows, bearish",
+       "Higher lows, bullish structure",
+       "Nothing at all",
+       "Guaranteed profit if you buy"
+      ],
+      "question": "Hypothetical lows: 2,320, 2,330, 2,341. What do they suggest?",
+      "explanation": "Rising lows suggest a bullish structure, but nothing is guaranteed.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Trends can reverse at any time",
+       "Brokers require it for fun",
+       "It increases profit",
+       "It is not needed with the trend"
+      ],
+      "question": "Why use a stop loss even when trading with the trend?",
+      "explanation": "Trends can end suddenly; a stop loss caps the loss if the market turns.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "915b0e612df339e928739045813d0f8c",
+   "m_kt": "8106d2262297454982b96f5de4c8c68b",
+   "m_ex": "e1941764d791fc29458fa94d3aef85ab",
+   "m_ic": "c2be6bcfa654d33cd62bc182d418a471",
+   "m_lo": "8191e9064ce6702f3000e3271c1be3ea",
+   "m_title": "db520bdd1015712e39b58c2c23e868e9"
+  },
+  {
+   "id": "7246c3d7-a7bb-4945-9c40-9758b4cbd553",
+   "slug": "position-sizing-and-lot-calculation",
+   "title": "Position Sizing & Lot Calculation",
+   "learning_objective": "Calculate the correct lot size for any trade based on account balance, risk percentage, and stop loss distance.",
+   "content": "Never risk more than 1% of your account per trade (the GFX standard), and always use a stop-loss. Guessing your lot size is how newbie accounts blow up — always calculate it.\n\nFormula: Risk divided by (SL pips x Pip Value) = Lot Size\n\n$1,000 account, 1% risk = $10 max loss.\n50 pip SL: $10 divided by (50 x $1.00) = 0.20 lot",
+   "key_takeaways": [
+    "Never risk more than 1% of your account on a single trade.",
+    "Lot size = Risk amount divided by (Stop Loss pips x Pip Value) — never guess it."
+   ],
+   "examples": [],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "$2",
+       "$20",
+       "$200",
+       "$1,000"
+      ],
+      "question": "Hypothetical: your demo account is $2,000. Under the GFX 1% rule, what is the most you may risk on one trade?",
+      "explanation": "1% of $2,000 = $20. That is the maximum planned loss if your stop loss is hit.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$0.65 (65 pips)",
+       "$6.50 (650 pips)",
+       "$65.00 (6,500 pips)",
+       "$3.50 (350 pips)"
+      ],
+      "question": "Hypothetical: you plan to buy XAUUSD at 2,350.00 with a stop loss at 2,343.50. What is the stop distance?",
+      "explanation": "2,350.00 − 2,343.50 = $6.50. With $0.01 = 1 pip, that is 650 pips. (Many brokers count a gold pip as $0.10, which would make it 65 pips; the dollar distance is the same.)",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "0.03 lot",
+       "0.04 lot",
+       "0.30 lot",
+       "3 lots"
+      ],
+      "question": "Same trade: $20 max risk, $6.50 stop distance. With 1 lot = 100 oz (so 0.01 lot = 1 oz and a $0.01 move = $1 per lot), what is the largest lot size within the rule, in 0.01-lot steps?",
+      "explanation": "Loss per 0.01 lot = $6.50 × 1 oz = $6.50. $20 ÷ $6.50 ≈ 3.08 → round DOWN to 3 × 0.01 = 0.03 lot (risk $19.50). 0.04 lot would risk $26, which is over 1%.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "2caba5d1af082aa985133efb09999934",
+   "m_kt": "ad0738778d2331cfdc4ae024e46e9ab2",
+   "m_ex": "d751713988987e9331980363e24189ce",
+   "m_ic": "d66c105b56662a2111ef3ff72d6869e0",
+   "m_lo": "e0f9c67130084580a5581cfc558c91dc",
+   "m_title": "48221496368013a7fc3ec7decb3c9b2d"
+  },
+  {
+   "id": "680c3ddf-a5e5-459d-bdf3-e8f06251e1de",
+   "slug": "what-is-the-financial-market",
+   "title": "What is the Financial Market?",
+   "learning_objective": "Understand what a financial market is, who takes part, and where gold (XAUUSD) fits in.",
+   "content": "## TL;DR sa Taglish\nAng financial market ay kung saan nagba-buy and sell ng shares, currencies at commodities like Gold, mostly online. Gumagalaw ang price depende sa dami ng buyers vs sellers. XAUUSD = price ng 1 troy ounce ng Gold in US dollars. Bilang beginner, hindi mo job ang mag-predict; ang goal mo ay matuto at mag-practice sa demo muna.\nDemo muna. Pagkatapos, optional ang cents account na maliit na pera lang na kaya mong mawala. Max 1% risk bawat trade, laging may stop loss.\n\n## A marketplace for prices\nA financial market is any place, physical or electronic, where buyers and sellers exchange assets such as company shares, currencies, commodities like gold, and bonds. Today almost all of this happens electronically. Prices move because the balance between buyers and sellers keeps changing: when more people want to buy than sell, the price tends to rise; when more want to sell, it tends to fall.\nSa Taglish: Ang market ay bilihan at bentahan. Mas maraming buyer, tumataas ang presyo; mas maraming seller, bumababa.\n\n## Who participates\nParticipants include central banks, commercial banks, funds, companies that need foreign currency or raw materials, and individual (retail) traders. Retail traders are a small part of the market. Large institutions move prices far more than any individual, which is one reason no one can reliably predict short-term moves.\nSa Taglish: Malalaking bangko at funds ang pinakanagpapagalaw ng presyo, kaya walang makakahula nang sigurado sa maikling galaw.\n\n## Where gold fits\nGold is traded worldwide as a commodity and as a store of value. When you see XAUUSD, it means the price of one troy ounce of gold in US dollars. Gold trades almost 24 hours a day, five days a week, because different financial centers (Asia, Europe, the US) open one after another.\nSa Taglish: XAUUSD = presyo ng 1 troy ounce ng gold sa US dollars. Halos 24 oras ito nagte-trade, Lunes hanggang Biyernes.\n\n## Why this matters for you\nUnderstanding that prices come from millions of decisions helps you stay humble: your job as a beginner is not to predict, but to learn how markets work, manage risk, and practice on a demo account before using real money.\nSa Taglish: Hindi mo trabaho mang-hula. Matuto, mag-manage ng risk, at mag-demo muna.\n\n## Exchanges vs over-the-counter\nSome markets run on central exchanges, like a stock exchange, where all orders meet in one place. Others, like forex and most gold trading for retail traders, are over-the-counter (OTC): prices come from a network of banks and liquidity providers, and your platform shows you a price based on that network. This is why the gold price you see can differ very slightly from one platform to another.\nSa Taglish: Karaniwang OTC ang gold, kaya pwedeng bahagyang magkaiba ang presyo sa bawat platform.\n\n## Key words to know\nAsset: anything that can be bought or sold, such as gold. Liquidity: how easily an asset can be bought or sold without moving the price much; gold is highly liquid. Volatility: how much and how fast the price moves; gold can be quite volatile. You will meet these words again in every level, so take a moment to make sure they feel familiar before moving on.\nSa Taglish: Asset = bagay na binibili o binebenta. Liquidity = gaano kadaling bumili o magbenta. Volatility = gaano kabilis at kalaki gumalaw ang presyo.\n\n## Gold example (hypothetical): Reading a gold price\n• Suppose your platform shows XAUUSD at 2,350.00 (hypothetical).\n• That means 1 troy ounce of gold costs 2,350.00 US dollars at that moment.\n• If news makes more buyers step in and the price moves to 2,352.00, gold has risen by $2.00 per ounce.\n• If sellers dominate and it drops to 2,348.00, gold has fallen by $2.00 per ounce.\nThe same $2 move can be a small or large gain or loss depending on position size, which you'll learn in Level 2.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nSa Taglish: Ang $2 na galaw ay pwedeng maliit o malaking gain o loss, depende sa laki ng position mo.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
+   "key_takeaways": [
+    "A financial market is where buyers and sellers exchange assets; prices move with the balance of supply and demand.",
+    "XAUUSD is the price of one troy ounce of gold in US dollars, traded almost 24 hours a day, 5 days a week.",
+    "Large institutions drive most price movement, so beginners should focus on learning and risk control, not prediction."
+   ],
+   "examples": [
+    {
+     "note": "The same $2 move can be a small or large gain or loss depending on position size, which you'll learn in Level 2.",
+     "steps": [
+      "Suppose your platform shows XAUUSD at 2,350.00 (hypothetical).",
+      "That means 1 troy ounce of gold costs 2,350.00 US dollars at that moment.",
+      "If news makes more buyers step in and the price moves to 2,352.00, gold has risen by $2.00 per ounce.",
+      "If sellers dominate and it drops to 2,348.00, gold has fallen by $2.00 per ounce."
+     ],
+     "title": "Reading a gold price",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "The price of 1 gram of gold in Philippine pesos",
+       "The price of 1 troy ounce of gold in US dollars",
+       "A gold mining company's stock",
+       "The exchange rate between USD and EUR"
+      ],
+      "question": "What does XAUUSD represent?",
+      "explanation": "XAU is the code for gold and USD for the US dollar, so XAUUSD is the price of one troy ounce of gold in dollars.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Because the broker decides to raise it",
+       "Because more participants want to buy than sell",
+       "Because it is a weekday",
+       "Because retail traders always buy"
+      ],
+      "question": "Why does a market price usually rise?",
+      "explanation": "Prices move with supply and demand. More buying pressure than selling pressure tends to push prices up.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Predicting tomorrow's gold price",
+       "Copying other people's trades",
+       "Learning how the market works and practicing on demo",
+       "Trading with as much money as possible"
+      ],
+      "question": "What is the best focus for a beginner?",
+      "explanation": "No one reliably predicts short-term moves. Beginners should learn the basics, manage risk, and practice on demo first.",
+      "correctIndex": 2
+     }
+    ]
+   },
+   "m_content": "27ae186c2651ae4f088817e89a3c4360",
+   "m_kt": "725b232d36d43db78f0bbce3ab9cea77",
+   "m_ex": "76f416b1fb649e8b382c427ed0d4532e",
+   "m_ic": "94017957e3dc3c297bce1276e57b1a9c",
+   "m_lo": "011a6496d9f95ddf9dabd6b83b118df4",
+   "m_title": "c7c4d1598ad2850e92c658aab8aa7798"
+  },
+  {
+   "id": "5b957c8d-5ac5-45ee-bcbf-5bc7ec91d764",
+   "slug": "demo-vs-live-account",
+   "title": "Demo vs Live Account",
+   "learning_objective": "Understand the psychological gap between demo and live trading, and why positive results on demo don't guarantee the same results live.",
+   "content": "Demo = virtual money, zero emotional pressure. Live = real money, and your psychology changes completely.\n\nThe Psychological Gap: Most traders perform well on demo then blow their first live account. Real money triggers fear and greed at a level demo never can.\n\nA smaller step: the cents account\nStart on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade. A cents account is a real-money account whose balance is shown in cents (for example, a $10 deposit shows as 1,000) and that allows very small lot sizes, so you can feel real-money emotions with tiny amounts. Not every broker offers one. Losses are still real, and results are not guaranteed.",
+   "key_takeaways": [
+    "The mechanics of demo and live trading are identical — the psychological weight of real money is what changes everything.",
+    "Positive results on demo don't guarantee the same results live.",
+    "Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade."
+   ],
+   "examples": [],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "icon": "🧠",
+      "options": [
+       "Real money triggers emotions absent in demo",
+       "Demo has better spreads",
+       "Live execution is slower",
+       "Demo has more indicators"
+      ],
+      "question": "Why do traders often struggle more on live vs demo?",
+      "explanation": "Real money triggers fear and greed at a level demo trading simply can't replicate.",
+      "correctIndex": 0
+     },
+     {
+      "icon": "⚖️",
+      "options": [
+       "Real money brings real psychological pressure",
+       "Live accounts have wider spreads by default",
+       "Demo accounts always produce better results",
+       "There is no real difference"
+      ],
+      "question": "What's the main risk difference between demo and live trading?",
+      "explanation": "The mechanics are identical — it's the psychological weight of real money that changes everything.",
+      "correctIndex": 0
+     },
+     {
+      "icon": "🚧",
+      "options": [
+       "No — emotional factors on live are different",
+       "Yes, demo results transfer directly",
+       "Only if you use a bigger lot size live",
+       "Yes, as long as you use the same broker"
+      ],
+      "question": "Do positive results on demo guarantee the same results live?",
+      "explanation": "Most traders perform well on demo then struggle on their first live account — exactly why this transition needs care.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "6010d4df0aa622af924b6003444706fe",
+   "m_kt": "d6c6ee91ff758516d624bffa5594530e",
+   "m_ex": "d751713988987e9331980363e24189ce",
+   "m_ic": "71af3ed6e9f70696bb08fc3997e9e3f8",
+   "m_lo": "745470ebc9f5ab2e2cd0b6fbb1255eb8",
+   "m_title": "4cae0274232cee952a767269da6356b7"
+  },
+  {
+   "id": "3cb8acf1-27ac-42fb-bd4d-95e5b18b00ef",
+   "slug": "demo-account-your-practice-ground",
+   "title": "Demo Account — Your Practice Ground",
+   "learning_objective": "Use a demo account to build skills and habits, and know when you might consider moving on.",
+   "content": "What a demo account is\nA demo account uses virtual money with live or near-live prices. You can practice the platform, order types, position sizing and your plan with no real money at risk.\n\nWhat to practice\nPlacing orders with a stop loss every time; calculating lot size from 1% risk; following a written plan; journaling every trade (reason, entry, stop, outcome, and whether you followed your rules).\n\nDemo limitations\nDemo fills can be smoother than live, and virtual money doesn't trigger real emotions like fear and greed. Treat your demo balance as if it were real, using the same size you would actually use.\n\nWhen to consider live\nJudge readiness by process, not demo profits: for example, at least 4 consecutive weeks following your plan (every trade with a stop loss, max 1% risk, every trade journaled), and an understanding of every cost. Going live is optional. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade. A cents account is a real-money account whose balance is shown in cents (for example, a $10 deposit shows as 1,000) and that allows very small lot sizes, so you can feel real-money emotions with tiny amounts. Not every broker offers one. Losses are still real, and results are not guaranteed. Seek your own independent advice.\n\nSetting up your demo\nChoose a starting balance similar to what you might realistically use later, not a huge number. Use the same platform and settings you would use live. Write a one-page plan: which market (XAUUSD), which timeframes, entry idea, where stops go, 1% risk, and when you will not trade (for example, right before major news).\n\nWeekly review\nOnce a week, review your journal: how many trades followed every rule, which mistakes repeated, and one thing to improve next week. Progress means fewer rule breaks over time.\n\nTreat it like real money\nIt's tempting to take random trades on demo because the money isn't real. Resist that. Every demo trade should look exactly like a trade you would place with real money: same size rules, same stop loss habit, same journal entry. The habits you build here are the habits you will carry forward, good or bad.\n\nQuick recap\nDemo is where you build skill and discipline without real money at risk. Practice the full routine on every trade, review weekly, and measure progress by rule-following, not by the demo balance.\n\nGold example (hypothetical): A week-one demo routine\n• Hypothetical $1,000 demo account. Rule: max 1% risk ($10) per trade, stop loss always.\n• Trade idea: buy XAUUSD at 2,350.00, stop 2,346.00 ($4.00 per oz). Size = $10 ÷ $4 = 2.5 oz → round down to 0.02 lot (2 oz, $8 risk).\n• Journal entry: reason for entry, SL/TP levels, size, result, and a yes/no: 'Did I follow my plan?'\n• At week's end, count rule-following trades, not the demo balance.\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nAng demo account ay virtual money pero real market, dito ka mag-practice nang walang tunay na pera na nakataya. I-practice: laging may stop loss, 1% max risk, at i-journal ang bawat trade. Ang sukatan ng ready ka na ay hindi demo profit kundi ilang linggong (hal. 4) sunod-sunod na sumusunod sa plan mo. Hindi required mag-live. Demo muna, tapos optional ang cents account: totoong pera pero maliit lang, nakikita ang balance in cents at napakaliit ng lot size. Pera lang na kaya mong mawala, 1% max risk, at laging may stop loss.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "A demo account lets you practice with virtual money on real market prices.",
+    "Practice stop losses, 1% sizing, your written plan and journaling, and treat demo money like real money.",
+    "Measure readiness by weeks of following your plan, not by demo profits.",
+    "Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical $1,000 demo account. Rule: max 1% risk ($10) per trade, stop loss always.",
+      "Trade idea: buy XAUUSD at 2,350.00, stop 2,346.00 ($4.00 per oz). Size = $10 ÷ $4 = 2.5 oz → round down to 0.02 lot (2 oz, $8 risk).",
+      "Journal entry: reason for entry, SL/TP levels, size, result, and a yes/no: 'Did I follow my plan?'",
+      "At week's end, count rule-following trades, not the demo balance."
+     ],
+     "title": "A week-one demo routine",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "Highest demo balance",
+       "Weeks of consistently following your plan",
+       "Number of trades per day",
+       "Biggest single win"
+      ],
+      "question": "What is the best measure of demo progress?",
+      "explanation": "GFX measures readiness by process: weeks of following your rules, not profits.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "0.02 lot",
+       "0.03 lot",
+       "0.25 lot",
+       "1 lot"
+      ],
+      "question": "Hypothetical: $1,000 demo, 1% risk, stop distance $4.00. Largest size within the rule (0.01-lot steps)?",
+      "explanation": "$10 ÷ $4 per oz = 2.5 oz; round DOWN to 0.02 lot (2 oz = $8 risk). 0.03 lot would risk $12, over 1%.",
+      "correctIndex": 0
+     },
+     {
+      "options": [
+       "Demo uses fake charts",
+       "Demo fills can be smoother and there's no real emotional pressure",
+       "Live accounts have no spreads",
+       "They never differ"
+      ],
+      "question": "Why can demo results differ from live?",
+      "explanation": "Fills and emotions differ, which is why you treat demo money as real and start small if you ever go live.",
+      "correctIndex": 1
+     }
+    ]
+   },
+   "m_content": "e206f4a084e3cc5ea689ebb63a07f734",
+   "m_kt": "0849001fd023cb6b044318c7a15ae481",
+   "m_ex": "5bbb5b4f1571b9d2b0b081f2932b2d33",
+   "m_ic": "8dfc682443590288eeb2a7e9a3110bc8",
+   "m_lo": "8333f0131ba3c7f51aaa2f585d42c322",
+   "m_title": "5df31b7ca9d237e3ff5f7f99999cdebb"
+  },
+  {
+   "id": "0a66d41e-7255-4028-8640-caf4497a4adb",
+   "slug": "opening-your-accm-account",
+   "title": "Opening Your ACCM Account",
+   "learning_objective": "Understand how to start on a free MT5 demo, check a broker's licence for your country, and the optional step to a cents account.",
+   "content": "This lesson shows the general steps to get started with ACCM, the broker used in the Academy's examples. You can use any broker you choose, or not trade at all.\n\nDisclosure: GFX's founder is an Introducing Broker (IB) for ACCM. GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose. Education only, not financial advice.\n\nSteps to get started:\n1. Create a free DEMO account in the MT5 app first. No ACCM registration is needed: install MT5, open the menu, choose to open a new account, search for your broker's demo server, and fill in the short demo form. Practise there for several weeks (1% max risk, stop-loss on every trade).\n2. Check the broker's licence for your country and the legal entity you would sign up with, on the regulator's own public register.\n3. Optional, and only after several weeks of following your trading plan consistently on demo: register a cents account (real money; balance shown in cents, very small lot sizes) through GFX's IB link, complete KYC (ID + selfie), and start small with money you can afford to lose. Minimum deposit: $50 (as of Oct 2026), via GCash, Maya, or other e-wallets; check ACCM's site for current terms. Max 1% risk per trade, stop-loss on every trade.\n\nSa Taglish: Demo muna sa MT5 app, walang ACCM registration. I-check ang licence ng broker para sa bansa mo. Optional lang ang cents account: real money, start small, max 1% risk, laging may stop-loss.",
+   "key_takeaways": [
+    "Start with a free demo in the MT5 app (no broker registration needed), then check the broker's licence for your country.",
+    "A cents account through the IB link is optional and uses real money: only after weeks of following your plan on demo, start small, max 1% risk per trade, stop-loss on every trade.",
+    "GFX's founder is an IB for ACCM. GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose."
+   ],
+   "examples": [],
+   "interactive_config": null,
+   "m_content": "8ff402abb8997fc42d0fed9c551ef5d7",
+   "m_kt": "79d3694a31b2d1d702745d44188eeeac",
+   "m_ex": "d751713988987e9331980363e24189ce",
+   "m_ic": "d41d8cd98f00b204e9800998ecf8427e",
+   "m_lo": "354a4ce73b14d8fb837b1fe2b9890604",
+   "m_title": "86300be1d34753b2e27cdfefae91a419"
+  },
+  {
+   "id": "94768e3c-a60b-4fb3-be16-c2e5c5a30132",
+   "slug": "how-do-traders-make-money",
+   "title": "How Do Traders Make Money?",
+   "learning_objective": "Understand how a trade can gain or lose, and why losses are a normal part of trading.",
+   "content": "## TL;DR sa Taglish\nPwede kang mag-buy (go long) kung expect mong tataas ang price, o mag-sell (go short) kung bababa, and either way pwede kang matalo. Walang trader na laging panalo; normal ang losing streaks. Ang mahalaga ay controlled ang talo: max 1% ng account per trade, laging may stop loss. May costs din ang bawat trade, like the spread. GFX does not promise profits; ang goal ay matuto at protektahan ang capital mo, starting sa demo.\nDemo muna. Pagkatapos, optional ang cents account na maliit na pera lang na kaya mong mawala. Max 1% risk bawat trade, laging may stop loss.\n\n## Two directions\nTraders try to benefit from price changes. If you buy (go long) and the price rises, the position gains; if it falls, it loses. If you sell (go short) and the price falls, the position gains; if it rises, it loses. With CFDs and forex-style platforms you can go long or short without owning physical gold.\nSa Taglish: Sa long, nag-ga-gain ang position kapag tumaas ang price; sa short, kapag bumaba. Kapag kabaligtaran ang galaw, talo ang position.\n\n## Losses are part of the process\nNo trader wins every trade. Even skilled traders have long losing streaks. What matters is controlling how much you can lose on each trade (GFX standard: max 1% of your account) and keeping your losses small and planned. A trader who risks too much can lose their account in a few bad trades.\nSa Taglish: Kahit skilled traders may losing streaks. I-control ang talo per trade, max 1% ng account, para hindi maubos ang account sa ilang bad trades.\n\n## Costs reduce results\nEvery trade has costs such as the spread and sometimes commissions or overnight (swap) fees. These costs mean a trade has to move in your favor just to break even.\nSa Taglish: Spread, commission at swap fees ay costs, kaya kailangang gumalaw muna in your favor ang trade para lang mag-break even.\n\n## The honest picture\nMany retail traders lose money, especially when using leverage. GFX does not promise profits. The goal of this Academy is to help you understand the market, build a plan, and protect your capital while you learn, starting on a demo account.\nSa Taglish: Maraming retail traders ang nalulugi, lalo na with leverage. Walang profit promise ang GFX; ang focus ay understanding, plan at protecting your capital, demo muna.\n\n## Why risk per trade matters more than wins\nImagine two hypothetical traders. One risks 1% of their account per trade; after five losses in a row they are down about 5% and can keep learning. The other risks 20% per trade; after the same five losses they have lost most of their account. Same market, same bad luck, very different outcome. Small, consistent risk keeps you in the game long enough to improve.\nSa Taglish: After 5 losses in a row: sa 1% risk, down lang ng about 5%; sa 20% risk, halos ubos na ang account. Small, consistent risk keeps you in the game.\n\n## Process over profit\nAs a beginner, judge yourself by whether you followed your plan: did every trade have a stop loss, was the size within 1%, did you journal it? These are things you control. Outcomes of single trades are partly luck and are not a good measure of skill.\nSa Taglish: I-judge ang sarili mo kung nasunod mo ang plan: may stop loss, within 1%, naka-journal. Partly luck ang result ng isang trade.\n\n## Quick recap\nTrades can gain or lose in either direction, costs apply to every trade, and losing streaks happen to everyone. Keep risk small and consistent, at max 1% per trade, and practice on demo first.\nSa Taglish: Pwedeng manalo o matalo sa long o short, may costs lagi, at normal ang losing streaks. Max 1% per trade, demo muna.\n\n## Gold example (hypothetical): Long vs short on gold\n• Hypothetical long: buy 0.01 lot (1 oz) XAUUSD at 2,350.00, stop loss at 2,345.00.\n• If price rises to 2,355.00, the position is up $5.00 per oz = $5 (before costs).\n• If price falls to the stop loss at 2,345.00, the position closes at a loss of $5.00 per oz = $5 (plus costs).\n• Hypothetical short: sell 0.01 lot at 2,350.00; if price falls to 2,345.00 the position is up $5, if it rises to 2,355.00 it is down $5.\nThese are illustrative numbers before costs, not results. Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nSa Taglish: Sa 0.01 lot, ang $5 na galaw ay $5 na gain o $5 na loss (before costs), depende kung long o short ka at saan pumunta ang price.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
+   "key_takeaways": [
+    "A long (buy) position gains when price rises; a short (sell) position gains when price falls, and either can lose.",
+    "Losing trades are normal; controlling loss size (max 1% per trade) matters more than any single win.",
+    "Costs like the spread mean a trade must move in your favor just to break even."
+   ],
+   "examples": [
+    {
+     "note": "These are illustrative numbers before costs, not results. Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical long: buy 0.01 lot (1 oz) XAUUSD at 2,350.00, stop loss at 2,345.00.",
+      "If price rises to 2,355.00, the position is up $5.00 per oz = $5 (before costs).",
+      "If price falls to the stop loss at 2,345.00, the position closes at a loss of $5.00 per oz = $5 (plus costs).",
+      "Hypothetical short: sell 0.01 lot at 2,350.00; if price falls to 2,345.00 the position is up $5, if it rises to 2,355.00 it is down $5."
+     ],
+     "title": "Long vs short on gold",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "When the price rises",
+       "When the price falls",
+       "Only on Fridays",
+       "Never"
+      ],
+      "question": "You sell (go short) XAUUSD. When does the position gain?",
+      "explanation": "A short position gains when the price falls and loses when it rises.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "+$5",
+       "-$5",
+       "-$500",
+       "-$0.05"
+      ],
+      "question": "Hypothetically, you buy 0.01 lot at 2,350.00 and price drops to 2,345.00. What is the result before costs?",
+      "explanation": "0.01 lot = 1 oz, and the price fell $5.00, so the loss is $5 before costs (common convention).",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "1% of your account",
+       "5% of your account",
+       "Whatever feels right",
+       "50% if you're confident"
+      ],
+      "question": "What does GFX recommend as maximum risk per trade?",
+      "explanation": "The GFX standard is max 1% risk per trade with a stop loss on every trade.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "7a9e6f8d23063f772a3f85434ae91f03",
+   "m_kt": "a6b4efb69a6beed146ae791c2f2e5740",
+   "m_ex": "fb27d5192bcc8d7b5e4563bcdc104480",
+   "m_ic": "db37144bcdcaa40110aea26429604d99",
+   "m_lo": "8147b3f788680a4270bd2a55fd2b5f71",
+   "m_title": "1ab12e76c9127f4f5402e4715a4ddddc"
+  },
+  {
+   "id": "3ea5a6f7-d454-4734-8a8a-af15f8c0adca",
+   "slug": "what-is-a-spread",
+   "title": "What is a Spread?",
+   "learning_objective": "Understand bid, ask and spread, and how the spread affects every trade.",
+   "content": "## TL;DR sa Taglish\nBid = price kung magse-sell ka, ask = price kung magbu-buy ka. Ang difference nila ay ang spread, at cost mo agad iyan pagpasok mo ng trade. Lumalaki ang spread sa big news, sa daily rollover at kapag mababa ang liquidity. Bago pumasok, i-check ang spread at bigyan ng buffer ang stop loss mo. I-practice muna ito sa demo.\nDemo muna. Pagkatapos, optional ang cents account na maliit na pera lang na kaya mong mawala. Max 1% risk bawat trade, laging may stop loss.\n\n## Bid and ask\nEvery platform shows two prices. The bid is the price at which you can sell; the ask is the price at which you can buy. The ask is higher than the bid.\nSa Taglish: Dalawang price ang makikita mo: bid para mag-sell, ask para mag-buy, at laging mas mataas ang ask.\n\n## The spread\nThe spread is the difference between ask and bid. It is a trading cost: as soon as you open a trade, you start slightly negative because you bought at the ask but could only sell back at the bid.\nSa Taglish: Ask minus bid = spread. Pagpasok mo, slightly negative ka agad dahil sa cost na ito.\n\n## Spreads change\nSpreads vary between providers, account types and times of day. They often widen during major news, at the daily market rollover, and when liquidity is low (for example around the weekly open). Wider spreads mean higher cost and can trigger a tight stop loss unexpectedly.\nSa Taglish: Iba-iba ang spread per provider, account at oras. Lumalaki ito sa news, rollover at low liquidity, at pwedeng ma-trigger ang tight stop loss.\n\n## What to do as a beginner\nCheck the live spread before entering. Avoid trading when spreads are unusually wide. When placing a stop loss, leave room for the spread. Compare conditions on a demo account before going live, and judge any provider on regulation and transparency, not just low spreads.\nSa Taglish: I-check ang live spread, iwas sa sobrang lapad na spread, at bigyan ng room ang stop loss. Piliin ang provider base sa regulation at transparency, hindi lang low spread.\n\n## Other trading costs\nBesides the spread, some accounts charge a commission per lot, and positions held overnight usually pay or receive a swap (financing) fee. Gold swaps can be significant for long-held positions. Add all costs together when you compare accounts, and remember that frequent trading multiplies costs.\nSa Taglish: Bukod sa spread, may commission per lot at swap fee kapag overnight ang position. Pwedeng malaki ang gold swaps, at mas maraming trades = mas maraming costs.\n\n## Spread and your stop loss\nCharts usually display the bid price. If you buy, your stop loss is triggered by the bid; if you sell, it is triggered by the ask. That means when spreads widen suddenly, a short position's stop can be hit even if the bid chart never touched your level. Leaving a small buffer and avoiding trading around big news helps reduce these surprises.\nSa Taglish: Bid ang usual na nasa chart. Sa buy, bid ang tumatama sa stop mo; sa sell, ask, kaya pwedeng ma-hit ang short stop kahit hindi umabot ang bid chart. Mag-iwan ng buffer.\n\n## Quick recap\nThe spread is the gap between buy and sell prices and a cost on every trade. Check it before entering, expect it to widen around news, and leave a buffer for it when placing your stop loss.\nSa Taglish: Ang spread ay gap ng buy at sell price at cost sa bawat trade. I-check bago pumasok, expect na lalaki ito sa news, at mag-buffer sa stop loss.\n\n## Gold example (hypothetical): Calculating the spread cost\n• Hypothetical quote: Bid 2,350.00 / Ask 2,350.30.\n• Spread = 2,350.30 − 2,350.00 = $0.30 = 30 pips (with $0.01 = 1 pip).\n• On 1 standard lot (100 oz): $0.30 × 100 = $30 cost to open.\n• On 0.01 lot (1 oz): $0.30 × 1 = $0.30 cost.\n• Price must rise $0.30 from your buy just for the trade to break even (before other costs).\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nSa Taglish: Ang spread na $0.30 ay $30 sa 1 standard lot at $0.30 sa 0.01 lot, at kailangang tumaas ng $0.30 ang price para lang mag-break even.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Start on demo, then optionally a cents account with small money you can afford to lose; max 1% risk per trade, stop-loss on every trade.",
+   "key_takeaways": [
+    "Bid is the sell price, ask is the buy price, and the spread is the difference: a cost on every trade.",
+    "Spreads vary and often widen around news, rollover and low liquidity.",
+    "Check the spread before entering and leave room for it when placing your stop loss."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical quote: Bid 2,350.00 / Ask 2,350.30.",
+      "Spread = 2,350.30 − 2,350.00 = $0.30 = 30 pips (with $0.01 = 1 pip).",
+      "On 1 standard lot (100 oz): $0.30 × 100 = $30 cost to open.",
+      "On 0.01 lot (1 oz): $0.30 × 1 = $0.30 cost.",
+      "Price must rise $0.30 from your buy just for the trade to break even (before other costs)."
+     ],
+     "title": "Calculating the spread cost",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "$0.03",
+       "$0.30",
+       "$3.00",
+       "$30.00"
+      ],
+      "question": "Bid 2,350.00, Ask 2,350.30 (hypothetical). What is the spread?",
+      "explanation": "2,350.30 − 2,350.00 = $0.30, which is 30 pips under the $0.01 = 1 pip convention.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$0.30",
+       "$3",
+       "$30",
+       "Nothing"
+      ],
+      "question": "With that $0.30 spread, what is the cost on 0.01 lot (1 oz)?",
+      "explanation": "$0.30 × 1 oz = $0.30. On 1 standard lot (100 oz) it would be $30.",
+      "correctIndex": 0
+     },
+     {
+      "options": [
+       "During major news and low liquidity",
+       "Only on weekends when markets are closed",
+       "Never, they are fixed",
+       "When you use a stop loss"
+      ],
+      "question": "When do spreads often widen?",
+      "explanation": "Spreads commonly widen around major news releases, rollover and low-liquidity periods.",
+      "correctIndex": 0
+     }
+    ]
+   },
+   "m_content": "ad9ad4a52c458756c2a5bb2fe075c0c9",
+   "m_kt": "2b187c5019300804d7d626db2875d327",
+   "m_ex": "6e12224cfbe29125b6e587933b37bd3a",
+   "m_ic": "b4f5a4735cf6e253066dc1ac5dd992fb",
+   "m_lo": "81ab2ec60d2dac44fb611814adcaae8e",
+   "m_title": "716a78dcd58ebe4f171d5a6f0b3487a3"
+  },
+  {
+   "id": "b123eaf2-b4fa-4ef0-8a07-bdaa190a3286",
+   "slug": "what-is-a-broker",
+   "title": "What is a Broker?",
+   "learning_objective": "Understand what a broker does and how to evaluate one safely, without endorsing any provider.",
+   "content": "What a broker does\nA broker gives you access to the market through a trading platform (such as MetaTrader 5). You deposit funds with the broker, and it executes your orders and shows you prices.\n\nHow brokers earn\nBrokers typically earn from spreads, commissions, and overnight (swap) fees. Some brokers may also take the other side of client trades. Understanding this helps you look at costs and conflicts of interest clearly.\n\nHow to evaluate a broker\nCheck: (1) regulation, look up the license number directly on the regulator's own website, not just the broker's claims; (2) clear costs: spreads, commissions, swaps, deposit and withdrawal fees; (3) withdrawal process and reputation; (4) negative balance protection; (5) whether they offer a free demo account; (6) the legal entity you'd actually be a client of, since many brokers operate several entities with different protections.\n\nRed flags\nGuaranteed returns, pressure to deposit quickly, 'account managers' who trade for you, bonuses with withdrawal conditions, and anyone asking for your login. If something promises easy profit, walk away.\n\nDisclosure\nGFX Society does not recommend a specific broker in this lesson. If GFX ever mentions a broker elsewhere, it must clearly disclose any affiliate or Introducing Broker (IB) relationship. Always do your own checks.\n\nPlatform vs broker\nThe trading platform (for example MetaTrader 5) is software; the broker is the company holding your money and handling your orders. The same platform can be offered by many different brokers with very different rules, costs and protections. Always check who the broker is, not just which platform it uses.\n\nFees and withdrawals in practice\nBefore depositing, find the full fee list and read it. Look for deposit and withdrawal fees, inactivity fees, currency conversion costs and minimum withdrawal amounts. Test the process with a small withdrawal early on. A broker that makes withdrawals slow or confusing is a warning sign, whatever its spreads look like.\n\nQuick recap\nBrokers provide access and earn from your trading costs. Verify regulation directly with the regulator, understand every fee, start with a demo account, and never trust promises of guaranteed returns.\n\nGold example (hypothetical): Comparing costs between two hypothetical brokers\n• Broker A (hypothetical): spread $0.30 on XAUUSD, no commission.\n• Broker B (hypothetical): spread $0.10, plus $7 commission per standard lot round trip.\n• For 1 standard lot (100 oz): A costs $0.30 × 100 = $30; B costs $0.10 × 100 + $7 = $17.\n• For 0.01 lot (1 oz): A costs $0.30; B costs $0.10 + $0.07 = $0.17.\n• Cost is only one factor. Regulation, withdrawals and protections matter more.\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nAng broker ang nagbibigay ng access sa market gamit ang platform. Kumikita sila sa spread, commission, at swap. Bago pumili, i-verify ang regulation sa mismong website ng regulator, alamin ang lahat ng fees, at mag-demo muna. Red flags: guaranteed profit, pressure mag-deposit, o may 'magte-trade para sa'yo'. Walang ini-endorse na broker ang lesson na 'to.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "A broker provides market access and earns through spreads, commissions and swaps.",
+    "Verify regulation on the regulator's own website and understand every cost before depositing.",
+    "Walk away from guaranteed returns, deposit pressure, or anyone offering to trade for you."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Broker A (hypothetical): spread $0.30 on XAUUSD, no commission.",
+      "Broker B (hypothetical): spread $0.10, plus $7 commission per standard lot round trip.",
+      "For 1 standard lot (100 oz): A costs $0.30 × 100 = $30; B costs $0.10 × 100 + $7 = $17.",
+      "For 0.01 lot (1 oz): A costs $0.30; B costs $0.10 + $0.07 = $0.17.",
+      "Cost is only one factor. Regulation, withdrawals and protections matter more."
+     ],
+     "title": "Comparing costs between two hypothetical brokers",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "Trust the logo on their homepage",
+       "Look up the license on the regulator's official website",
+       "Ask in a comment section",
+       "Check how many ads they run"
+      ],
+      "question": "What is the safest way to check a broker's regulation?",
+      "explanation": "Always verify the license directly with the regulator, since anyone can put a logo on a website.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$7",
+       "$10",
+       "$17",
+       "$70"
+      ],
+      "question": "Hypothetically, Broker B charges a $0.10 spread plus $7 commission per standard lot. What is the cost for 1 standard lot?",
+      "explanation": "$0.10 × 100 oz = $10 spread, plus $7 commission = $17.",
+      "correctIndex": 2
+     },
+     {
+      "options": [
+       "A free demo account",
+       "Clear fee table",
+       "A promise of guaranteed monthly returns",
+       "Negative balance protection"
+      ],
+      "question": "Which of these is a red flag?",
+      "explanation": "No legitimate provider can guarantee returns. That is a major red flag.",
+      "correctIndex": 2
+     }
+    ]
+   },
+   "m_content": "73df65615460d1301024e87bbe71ce7f",
+   "m_kt": "723e3da319ab745cc352115d4ca13f24",
+   "m_ex": "50385a5fa562e1899dd2fc4e9520ab61",
+   "m_ic": "3260074932969630995cb06f08a10c84",
+   "m_lo": "8c49c666ca7ffd4a910ea637afd9cde4",
+   "m_title": "bab7c4b09fa4bd930723b706d6a2352e"
+  },
+  {
+   "id": "c7eaf0f2-c415-4b9a-97c9-84f0095a721a",
+   "slug": "types-of-orders",
+   "title": "Types of Orders",
+   "learning_objective": "Know the main order types and how to attach a stop loss and take profit.",
+   "content": "Market order\nExecutes immediately at the best available price. Buy orders fill at the ask, sell orders at the bid. In fast markets, the fill can differ slightly from what you saw (slippage).\n\nPending orders\nBuy limit: buy below the current price (expecting a pullback). Sell limit: sell above the current price. Buy stop: buy above the current price (expecting a breakout). Sell stop: sell below the current price.\n\nStop loss and take profit\nA stop loss (SL) automatically closes a trade at a set loss level; a take profit (TP) closes it at a set target. GFX rule: every trade has a stop loss attached when it is placed. Note that in fast or gapping markets a stop can fill worse than its level.\n\nPractice\nPlace each order type on a demo account until you can do it correctly without thinking: right direction, right size, SL attached.\n\nOrder checklist before you click\n1. Direction: buy or sell, matching your plan. 2. Size: calculated from max 1% risk and your stop distance. 3. Stop loss: set at a logical level, entered in the order. 4. Take profit or exit plan: written down. 5. Spread and news: check the current spread and the economic calendar. Reading this checklist every time feels slow at first, but it prevents the most common beginner errors, like a wrong direction or a missing stop.\n\nManaging open trades\nOnce a trade is open, avoid moving your stop loss further away to 'give it room'; that increases your risk beyond plan. Many traders only allow themselves to move a stop in the direction that reduces risk. Pending orders that are no longer valid, for example after the market situation changes, should be cancelled so they don't fill unexpectedly.\n\nQuick recap\nMarket orders fill now, limit orders wait for a better price, and stop orders wait for a breakout. Whichever you choose, the stop loss goes in with the order, and the size comes from your 1% rule.\n\nGold example (hypothetical): Placing a buy limit with SL and TP\n• Hypothetical: XAUUSD at 2,350.00; your plan wants to buy a pullback to 2,345.00.\n• Order: buy limit at 2,345.00, stop loss 2,340.00 ($5.00 risk per oz), take profit 2,355.00 ($10.00 target per oz).\n• Size from 1% risk on a $1,000 demo account: $10 ÷ $5 = 0.02 lot (2 oz).\n• If filled and stopped: −$10 (1%). If target hit: +$20 before costs. Illustrative only, not a result.\nConvention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nMarket order = pasok agad sa current price. Pending orders: buy limit/sell limit (hintayin ang mas magandang presyo), buy stop/sell stop (pasok kapag na-break ang level). Pinakamahalaga: laging may stop loss na naka-attach pagka-place pa lang ng order. I-practice lahat ng ito sa demo hanggang kabisado mo na.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "Market orders fill immediately; limit and stop orders wait for a specific price.",
+    "Attach a stop loss to every trade when you place it; a take profit is optional but planned.",
+    "Fast markets can cause slippage, so practice every order type on demo first."
+   ],
+   "examples": [
+    {
+     "note": "Convention note: GFX lessons treat a $0.01 move in XAUUSD as 1 pip, and 1 standard lot as 100 oz, so a $0.01 move = $1 per standard lot. Many brokers define a gold pip differently (often $0.10) and contract sizes can vary. Always check your own broker's contract specifications.",
+     "steps": [
+      "Hypothetical: XAUUSD at 2,350.00; your plan wants to buy a pullback to 2,345.00.",
+      "Order: buy limit at 2,345.00, stop loss 2,340.00 ($5.00 risk per oz), take profit 2,355.00 ($10.00 target per oz).",
+      "Size from 1% risk on a $1,000 demo account: $10 ÷ $5 = 0.02 lot (2 oz).",
+      "If filled and stopped: −$10 (1%). If target hit: +$20 before costs. Illustrative only, not a result."
+     ],
+     "title": "Placing a buy limit with SL and TP",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "scenarios": [
+     {
+      "options": [
+       "Buy stop",
+       "Buy limit",
+       "Sell limit",
+       "Market sell"
+      ],
+      "question": "You want to buy only if gold pulls back below the current price. Which order?",
+      "explanation": "A buy limit is placed below the current price to buy a pullback.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "$5",
+       "$10",
+       "$100",
+       "$1,000"
+      ],
+      "question": "Hypothetical: entry 2,345.00, SL 2,340.00, 0.02 lot (2 oz). What is the planned loss if stopped?",
+      "explanation": "$5.00 stop distance × 2 oz = $10, which is 1% of a $1,000 account.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Only on big trades",
+       "Add it later if price goes against you",
+       "Every trade, attached when placed",
+       "Not needed on demo"
+      ],
+      "question": "What is the GFX rule for stop losses?",
+      "explanation": "Every trade gets a stop loss when it is placed, including on demo, to build the habit.",
+      "correctIndex": 2
+     }
+    ]
+   },
+   "m_content": "9a3cae6cd46e246b5a03a3fade8b2a1e",
+   "m_kt": "acffc9b5e88a58eb85ccd988bc5a5a07",
+   "m_ex": "6ff08a5d3903fff4daa9f2db444b7308",
+   "m_ic": "ff01cd027553b98905cea61826928b77",
+   "m_lo": "1e1daeecb3979c2917b3d708799c7fc8",
+   "m_title": "f35d4750acdb8977784697377bff1530"
+  },
+  {
+   "id": "bf0e27f5-ab9b-4e63-8f77-8b0a692476e0",
+   "slug": "candlestick-patterns",
+   "title": "Candlestick Patterns",
+   "learning_objective": "Recognize a few common candlestick patterns and understand their limits.",
+   "content": "Why patterns\nPatterns are recurring candle shapes that some traders use to describe shifts between buyers and sellers. They are descriptive tools, not predictions.\n\nCommon patterns\nDoji: open and close almost equal, showing indecision. Hammer: small body near the top with a long lower wick, appearing after a decline; it suggests sellers pushed down but buyers pushed back. Shooting star: the opposite, a long upper wick after a rise. Engulfing: a candle whose body fully covers the previous candle's body, bullish or bearish.\n\nContext and confirmation\nA pattern at a meaningful level (like prior support) in line with the bigger trend is more informative than one in the middle of nowhere. Many traders wait for the next candle to confirm before acting.\n\nLimits\nPatterns fail often. Use them as one input in a written plan, with a stop loss and a position size based on max 1% risk. Practice spotting them on a demo account and record the outcomes honestly in a journal.\n\nCommon beginner mistakes\nSeeing patterns everywhere: almost any chart shows a doji or hammer somewhere, so focus on patterns at levels you marked in advance. Ignoring the trend: a single bullish pattern in a strong downtrend is often just a pause. Entering too early: acting before the candle has closed, when its final shape may change. Sizing up because a pattern 'looks perfect': no pattern justifies risking more than 1%.\n\nTrack your results honestly\nIf you use patterns, keep a simple journal: pattern, timeframe, level, whether you took the trade, and the outcome. After many demo trades you will see how often a pattern actually helped in your plan, which is more useful than any general claim about pattern reliability.\n\nQuick recap\nLearn a few patterns well instead of many patterns poorly. Doji, hammer, shooting star and engulfing are enough for now. Look for them only at levels you marked in advance, wait for the candle to close, and let your written plan, stop loss and 1% rule decide what happens next, not excitement about the pattern.\n\nGold example (hypothetical): A hypothetical hammer at support\n• Gold has fallen to an area near 2,330.00 that acted as support before (hypothetical).\n• A 1-hour candle: Open 2,333.00, Low 2,326.00, Close 2,334.50, High 2,335.00 → small body near the top, long lower wick = hammer shape.\n• A trader's plan might consider a long only if the next candle closes higher, with a stop loss below the wick (e.g. 2,325.00).\n• If price instead breaks below 2,325.00, the stop loss closes the trade at a planned, limited loss.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\nAll prices are illustrative and hypothetical, not real quotes, forecasts, or results.\n\nTaglish summary\nAng candlestick patterns (doji, hammer, shooting star, engulfing) ay paraan para basahin ang labanan ng buyers at sellers. Pero hindi sila hula o garantiya, madalas din silang pumalya. Mas may saysay kung nasa importanteng level at may confirmation. Laging may stop loss at 1% max risk, at i-practice muna sa demo.\n\nTrading involves real risk of loss. GFX provides education only, not financial advice. Practice on a demo account first, risk no more than 1% of your account per trade, and always use a stop loss.",
+   "key_takeaways": [
+    "Patterns like doji, hammer, shooting star and engulfing describe buyer/seller shifts.",
+    "Patterns matter more at key levels and with confirmation, and they still fail often.",
+    "Use patterns as one input in a written plan with a stop loss and max 1% risk."
+   ],
+   "examples": [
+    {
+     "note": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "steps": [
+      "Gold has fallen to an area near 2,330.00 that acted as support before (hypothetical).",
+      "A 1-hour candle: Open 2,333.00, Low 2,326.00, Close 2,334.50, High 2,335.00 → small body near the top, long lower wick = hammer shape.",
+      "A trader's plan might consider a long only if the next candle closes higher, with a stop loss below the wick (e.g. 2,325.00).",
+      "If price instead breaks below 2,325.00, the stop loss closes the trade at a planned, limited loss."
+     ],
+     "title": "A hypothetical hammer at support",
+     "disclaimer": "All prices are illustrative and hypothetical, not real quotes, forecasts, or results.",
+     "hypothetical": true
+    }
+   ],
+   "interactive_config": {
+    "rounds": 5,
+    "patterns": [
+     {
+      "id": "bullish-engulfing",
+      "tip": "Most powerful at support zones or after a downtrend. Confirm with the next candle going up before entering.",
+      "desc": "A small red candle followed by a large green candle that completely covers it. Shows buyers took over aggressively from sellers.",
+      "name": "Bullish Engulfing",
+      "ohlc": [
+       {
+        "c": 50,
+        "h": 58,
+        "l": 48,
+        "o": 55
+       },
+       {
+        "c": 63,
+        "h": 65,
+        "l": 44,
+        "o": 46
+       }
+      ],
+      "type": "bullish",
+      "signal": "Strong Buy"
+     },
+     {
+      "id": "bearish-engulfing",
+      "tip": "Most powerful at resistance zones or after an uptrend. Wait for confirmation before shorting.",
+      "desc": "A small green candle followed by a large red candle that completely covers it. Shows sellers took over aggressively from buyers.",
+      "name": "Bearish Engulfing",
+      "ohlc": [
+       {
+        "c": 50,
+        "h": 52,
+        "l": 43,
+        "o": 45
+       },
+       {
+        "c": 38,
+        "h": 56,
+        "l": 36,
+        "o": 54
+       }
+      ],
+      "type": "bearish",
+      "signal": "Strong Sell"
+     },
+     {
+      "id": "hammer",
+      "tip": "Only valid at support or after a downtrend. The longer the lower wick, the stronger the signal.",
+      "desc": "Long lower wick, small body near the top. Sellers pushed price down hard but buyers fought back and closed near the high.",
+      "name": "Hammer",
+      "ohlc": [
+       {
+        "c": 51,
+        "h": 54,
+        "l": 30,
+        "o": 52
+       }
+      ],
+      "type": "bullish",
+      "signal": "Bullish Reversal"
+     },
+     {
+      "id": "shooting-star",
+      "tip": "Only valid at resistance or after an uptrend. The longer the upper wick, the stronger the signal.",
+      "desc": "Long upper wick, small body near the bottom. Buyers pushed price up hard but sellers took over and closed near the low.",
+      "name": "Shooting Star",
+      "ohlc": [
+       {
+        "c": 49,
+        "h": 70,
+        "l": 46,
+        "o": 48
+       }
+      ],
+      "type": "bearish",
+      "signal": "Bearish Reversal"
+     },
+     {
+      "id": "doji",
+      "tip": "By itself, a doji just means indecision. Watch the next candle — if it breaks in one direction, follow it.",
+      "desc": "Open and close are almost equal. Neither buyers nor sellers won — the market is undecided about direction.",
+      "name": "Doji",
+      "ohlc": [
+       {
+        "c": 50,
+        "h": 62,
+        "l": 38,
+        "o": 50
+       }
+      ],
+      "type": "neutral",
+      "signal": "Indecision"
+     },
+     {
+      "id": "pin-bar",
+      "tip": "One of the most traded patterns in price action. Always trade in the direction of the rejection wick.",
+      "desc": "A candle with a very long wick and a tiny body — shows strong rejection of a price level by the market.",
+      "name": "Pin Bar",
+      "ohlc": [
+       {
+        "c": 51,
+        "h": 54,
+        "l": 28,
+        "o": 52
+       }
+      ],
+      "type": "bullish",
+      "signal": "Reversal Signal"
+     }
+    ],
+    "scenarios": [
+     {
+      "options": [
+       "Strong guaranteed uptrend",
+       "Indecision, with open and close nearly equal",
+       "Market closed",
+       "A broker error"
+      ],
+      "question": "What does a doji usually indicate?",
+      "explanation": "A doji has nearly equal open and close, suggesting indecision.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Long upper wick after a rise",
+       "Small body near the top with a long lower wick after a decline",
+       "No wicks at all",
+       "A huge red body"
+      ],
+      "question": "Which describes a hammer?",
+      "explanation": "A hammer has a long lower wick and small body near the top, usually after a decline.",
+      "correctIndex": 1
+     },
+     {
+      "options": [
+       "Above the high at 2,335.00",
+       "Below the hammer's wick, around 2,325.00",
+       "No stop loss needed",
+       "At the entry price"
+      ],
+      "question": "In the hypothetical example, where is the stop loss placed?",
+      "explanation": "The stop goes below the wick so the trade closes at a planned loss if the pattern fails.",
+      "correctIndex": 1
+     }
+    ],
+    "lookalikes": {
+     "hammer": [
+      "pin-bar"
+     ],
+     "pin-bar": [
+      "hammer"
+     ]
+    }
+   },
+   "m_content": "b9da5bbe2d08e7af5018d878290bceae",
+   "m_kt": "6bd36462dfbe76c6eaf16ccbc7c3b4c5",
+   "m_ex": "664287c38577963a80f48391fb1a87c0",
+   "m_ic": "cbd3a72855455ccd2bba1b2ca4688444",
+   "m_lo": "f613876ad5e9ae4eaea25046f5e17699",
+   "m_title": "1cd5869c0f88994a639a53173401c7c1"
+  }
+ ],
+ "diag": [
+  {
+   "id": "3a89b300-bdbb-445e-9a4b-4420ea579057",
+   "question_key": "platform_demo_purpose",
+   "question": "You want to test a brand-new strategy without risking real money. What should you use first?",
+   "options": [
+    "A demo account",
+    "Maximum leverage",
+    "A live account with a small deposit",
+    "Skip testing and go straight to live"
+   ],
+   "explanation": "A demo account uses virtual money on real market data — the safe way to test anything new.",
+   "correct_index": 0,
+   "m_q": "68890c4260d9b1c0319547593d3b62e4",
+   "m_o": "a0082288d1581e4de08dedab8aafcb49",
+   "m_e": "89e6eeb77b77f532e6c0903ec2d73831"
+  },
+  {
+   "id": "9de5a6fa-a5bb-457d-b8c1-1a330f7dfdcb",
+   "question_key": "setups_trading_plan_purpose",
+   "question": "You're about to enter a trade but haven't decided your stop loss, target, or risk amount in advance. What is this missing?",
+   "options": [
+    "A demo account",
+    "The spread",
+    "A trading plan",
+    "A broker account"
+   ],
+   "explanation": "A trading plan defines entry, SL/TP, and risk rules in advance — exactly what's missing here.",
+   "correct_index": 2,
+   "m_q": "f14a0fc249ce698d371a6781f2a0a402",
+   "m_o": "b6313aad377f4d418fc96256869dbbf6",
+   "m_e": "e222a6bab561b182809b6958e73fb9bf"
+  },
+  {
+   "id": "a2e0f08f-7098-49a6-9ea2-3d0b5dae0688",
+   "question_key": "risk_management_stop_loss",
+   "question": "Is it ever okay to skip your stop loss if you're very confident about a trade?",
+   "options": [
+    "Only on demo accounts",
+    "No — never trade without a stop loss, no exceptions",
+    "Yes, if experienced",
+    "Yes, always skip it on Gold"
+   ],
+   "explanation": "A stop loss is non-negotiable regardless of confidence level.",
+   "correct_index": 1,
+   "m_q": "0a7a8c00924b7f0741d6d214bce77295",
+   "m_o": "22c72841c6cd0e8589894c2573812855",
+   "m_e": "6866ed458262afc3a9910fe85d09b361"
+  },
+  {
+   "id": "ebdfe0f7-704f-4997-86f2-7de6a461e2f9",
+   "question_key": "gold_news_release",
+   "question": "A major US economic report is due in 5 minutes and Gold is already moving fast. As a beginner practicing on demo, what is the most sensible approach?",
+   "options": [
+    "Open a large trade before the release to catch the move",
+    "Remove your stop loss so the spike doesn't close your trade",
+    "Avoid opening new trades until the release has passed and spreads settle",
+    "Double your usual risk because volatility means opportunity"
+   ],
+   "explanation": "Around major news, Gold can spike and spreads can widen sharply. Beginners are safer waiting; risk stays at max 1% with a stop loss on every trade.",
+   "correct_index": 2,
+   "m_q": "7d2baf39b41ff929c79d3dc5f6865e9f",
+   "m_o": "99b128ff8e09be904e64938653c8f186",
+   "m_e": "13fd18a8e2eaab12257e16a1222d405f"
+  },
+  {
+   "id": "04d9eaf5-ca4c-42cf-bbdd-9e10560dd28a",
+   "question_key": "journaling_weekly_review",
+   "question": "At the end of a demo week you review your journal. Which measure best shows whether you are improving as a beginner?",
+   "options": [
+    "How many trades followed every rule in your plan",
+    "Your demo balance compared with last week",
+    "How many trades you opened",
+    "Your single biggest winning trade"
+   ],
+   "explanation": "Single results are partly luck. Rule-following (stop loss on every trade, max 1% risk, plan followed) is under your control and shows real progress.",
+   "correct_index": 0,
+   "m_q": "33c79200452e5aac995d98dd8d97ae3f",
+   "m_o": "569e5308a99250b3c0e4e4c467720d51",
+   "m_e": "bcde670e5e8cb7cc7be8a4d11e276116"
+  },
+  {
+   "id": "8c7292b0-f870-49b3-8d21-84bf04d75812",
+   "question_key": "setups_lot_size_from_stop",
+   "question": "Hypothetically, your demo account is $1,000 and you risk max 1% per trade. Your planned Gold stop distance is $2.50. With 0.01 lot = 1 oz (a $0.01 move = $1 per standard lot), what lot size fits the rule?",
+   "options": [
+    "0.01 lot",
+    "0.04 lot",
+    "0.40 lot",
+    "4 lots"
+   ],
+   "explanation": "1% of $1,000 = $10. A $2.50 stop on 0.01 lot (1 oz) risks $2.50, so $10 ÷ $2.50 = 4 → 0.04 lot. Check: 4 oz × $2.50 = $10.",
+   "correct_index": 1,
+   "m_q": "639f13e2ef802b7ae0b25b2436db8650",
+   "m_o": "e8964e3bc44c88e48feddd337648ca39",
+   "m_e": "0a887ffa89837eda3cc3c57987274d0f"
+  },
+  {
+   "id": "8b7fc3b0-032f-4495-a7b8-2650a448a946",
+   "question_key": "psychology_moving_stop",
+   "question": "Your demo trade is moving toward your stop loss, so you move the stop further away to 'give it more room'. What is the main problem?",
+   "options": [
+    "Nothing, it's a normal adjustment",
+    "It reduces your risk",
+    "It increases your risk beyond what you planned",
+    "It guarantees the trade will recover"
+   ],
+   "explanation": "Moving a stop further away means a bigger possible loss than your plan allowed. Many traders only move stops in the direction that reduces risk.",
+   "correct_index": 2,
+   "m_q": "a277961e77460a966e999da3a240e1be",
+   "m_o": "3cdb521aa115edb6c14d629981ff6009",
+   "m_e": "de7ca58992f078a7b6896c856753ebb3"
+  },
+  {
+   "id": "d5e7864f-7214-4b98-823d-202e9192ca7c",
+   "question_key": "platform_attach_stop_loss",
+   "question": "When should you set the stop loss on a new trade?",
+   "options": [
+    "When you place the order, as part of the order",
+    "Only after the trade starts losing",
+    "At the end of the day",
+    "Only on live accounts, not on demo"
+   ],
+   "explanation": "Attach the stop loss when you place the order so the trade is protected from the first second, and practice it on demo every time to build the habit.",
+   "correct_index": 0,
+   "m_q": "53dbb0372c6a959db44e2e054735f2ea",
+   "m_o": "d75c376d2c26d4512a9e58eaafab1520",
+   "m_e": "b248e6b91ccef053a7252c93bd424d86"
+  }
+ ],
+ "levels": [
+  {
+   "id": "fbb55f0c-cb4c-4f43-9e2f-70aeff160ab2",
+   "slug": "college",
+   "title": "Level 5: Building Your Trading System",
+   "description": "Strategy, backtesting, live prep."
+  },
+  {
+   "id": "e42c66c8-abee-47ec-9fa6-d5e67ee7cf34",
+   "slug": "graduation",
+   "title": "Level 6: Demo to Live — Are You Ready?",
+   "description": "A readiness checklist: demo first, plan-following, 1% risk."
+  }
+ ],
+ "latest": "20261011163101"
+}
