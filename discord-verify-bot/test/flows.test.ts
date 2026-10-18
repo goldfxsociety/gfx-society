@@ -150,7 +150,7 @@ describe("approve", () => {
     expect(h.dc.find("DELETE", new RegExp(`/channels/${IDS.approvals}/messages/${cardId}$`))).toHaveLength(1);
     const logs = h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`));
     expect(logs).toHaveLength(1);
-    expect((logs[0]!.json as { content: string }).content).toMatch(new RegExp(`member ${IDS.member} · admin ${IDS.admin} · approved`));
+    expect((logs[0]!.json as { content: string }).content).toContain(`member <@${IDS.member}> (\`${IDS.member}\`) · approved by <@${IDS.admin}> (\`${IDS.admin}\`) · <t:`);
     expect(h.sb.rows[0]).toMatchObject({ status: "approved", admin_id: IDS.admin, approval_message_id: null, flags: [] });
   });
 

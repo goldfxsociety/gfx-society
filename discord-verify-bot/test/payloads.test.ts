@@ -168,7 +168,7 @@ describe("copy compliance", () => {
 
   it("log line has ids only", () => {
     const l = copy.logLine({ requestId: "1", memberId: "2", adminId: "3", decision: "rejected", decidedAt: "2026-10-18T04:00:00.000Z", reason: "unclear", flags: ["dm_failed"] });
-    expect(l).toBe("`1` · member 2 · admin 3 · rejected · 2026-10-18T04:00:00.000Z · reason unclear · dm_failed");
+    expect(l).toBe("`1` · member <@2> (`2`) · rejected by <@3> (`3`) · <t:1792296000:f> · reason unclear · dm_failed");
   });
 
   it("never names the founder", () => {

@@ -156,7 +156,7 @@ export function approvalCardText(requestId: string, memberId: string, createdUni
 export const cardDeleteAlert = (requestId: string, cardUrl: string) =>
   `⚠️ Hindi ma-delete ng bot ang approval card ng request \`${requestId}\` (nandoon pa ang screenshot). Paki-delete manually: ${cardUrl} · Auto-retry pa rin ang bot every hour.`;
 
-/** One-line #vip-log mirror. Ids only, no usernames, no images, no amounts, no notes. */
+/** One-line #vip-log mirror. Mentions plus ids, no usernames stored, no images, no amounts, no notes. */
 export function logLine(p: {
   requestId: string;
   memberId: string;
@@ -166,7 +166,11 @@ export function logLine(p: {
   reason?: ReasonCode | null;
   flags?: LogFlag[];
 }): string {
-  const parts = [`\`${p.requestId}\``, `member ${p.memberId}`, `admin ${p.adminId ?? "system"}`, p.decision, p.decidedAt];
+  // Mentions render names (allowed_mentions is empty, so nobody is pinged); raw ids stay for traceability.
+  const unix = Math.floor(Date.parse(p.decidedAt) / 1000);
+  const when = Number.isFinite(unix) ? `<t:${unix}:f>` : p.decidedAt;
+  const admin = p.adminId ? `<@${p.adminId}> (\`${p.adminId}\`)` : "system";
+  const parts = [`\`${p.requestId}\``, `member <@${p.memberId}> (\`${p.memberId}\`)`, `${p.decision} by ${admin}`, when];
   if (p.reason) parts.push(`reason ${p.reason}`);
   if (p.flags?.length) parts.push(p.flags.join(","));
   return parts.join(" · ");
