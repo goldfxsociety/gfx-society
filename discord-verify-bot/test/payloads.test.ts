@@ -125,6 +125,8 @@ describe("copy compliance", () => {
       expect(s).toContain(copy.IB_DISCLOSURE);
     }
     expect(named).toBeGreaterThanOrEqual(4); // panel, modal, reject/needs-info DMs, status
+    expect(copy.IB_DISCLOSURE).toBe("GFX at ang partner community ay maaaring kumita ng commission mula sa ACCM kapag nag-trade ka via our link.");
+    for (const s of member) if (withoutIb(s).includes("ACCM")) expect(s).toContain("GFX at ang partner community ay maaaring kumita ng commission mula sa ACCM kapag nag-trade ka via our link.");
     expect(copy.IB_DISCLOSURE).not.toMatch(/\n/);
     expect(copy.withIb("no broker here")).toBe("no broker here");
   });

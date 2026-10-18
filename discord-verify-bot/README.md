@@ -68,7 +68,8 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 | Member left (10007) | No DM. Card deleted, flag `member_left`. |
 | Role hierarchy wrong (50013) | Decision **reverted to pending** and buttons re-enabled. #vip-approvals gets "Ilipat ang bot role sa itaas ng @VIP". Retry after fixing. |
 | Pending > 7 days | Hourly cron expires it, deletes the card and screenshot, and writes a log line (`admin system`). |
-| Decided > 12 months | Hourly cron deletes the DB row and the bot's #vip-log mirror message (single-message DELETE). |
+| Card delete fails (non-404) | The card id stays on the row and #vip-log gets **one** alert with a link to the card so an admin can delete it by hand. The hourly cron retries (≤ 4 per run) and clears the id on success or 404. |
+| Decided > 12 months | Hourly cron deletes the bot's #vip-log mirror message (single-message DELETE). It deletes the DB row only if that worked or returned 404; otherwise the row is kept and retried. Rows with a leftover card are skipped until the card is gone. |
 | @VIP removal | **Never.** @VIP is permanent; there is no re-verification, and no code path removes roles. |
 | Discord 429 | One retry after `retry_after` (max 3 s). |
 | Bad signature / stale timestamp (> 5 min) | 401. Payloads, URLs and tokens are never logged. |
@@ -93,7 +94,7 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 |---|---|---|
 | Requests | **100,000/day** (resets 00:00 UTC = 8:00 AM PHT). Over the limit: error 1027. | A few per verification (≈ 4–6) |
 | CPU time | **10 ms per HTTP request**. Waiting on fetch doesn't count. Cron: 10 ms. | Ed25519 verify is native Web Crypto; the rest is I/O |
-| Subrequests | **50 per invocation**; 6 simultaneous open connections | ≤ 10 per flow. Cron per run: expiry ≤ 5 rows (≤ 21) + purge ≤ 20 rows (≤ 22) = ≤ 43 |
+| Subrequests | **50 per invocation**; 6 simultaneous open connections | ≤ 11 per flow. Cron per run: expiry ≤ 4 rows (≤ 21) + card retry ≤ 4 (≤ 13) + purge ≤ 12 rows (≤ 14) = ≤ 48 |
 | Request body size | **100 MB** (Cloudflare Free/Pro account plan) | Interactions are small JSON; we cap at 256 KB |
 | `waitUntil` | Extends execution **up to 30 s** after the response | Download + re-upload of ≤ 8 MiB |
 | Memory | 128 MB per isolate | ≤ 8 MiB buffered |
@@ -115,7 +116,7 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 - A bot can only assign roles below its highest role ([Permission hierarchy](https://docs.discord.com/developers/topics/permissions#permission-hierarchy)). `default_member_permissions` applies to commands, not buttons, which is why every click is checked ([Application command permissions](https://docs.discord.com/developers/interactions/application-commands#permissions)).
 - **Deleting old messages:** Bulk Delete "will not delete messages older than 2 weeks" ([Bulk Delete Messages](https://docs.discord.com/developers/resources/message#bulk-delete-messages)). So the 12-month purge deletes each mirror line with the single **Delete Message** endpoint on the bot's own message, which has no age limit and needs no Manage Messages permission.
   - Discord rate-limits deletes of old messages more tightly. On a 429 the bot retries once, then stops and continues next hour.
-  - Each hourly run purges at most 20 rows, which is about 480 a day.
+  - Each hourly run purges at most 12 rows, which is about 288 a day.
   - Lines that admins post by hand in #vip-log, or mirror lines whose id wasn't saved, aren't purged automatically.
 - Error codes handled: 10007 unknown member, 10008 unknown message, 50007 cannot DM, 50013 missing permissions ([JSON error codes](https://docs.discord.com/developers/topics/opcodes-and-status-codes#json-json-error-codes)).
 
@@ -176,6 +177,11 @@ Setup:
 14. **Expiry:** set a test row's `created_at` 8 days back and trigger the cron (`wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=17+*+*+*+*"`). The row becomes expired and the card is deleted.
 14b. **Retention:** set a decided test row's `decided_at` 13 months back, keeping a real `log_message_id`, and trigger the cron. The row and its #vip-log line are deleted, and @VIP stays on the member.
 15. **Deletion check:** after decisions, #vip-approvals has no screenshots left. The ephemeral ACK never showed the image.
+14c. **Stuck card:** remove the bot's View Channel on #vip-approvals, then approve a request. Exactly **one** ⚠️ alert with a card link appears in #vip-log. Re-trigger the cron twice: still one alert. Restore the permission and trigger the cron: the card is deleted.
+14d. **Purge keeps rows on failure:** remove the bot's access to #vip-log and run the 14b retention test. The row stays. Restore access and re-run: the row and the log line are deleted.
+14e. **New reject reasons:** reject one request with **Not an ACCM deposit** and one with **Older than 30 days**. Each DM shows the matching reason plus the IB line. The rows store `not_accm` / `too_old`.
+14f. **Stale signature:** re-send a captured valid request after more than 5 minutes (same body, timestamp and signature). Expect 401.
+14g. **No admin roles:** set `ADMIN_ROLE_IDS = ""` and start `wrangler dev`. Every interaction returns 500 and the log says `Missing or invalid config: ADMIN_ROLE_IDS`. Restore the value.
 16. **Copy review:** balanced Taglish, education-only, no income claims, the IB line wherever ACCM is named, no founder name.
 
 ## Ben's setup checklist
@@ -259,7 +265,7 @@ Do these yourself, in order. **Never paste the token, public key or Supabase key
 1. Read `supabase/migrations/20261018170000_vip_verification_log.sql`. It creates one table and four indexes and enables RLS with no policies. It **explicitly revokes ALL** on the table from PUBLIC, anon and authenticated, and grants service_role select/insert/update/delete. It touches nothing else (no default-privileges changes).
 2. Apply it (Supabase SQL editor or `apply_migration` with name `vip_verification_log`). It's re-runnable: a second run is a no-op.
 3. Run `supabase/verification/20261018170000_vip_verification_log_verify.sql`. Expect:
-   - checks 1, 3c, 4, 5, 6, 7, 8 and 10: `ok = true`
+   - checks 1, 3c, 4, 5, 6, 7, 8, 10 and 11: `ok = true`
    - check 2: `policies = 0`
    - check 3b: `acl_entries = 0`
    - checks 3 and 3d: 0 rows

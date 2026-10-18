@@ -53,6 +53,8 @@ export class FakeSupabase {
         const cell = (r as unknown as Record<string, unknown>)[k];
         if (op === "eq") return String(cell) === val;
         if (op === "neq") return String(cell) !== val;
+        if (op === "is" && val === "null") return cell === null || cell === undefined;
+        if (op === "not" && val === "is.null") return cell !== null && cell !== undefined;
         if (op === "in") return val.replace(/^\(|\)$/g, "").split(",").includes(String(cell));
         if (cell === null || cell === undefined) return false;
         if (op === "gte") return String(cell) >= val;
@@ -88,6 +90,7 @@ export class FakeSupabase {
         flags: [],
         approval_message_id: null,
         log_message_id: null,
+        card_alert_at: null,
         created_at: now().toISOString(),
         decided_at: null,
       };
@@ -124,6 +127,10 @@ export class FakeDiscord {
   dmClosed = false;
   roleHierarchyBroken = false;
   failUpload = false;
+  /** Number of upcoming #vip-approvals message DELETEs that fail with 500. */
+  cardDeleteFailures = 0;
+  /** #vip-log message DELETEs fail with 403 while true. */
+  logDeleteFails = false;
 
   async handle(method: string, url: URL, init?: RequestInit): Promise<Response> {
     const path = url.pathname.replace("/api/v10", "");
@@ -151,7 +158,14 @@ export class FakeDiscord {
       if (call.form && this.failUpload) return err(500, 0);
       return res({ id: String(this.nextMessageId++) });
     }
-    if (/^\/channels\/\d+\/messages\/\d+$/.test(path)) return method === "DELETE" ? res(undefined, 204) : res({ id: "x" });
+    if (/^\/channels\/\d+\/messages\/\d+$/.test(path)) {
+      if (method === "DELETE" && path.startsWith(`/channels/${IDS.approvals}/`) && this.cardDeleteFailures > 0) {
+        this.cardDeleteFailures--;
+        return err(500, 0);
+      }
+      if (method === "DELETE" && path.startsWith(`/channels/${IDS.logs}/`) && this.logDeleteFails) return err(403, 50001);
+      return method === "DELETE" ? res(undefined, 204) : res({ id: "x" });
+    }
     if (path.startsWith("/webhooks/")) return res({ id: "w" });
     return err(404, 0);
   }

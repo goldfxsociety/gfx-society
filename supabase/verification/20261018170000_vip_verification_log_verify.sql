@@ -37,7 +37,7 @@ select (has_table_privilege('service_role', 'public.discord_vip_requests', 'sele
 
 -- 5) Exactly the expected columns (no image/url/name/amount columns). Expect ok = true.
 select (array_agg(column_name::text order by column_name) = array[
-  'admin_id', 'approval_message_id', 'created_at', 'decided_at', 'flags', 'guild_id',
+  'admin_id', 'approval_message_id', 'card_alert_at', 'created_at', 'decided_at', 'flags', 'guild_id',
   'log_message_id', 'member_id', 'reason_code', 'request_id', 'status']) as ok
 from information_schema.columns
 where table_schema = 'public' and table_name = 'discord_vip_requests';
@@ -72,3 +72,11 @@ where status not in ('pending', 'approved', 'rejected', 'needs_info', 'expired')
 
 -- 10) Retention index for the 12-month purge exists. Expect ok = true.
 select exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'discord_vip_requests_decided_at') as ok;
+
+-- 11) Leftover-card retry: card_alert_at is timestamptz and the partial index exists. Expect ok = true.
+select (exists (select 1 from information_schema.columns
+                where table_schema = 'public' and table_name = 'discord_vip_requests'
+                  and column_name = 'card_alert_at' and data_type = 'timestamp with time zone')
+    and exists (select 1 from pg_indexes
+                where schemaname = 'public' and indexname = 'discord_vip_requests_leftover_cards'
+                  and indexdef ilike '%approval_message_id IS NOT NULL%')) as ok;

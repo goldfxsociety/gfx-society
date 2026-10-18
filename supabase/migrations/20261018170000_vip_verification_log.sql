@@ -23,10 +23,13 @@ create table if not exists public.discord_vip_requests (
   -- Outcome flags for the log line, e.g. {dm_failed}, {already_vip}, {member_left}.
   flags               text[] not null default '{}'
                         check (flags <@ array['dm_failed', 'already_vip', 'member_left']::text[]),
-  -- Id of the bot's own #vip-approvals message while pending (so it can be deleted). Cleared after the decision.
+  -- Id of the bot's own #vip-approvals message (so it can be deleted). Cleared once deleted (or already gone);
+  -- kept after the decision if the delete failed, so the hourly cron retries it.
   approval_message_id text check (approval_message_id is null or approval_message_id ~ '^[0-9]{17,20}$'),
   -- Id of the bot's one-line #vip-log mirror message (so the 12-month purge can delete it too).
   log_message_id      text check (log_message_id is null or log_message_id ~ '^[0-9]{17,20}$'),
+  -- When the one-time "delete this card manually" alert was posted to #vip-log (card delete failed).
+  card_alert_at       timestamptz,
   created_at          timestamptz not null default now(),
   decided_at          timestamptz,
   constraint discord_vip_requests_decided_consistency check (
@@ -55,6 +58,10 @@ create index if not exists discord_vip_requests_pending_created
 -- 12-month retention purge.
 create index if not exists discord_vip_requests_decided_at
   on public.discord_vip_requests (decided_at) where decided_at is not null;
+
+-- Hourly retry of approval cards (screenshots) left behind on decided rows.
+create index if not exists discord_vip_requests_leftover_cards
+  on public.discord_vip_requests (decided_at) where approval_message_id is not null and status <> 'pending';
 
 alter table public.discord_vip_requests enable row level security;
 

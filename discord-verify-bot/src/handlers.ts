@@ -1,6 +1,6 @@
 import { checkAdmin } from "./admin";
 import { attachmentsFromModal, checkAttachmentMeta, isDiscordCdnUrl, sniffImageType } from "./attachments";
-import { APPROVE_DM, approvalCardText, dmFallback, logLine, MSG, needsInfoDm, REASONS, rejectDm, statusText } from "./copy";
+import { APPROVE_DM, approvalCardText, cardDeleteAlert, dmFallback, logLine, MSG, needsInfoDm, REASONS, rejectDm, statusText } from "./copy";
 import type { Db } from "./db";
 import { type Discord, DiscordCode, DiscordError } from "./discord";
 import {
@@ -35,9 +35,11 @@ export const LIMITS = {
   /** Decision-log retention (decided default): 12 months. */
   retentionMonths: 12,
   // Per hourly cron run, sized to stay under the Workers Free limit of 50 subrequests:
-  // expiry ≤ 1 + 5×4 = 21, purge ≤ 1 + 20 + 1 = 22.
-  expireBatch: 5,
-  purgeBatch: 20,
+  // expiry ≤ 1 + 4×5 = 21 (decide, card delete, mirror, alert, finalize),
+  // card retry ≤ 1 + 4×3 = 13 (delete, alert, patch), purge ≤ 1 + 12 + 1 = 14. Total ≤ 48.
+  expireBatch: 4,
+  cardRetryBatch: 4,
+  purgeBatch: 12,
 } as const;
 
 const log = (msg: string, e?: unknown) => console.error(`[vip-bot] ${msg}${e instanceof Error ? `: ${e.message}` : ""}`);
@@ -231,9 +233,33 @@ async function notifyMember(deps: Deps, memberId: string, content: string, flags
   }
 }
 
+const cardUrl = (cfg: Config, messageId: string) => `https://discord.com/channels/${cfg.guildId}/${cfg.approvalsChannelId}/${messageId}`;
+
+/** Deletes an approval card. True if deleted or already gone (404); false on any other error. */
+async function tryDeleteCard(deps: Deps, messageId: string): Promise<boolean> {
+  try {
+    await deps.discord.deleteOwnMessage(deps.cfg.approvalsChannelId, messageId); // 404 counts as success
+    return true;
+  } catch (e) {
+    log("delete card failed", e);
+    return false;
+  }
+}
+
+/** One-time #vip-log alert so admins delete a stuck card by hand. Returns the alert time, or null if posting failed. */
+async function postCardAlert(deps: Deps, requestId: string, messageId: string): Promise<string | null> {
+  try {
+    await deps.discord.createMessage(deps.cfg.logChannelId, { content: cardDeleteAlert(requestId, cardUrl(deps.cfg, messageId)), allowed_mentions: NO_MENTIONS });
+    return deps.now().toISOString();
+  } catch (e) {
+    log("card alert failed", e);
+    return null;
+  }
+}
+
 async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, flags: LogFlag[]) {
   const { discord, db, cfg } = deps;
-  if (messageId) await discord.deleteOwnMessage(cfg.approvalsChannelId, messageId).catch((e) => log("delete card failed", e));
+  const cardGone = messageId ? await tryDeleteCard(deps, messageId) : true;
   const mirror = await discord
     .createMessage(cfg.logChannelId, {
       content: logLine({
@@ -251,8 +277,12 @@ async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, f
       log("log mirror failed", e);
       return null;
     });
+  // Card delete failed: keep its id for the hourly retry and alert admins once.
+  const alertAt = !cardGone && messageId ? await postCardAlert(deps, row.request_id, messageId) : null;
   // Store the mirror's id so the 12-month purge can delete it too.
-  await db.finalize(row.request_id, flags, mirror?.id ?? null).catch((e) => log("finalize failed", e));
+  await db
+    .finalize(row.request_id, flags, mirror?.id ?? null, cardGone ? null : messageId, alertAt)
+    .catch((e) => log("finalize failed", e));
 }
 
 export async function runApprove(i: Interaction, requestId: string, adminId: string, deps: Deps): Promise<void> {
@@ -372,7 +402,8 @@ export function retentionCutoff(now: Date): Date {
 /**
  * Cron: delete decision-log rows older than 12 months and their #vip-log mirror messages.
  * Uses single-message DELETE on the bot's OWN messages (works at any age; bulk delete only works for
- * messages < 14 days old, so it is not used). A row is kept for the next run only if Discord rate-limits us.
+ * messages < 14 days old, so it is not used). The row is deleted only after its #vip-log line is deleted or
+ * already gone (404); on any other error the row is kept and retried next run. Rows with a leftover card are skipped.
  * Never touches roles: @VIP is permanent.
  */
 export async function purgeOldLogs(deps: Deps): Promise<number> {
@@ -388,7 +419,8 @@ export async function purgeOldLogs(deps: Deps): Promise<number> {
           log("purge rate-limited; will retry next run", e);
           break;
         }
-        log("purge: mirror delete failed (row deleted anyway)", e);
+        log("purge: mirror delete failed; keeping row for next run", e);
+        continue; // only delete the row once its #vip-log line is gone (deleted or 404)
       }
     }
     done.push(r.request_id);
@@ -397,17 +429,38 @@ export async function purgeOldLogs(deps: Deps): Promise<number> {
   return done.length;
 }
 
-/** Hourly cron: expiry + retention purge. */
-export async function maintenance(deps: Deps): Promise<{ expired: number; purged: number }> {
+/** Cron: retry deleting approval cards (screenshots) left behind on decided rows; alert #vip-log once per card. */
+export async function retryLeftoverCards(deps: Deps): Promise<number> {
+  const rows = await deps.db.leftoverCards(LIMITS.cardRetryBatch);
+  let deleted = 0;
+  for (const r of rows) {
+    if (!r.approval_message_id) continue;
+    if (await tryDeleteCard(deps, r.approval_message_id)) {
+      await deps.db.updateCard(r.request_id, { approval_message_id: null }).catch((e) => log("clear card failed", e));
+      deleted++;
+    } else if (!r.card_alert_at) {
+      const at = await postCardAlert(deps, r.request_id, r.approval_message_id);
+      if (at) await deps.db.updateCard(r.request_id, { card_alert_at: at }).catch((e) => log("mark alert failed", e));
+    }
+  }
+  return deleted;
+}
+
+/** Hourly cron: expiry + leftover-card retry + retention purge. */
+export async function maintenance(deps: Deps): Promise<{ expired: number; cards: number; purged: number }> {
   const expired = await expireStale(deps).catch((e) => {
     log("expiry failed", e);
+    return 0;
+  });
+  const cards = await retryLeftoverCards(deps).catch((e) => {
+    log("card retry failed", e);
     return 0;
   });
   const purged = await purgeOldLogs(deps).catch((e) => {
     log("purge failed", e);
     return 0;
   });
-  return { expired, purged };
+  return { expired, cards, purged };
 }
 
 /** Cron: expire pending requests older than 7 days and delete their cards (and so the screenshot). */

@@ -138,6 +138,8 @@ export interface RequestRow {
   approval_message_id: string | null;
   /** Id of the bot's one-line #vip-log mirror message (so the 12-month purge can delete it). */
   log_message_id: string | null;
+  /** When the one-time "delete this card manually" alert was posted to #vip-log (card delete failed). */
+  card_alert_at: string | null;
   created_at: string;
   decided_at: string | null;
 }

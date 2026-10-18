@@ -15,8 +15,8 @@ export default {
     ctx.waitUntil(
       (async () => {
         try {
-          const { expired, purged } = await maintenance(makeDeps(env));
-          if (expired || purged) console.log(`[vip-bot] cron: expired ${expired}, purged ${purged}`);
+          const { expired, cards, purged } = await maintenance(makeDeps(env));
+          if (expired || cards || purged) console.log(`[vip-bot] cron: expired ${expired}, cards ${cards}, purged ${purged}`);
         } catch (e) {
           console.error(`[vip-bot] cron failed${e instanceof Error ? `: ${e.message}` : ""}`);
         }

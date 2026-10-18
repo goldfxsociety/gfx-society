@@ -152,6 +152,10 @@ export function approvalCardText(requestId: string, memberId: string, createdUni
   );
 }
 
+/** #vip-log alert, posted once per card when the bot can't delete an approval card (screenshot still there). */
+export const cardDeleteAlert = (requestId: string, cardUrl: string) =>
+  `⚠️ Hindi ma-delete ng bot ang approval card ng request \`${requestId}\` (nandoon pa ang screenshot). Paki-delete manually: ${cardUrl} · Auto-retry pa rin ang bot every hour.`;
+
 /** One-line #vip-log mirror. Ids only, no usernames, no images, no amounts, no notes. */
 export function logLine(p: {
   requestId: string;

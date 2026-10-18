@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { APPROVE_DM, APPROVER_GUIDANCE, IB_DISCLOSURE, MSG } from "../src/copy";
-import { expireStale, handleInteraction, LIMITS, maintenance, purgeOldLogs, rateDecision, retentionCutoff } from "../src/handlers";
+import { expireStale, handleInteraction, LIMITS, maintenance, purgeOldLogs, rateDecision, retentionCutoff, retryLeftoverCards } from "../src/handlers";
 import { button, CDN_URL, harness, IDS, infoSubmit, member, nextId, rejectSubmit, uploadSubmit } from "./helpers";
 
 async function submit(h: ReturnType<typeof harness>, memberId = IDS.member) {
@@ -353,7 +353,77 @@ describe("12-month retention purge", () => {
 
   it("cutoff is 12 calendar months; batches stay under 50 subrequests", () => {
     expect(retentionCutoff(new Date("2026-10-18T04:00:00Z")).toISOString()).toBe("2025-10-18T04:00:00.000Z");
-    expect(1 + LIMITS.expireBatch * 4 + 1 + LIMITS.purgeBatch + 1).toBeLessThanOrEqual(50);
+    expect(1 + LIMITS.expireBatch * 5 + 1 + LIMITS.cardRetryBatch * 3 + 1 + LIMITS.purgeBatch + 1).toBeLessThanOrEqual(50);
+  });
+
+  it("keeps the row when deleting its #vip-log line fails (non-404) and retries next run", async () => {
+    const h = harness({ now: new Date("2025-09-01T00:00:00Z") });
+    const { i } = await submit(h);
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    h.setNow(new Date("2026-10-01T00:00:00Z"));
+    h.dc.logDeleteFails = true;
+    expect(await purgeOldLogs(h.deps)).toBe(0);
+    expect(h.sb.rows).toHaveLength(1);
+    h.dc.logDeleteFails = false;
+    expect(await purgeOldLogs(h.deps)).toBe(1);
+    expect(h.sb.rows).toHaveLength(0);
+  });
+});
+
+describe("leftover approval card (screenshot) when the card delete fails", () => {
+  const alerts = (h: ReturnType<typeof harness>) =>
+    h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`)).map((c) => (c.json as { content: string }).content).filter((t) => t.startsWith("⚠️"));
+
+  it("delete fails once → approve keeps the card id + alerts #vip-log once with a link → cron retries and deletes it", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    const cardId = h.sb.rows[0]!.approval_message_id!;
+    h.dc.cardDeleteFailures = 1;
+    handleInteraction(button(`vip:approve:${i.id}`), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]).toMatchObject({ status: "approved", approval_message_id: cardId });
+    expect(h.sb.rows[0]!.card_alert_at).not.toBeNull();
+    const a = alerts(h);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toContain(`https://discord.com/channels/${IDS.guild}/${IDS.approvals}/${cardId}`);
+    expect(a[0]).not.toContain(IDS.member); // no member details in the alert
+
+    expect(await retryLeftoverCards(h.deps)).toBe(1);
+    expect(h.sb.rows[0]!.approval_message_id).toBeNull();
+    expect(h.dc.find("DELETE", new RegExp(`/channels/${IDS.approvals}/messages/${cardId}$`))).toHaveLength(2);
+    expect(alerts(h)).toHaveLength(1);
+    expect(await retryLeftoverCards(h.deps)).toBe(0); // nothing left
+  });
+
+  it("keeps retrying hourly while it fails, but alerts only once per card; a 404 counts as gone", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.cardDeleteFailures = 99;
+    handleInteraction(rejectSubmit(i.id, "too_old"), h.deps, h.ctx);
+    await h.flush();
+    await maintenance(h.deps);
+    await maintenance(h.deps);
+    expect(alerts(h)).toHaveLength(1);
+    expect(h.sb.rows[0]!.approval_message_id).not.toBeNull();
+    // purge skips rows with a leftover card
+    h.setNow(new Date("2028-01-01T00:00:00Z"));
+    expect(await purgeOldLogs(h.deps)).toBe(0);
+    h.dc.cardDeleteFailures = 0; // card now deletable (fake returns 204; real 404 is also treated as success)
+    await maintenance(h.deps);
+    expect(h.sb.rows.length === 0 || h.sb.rows[0]!.approval_message_id === null).toBe(true);
+    expect(alerts(h)).toHaveLength(1);
+  });
+
+  it("needs_info rows are retried too", async () => {
+    const h = harness();
+    const { i } = await submit(h);
+    h.dc.cardDeleteFailures = 1;
+    handleInteraction(infoSubmit(i.id, "clearer please"), h.deps, h.ctx);
+    await h.flush();
+    expect(h.sb.rows[0]!.approval_message_id).not.toBeNull();
+    expect(await retryLeftoverCards(h.deps)).toBe(1);
+    expect(h.sb.rows[0]!.approval_message_id).toBeNull();
   });
 });
 

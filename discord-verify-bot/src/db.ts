@@ -125,21 +125,37 @@ export class Db {
     );
   }
 
-  /** After the card is deleted: drop the card id, record outcome flags and the #vip-log mirror message id. */
-  finalize(requestId: string, flags: LogFlag[], logMessageId: string | null): Promise<unknown> {
+  /**
+   * After the decision: record outcome flags and the #vip-log mirror id. `leftoverCardId` is the approval
+   * card id if deleting it FAILED (kept so the cron retries), or null once it's gone.
+   */
+  finalize(requestId: string, flags: LogFlag[], logMessageId: string | null, leftoverCardId: string | null, cardAlertAt: string | null): Promise<unknown> {
     return this.call(
       "PATCH",
       `?request_id=eq.${requestId}`,
-      { approval_message_id: null, flags, log_message_id: logMessageId },
+      { approval_message_id: leftoverCardId, flags, log_message_id: logMessageId, card_alert_at: cardAlertAt },
       "return=minimal",
     );
+  }
+
+  /** Decided rows whose approval card (screenshot) still needs deleting. */
+  leftoverCards(limit: number): Promise<Pick<RequestRow, "request_id" | "approval_message_id" | "card_alert_at">[]> {
+    return this.call(
+      "GET",
+      `?select=request_id,approval_message_id,card_alert_at&status=neq.pending&approval_message_id=not.is.null&order=decided_at.asc&limit=${limit}`,
+    );
+  }
+
+  /** Card deleted (or already gone): clear the id. Optionally record that the one-time alert was posted. */
+  updateCard(requestId: string, patch: { approval_message_id?: null; card_alert_at?: string }): Promise<unknown> {
+    return this.call("PATCH", `?request_id=eq.${requestId}&status=neq.pending`, patch, "return=minimal");
   }
 
   /** Decided rows older than the retention cutoff (12 months), oldest first. */
   decidedBefore(cutoffIso: string, limit: number): Promise<Pick<RequestRow, "request_id" | "log_message_id">[]> {
     return this.call(
       "GET",
-      `?select=request_id,log_message_id&status=neq.pending&decided_at=lt.${encodeURIComponent(cutoffIso)}&order=decided_at.asc&limit=${limit}`,
+      `?select=request_id,log_message_id&status=neq.pending&approval_message_id=is.null&decided_at=lt.${encodeURIComponent(cutoffIso)}&order=decided_at.asc&limit=${limit}`,
     );
   }
 
