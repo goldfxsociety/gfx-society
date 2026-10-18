@@ -27,7 +27,7 @@ export const VALID_DEPOSIT_MEMBER =
 /** Shown inside the upload modal, ABOVE the file field (and in the #verify panel). */
 export const PRIVACY_NOTICE =
   "**Privacy:** Your screenshot is only for VIP verification. Admins lang ang makakakita nito, and the bot deletes it after the review. " +
-  "Decision log lang ang itatago namin: your Discord ID, sino ang nag-review, the date and time, at ang resulta. " +
+  "Decision log lang ang itatago namin: your Discord ID, sino ang nag-review, the date and time, at ang resulta. Kept for 12 months, then auto-deleted. " +
   "Puwede mong takpan ang account number. " +
   `Questions: ${CONTACT_EMAIL} · Privacy Notice: ${PRIVACY_URL}`;
 
