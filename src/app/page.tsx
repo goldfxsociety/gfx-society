@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "cn";
-import { FIRST_LESSON_PATH, MESSENGER_COMMUNITY_URL } from "@/config/academy";
+import { FIRST_LESSON_PATH } from "@/config/academy";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { NextStepLink } from "@/components/funnel/next-step-link";
 
 function academyBody(lessons: number | null, levels: number | null) {
   const size =
@@ -23,9 +25,9 @@ const OFFERS = [
     body: "We teach max 1% risk per trade at laging may stop loss. Kung magte-trade ka, start sa cents account na pera lang na kaya mong mawala, para ma-train ang emotions mo. Walang profit promises.",
   },
   {
-    icon: "💬",
-    title: "A beginner community",
-    body: "Ask questions and learn with other Filipino beginners in the GFX Society Messenger community.",
+    icon: "🎓",
+    title: "Aral muna, walang pressure",
+    body: "Libre ang Academy, at puwede kang mag-aral dito hangga't kailangan mo. Kapag ready ka na, may next step para sa'yo (see below).",
   },
 ];
 
@@ -140,18 +142,15 @@ export default async function Home({
       </section>
 
       <section className="rounded-lg border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Join the GFX Society community</h2>
+        <h2 className="text-sm font-semibold">Next step: guided training sa partner community namin</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Learning is easier together. Ask questions as you go through the Academy.
+          Tuloy lang sa lessons. Kapag kabisado mo na ang basics (max 1% risk, laging may stop loss), puwede kang
+          sumali sa Discord community namin pagka-register mo sa ACCM.
         </p>
-        <a
-          href={MESSENGER_COMMUNITY_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}
-        >
-          Join the Messenger community →
-        </a>
+        <NextStepLink location="home" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
+          Tingnan kung paano →
+        </NextStepLink>
+        <p className="mt-2 text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT} Education lang, not financial advice.</p>
       </section>
 
       <section

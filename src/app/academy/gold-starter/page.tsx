@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { createClient } from "@/lib/supabase/server";
 import { FIRST_LESSON_PATH } from "@/config/academy";
-import { MessengerLink } from "@/components/funnel/messenger-link";
+import { NextStepLink } from "@/components/funnel/next-step-link";
 import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-checklist";
 
@@ -66,7 +66,7 @@ const DAYS: Day[] = [
     body: (
       <>
         Basahin ang Lesson 1 (What is the Financial Market). Pagkatapos, isulat sa notebook o notes app sa 1
-        sentence: <em>&quot;Ang XAUUSD ay…&quot;</em> I-post ang sagot mo sa Start Here ng community.
+        sentence: <em>&quot;Ang XAUUSD ay…&quot;</em> Balikan mo ito sa Day 7.
       </>
     ),
     href: "/academy/foundations/what-is-the-financial-market",
@@ -132,14 +132,14 @@ const DAYS: Day[] = [
     body: (
       <>
         Basahin ulit ang journal mo. Sagutin: (1) Nasunod ko ba ang SL at 1% sa lahat? (2) Ano ang isang bagay na
-        gagawin kong iba next week? I-share ang <em>process</em> mo (hindi P&amp;L) sa community.
+        gagawin kong iba next week? Isulat ang <em>process</em> mo (hindi P&amp;L) sa journal mo.
       </>
     ),
   },
 ];
 
 const FAQ = [
-  { q: "Libre ba talaga?", a: "Oo. Libreng basahin ang Academy lessons, at libre ang community." },
+  { q: "Libre ba talaga?", a: "Oo. Libreng basahin ang lahat ng Academy lessons, walang bayad." },
   {
     q: "Kailangan ko bang mag-sign up?",
     a: "Hindi para magbasa. Optional ang sign-up kung gusto mong i-save ang progress mo.",
@@ -205,7 +205,7 @@ export default async function GoldStarterPage() {
           </li>
         </ul>
         <p className="text-sm">
-          <strong>Hindi ito para sa:</strong> naghahanap ng signals, &quot;sure win,&quot; o mabilisang yaman. Wala
+          <strong>Hindi ito para sa:</strong> naghahanap ng trade calls na &quot;sure win&quot; o mabilisang yaman. Wala
           kaming ganyan.
         </p>
       </section>
@@ -266,15 +266,15 @@ export default async function GoldStarterPage() {
         <p className="mt-1">Start small. Pera lang na kaya mong mawala ang gamitin.</p>
       </section>
 
-      {/* 6. Community (secondary) */}
+      {/* 6. Next step (secondary) */}
       <section className="flex flex-col gap-1 text-sm">
         <p>
-          <strong>May tanong habang nag-aaral?</strong> Sumali sa libreng GFX Society Messenger community. I-post ang
-          Lesson 1 takeaway mo sa Start Here.
+          <strong>Para sa later:</strong> may next step kapag ready ka na: guided training sa partner community namin. Sa
+          ngayon, focus muna sa Starter Kit at Lesson 1.
         </p>
-        <MessengerLink location="gold_starter" className="inline-flex min-h-11 items-center self-start font-medium underline">
-          Sumali sa community →<span className="sr-only"> (bubukas sa bagong tab)</span>
-        </MessengerLink>
+        <NextStepLink location="gold_starter" className="inline-flex min-h-11 items-center self-start font-medium underline">
+          Tingnan ang steps →
+        </NextStepLink>
       </section>
 
       {/* 7. FAQ */}

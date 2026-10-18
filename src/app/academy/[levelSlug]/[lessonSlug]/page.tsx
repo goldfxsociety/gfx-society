@@ -7,7 +7,8 @@ import { LessonProgressBar } from "@/components/academy/lesson-progress-bar";
 import { RiskFooter } from "@/components/academy/risk-footer";
 import { SaveProgressPrompt } from "@/components/academy/save-progress-prompt";
 import { LessonContent } from "@/lib/academy/markdownish";
-import { Lesson1MessengerCta } from "@/components/funnel/lesson1-messenger-cta";
+import { Lesson1EndCard } from "@/components/funnel/lesson1-end-card";
+import { DiscordAfterAccmReminder } from "@/components/funnel/discord-after-accm-reminder";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
@@ -197,7 +198,7 @@ export default async function LessonPage({
   }
 
   const sequence = await getLessonSequence(supabase);
-  // Lesson 1 only: risk warning, then Messenger CTA, then prev/next (spec 08 §2).
+  // Lesson 1 only: risk warning, end card, gold Next lesson, then the inline Discord-after-ACCM link.
   const isLesson1 = `/academy/${level.slug}/${lessonSlug}` === FIRST_LESSON_PATH;
   const idx = sequence.findIndex((l) => l.levelSlug === level.slug && l.slug === lessonSlug);
   const prevLesson = idx > 0 ? sequence[idx - 1] : null;
@@ -350,7 +351,7 @@ export default async function LessonPage({
       {isLesson1 && (
         <>
           <RiskFooter />
-          <Lesson1MessengerCta />
+          <Lesson1EndCard />
         </>
       )}
       <LessonNav
@@ -359,8 +360,15 @@ export default async function LessonPage({
         currentLevelTitle={level.title}
         nextLevelTitle={isLastInLevel && nextLesson ? nextLesson.levelTitle : null}
         isLastInLevel={isLastInLevel}
-        nextIsPrimary={!isLesson1}
+        afterPrimary={
+          isLesson1 ? (
+            <DiscordAfterAccmReminder variant="inline" location="lesson1" />
+          ) : nextLesson && isLastInLevel ? (
+            <DiscordAfterAccmReminder variant="card" location="level_complete" />
+          ) : null
+        }
       />
+      {!isLesson1 && nextLesson && !isLastInLevel && <DiscordAfterAccmReminder variant="card" location="lesson_end" />}
       {!isLesson1 && <RiskFooter />}
     </div>
   );

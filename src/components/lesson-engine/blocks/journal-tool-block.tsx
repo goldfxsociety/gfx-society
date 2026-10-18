@@ -7,7 +7,7 @@ import { cn } from "cn";
 const REASONS = [
   { id: "support", label: "Bounced off support/resistance", planned: true },
   { id: "bos", label: "Break of Structure confirmation", planned: true },
-  { id: "rsi", label: "RSI oversold/overbought signal", planned: true },
+  { id: "rsi", label: "RSI oversold/overbought reading", planned: true },
   { id: "plan", label: "Followed my trading plan exactly", planned: true },
   { id: "fomo", label: "FOMO — jumped in after a big move", planned: false },
 ];

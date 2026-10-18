@@ -3,7 +3,10 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { getLessonMinutes } from "@/lib/academy/lesson-minutes";
-import { FIRST_LESSON_PATH, MESSENGER_COMMUNITY_URL } from "@/config/academy";
+import { FIRST_LESSON_PATH } from "@/config/academy";
+import { NEXT_STEP_HREF } from "@/config/journey";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { NextStepLink } from "@/components/funnel/next-step-link";
 
 export const metadata: Metadata = {
   title: "Start here",
@@ -41,11 +44,11 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Join the community",
-    body: "Ask questions and learn with other beginners in the GFX Society Messenger community.",
-    href: MESSENGER_COMMUNITY_URL,
-    cta: "Join on Messenger →",
-    external: true,
+    title: "Optional: Next step: guided training sa partner community namin",
+    body: "Hindi kailangan para matuto. Pero kung ready ka na, puwede kang sumali sa Discord community namin pagka-register mo sa ACCM.",
+    href: NEXT_STEP_HREF,
+    cta: "Tingnan ang steps →",
+    note: IB_DISCLOSURE_TEXT,
   },
 ];
 
@@ -73,15 +76,10 @@ export default async function StartPage() {
               {s.n === 1 && l1Minutes ? ` (~${l1Minutes} min)` : ""}
             </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.body}</p>
-            {s.external ? (
-              <a
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}
-              >
+            {s.href === NEXT_STEP_HREF ? (
+              <NextStepLink location="start" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
                 {s.cta}
-              </a>
+              </NextStepLink>
             ) : (
               <Link
                 href={s.href}
@@ -93,6 +91,7 @@ export default async function StartPage() {
                 {s.cta}
               </Link>
             )}
+            {"note" in s && s.note ? <p className="mt-2 text-xs text-muted-foreground">{s.note}</p> : null}
           </li>
         ))}
       </ol>

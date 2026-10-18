@@ -17,14 +17,14 @@ function rsiVerdict(val: number): { verdict: string; desc: string; tone: Tone } 
   if (val < 30) {
     return {
       verdict: "Oversold",
-      desc: "Watch for a possible bounce — not a guaranteed buy signal.",
+      desc: "Watch for a possible bounce — oversold reading lang ito, hindi guarantee.",
       tone: "bullish",
     };
   }
   if (val > 70) {
     return {
       verdict: "Overbought",
-      desc: "Watch for a possible pullback — not a guaranteed sell signal.",
+      desc: "Watch for a possible pullback — overbought reading lang ito, hindi guarantee.",
       tone: "bearish",
     };
   }
