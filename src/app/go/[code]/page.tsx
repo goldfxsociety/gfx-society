@@ -25,14 +25,14 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
       <p className="text-sm text-muted-foreground">
         Free gold trading education. Taking you to the Academy…
       </p>
-      <Link href={target.href} className={buttonVariants({ variant: "default" })}>
+      <Link href={target.href} className={`${buttonVariants({ variant: "default" })} min-h-11`}>
         Start learning →
       </Link>
       {MESSENGER_INVITE_URL && (
         <a
           href={MESSENGER_INVITE_URL}
           rel="noopener noreferrer"
-          className={buttonVariants({ variant: "outline" })}
+          className={`${buttonVariants({ variant: "outline" })} min-h-11`}
         >
           Join the GFX Messenger community
         </a>

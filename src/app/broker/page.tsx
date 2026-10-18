@@ -70,7 +70,7 @@ export default function BrokerPage() {
 
       <IbDisclosureFull />
 
-      <Link href="/" className="text-sm text-muted-foreground underline">
+      <Link href="/" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline">
         ← Back to home
       </Link>
     </div>
