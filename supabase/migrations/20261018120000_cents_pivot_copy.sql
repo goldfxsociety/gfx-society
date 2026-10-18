@@ -642,8 +642,8 @@ where id = 'fbb55f0c-cb4c-4f43-9e2f-70aeff160ab2'
 
 -- level graduation
 update public.levels set
-  title = $q$Level 6: Real-Money Discipline: Ready Ka Na Ba?$q$,
-  description = $q$Checklist para sa real money: start small, sundin ang plan, max 1% risk, laging may stop loss.$q$,
+  title = $q$Level 6: Real-Money Discipline$q$,
+  description = $q$Ready ka na ba? Checklist para sa real money: start small, sundin ang plan, max 1% risk, laging may stop loss.$q$,
   updated_at = now()
 where id = 'e42c66c8-abee-47ec-9fa6-d5e67ee7cf34'
   and title = $q$Level 6: Demo to Live — Are You Ready?$q$

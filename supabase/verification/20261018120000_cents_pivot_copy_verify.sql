@@ -141,7 +141,7 @@ select 'platform_attach_stop_loss' as key, (question = $q$When should you set th
 -- 3) Levels. Expect 2 rows, ok = true.
 select 'college' as slug, (title = $q$Level 5: Building Your Trading System$q$ and description = $q$Strategy, backtesting, real-money prep.$q$) as ok from public.levels where id = 'fbb55f0c-cb4c-4f43-9e2f-70aeff160ab2'
 union all
-select 'graduation' as slug, (title = $q$Level 6: Real-Money Discipline: Ready Ka Na Ba?$q$ and description = $q$Checklist para sa real money: start small, sundin ang plan, max 1% risk, laging may stop loss.$q$) as ok from public.levels where id = 'e42c66c8-abee-47ec-9fa6-d5e67ee7cf34';
+select 'graduation' as slug, (title = $q$Level 6: Real-Money Discipline$q$ and description = $q$Ready ka na ba? Checklist para sa real money: start small, sundin ang plan, max 1% risk, laging may stop loss.$q$) as ok from public.levels where id = 'e42c66c8-abee-47ec-9fa6-d5e67ee7cf34';
 
 -- 4) No banned phrases in published lessons. Expect 0 rows.
 select slug from public.lessons where is_published and
