@@ -44,7 +44,7 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Optional: Next step: guided training sa partner community namin",
+    title: "Optional next step: guided training sa partner community namin",
     body: "Hindi kailangan para matuto. Pero kung ready ka na, puwede kang sumali sa Discord community namin pagka-register mo sa ACCM.",
     href: NEXT_STEP_HREF,
     cta: "Tingnan ang steps →",
