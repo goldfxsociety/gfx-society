@@ -12,7 +12,7 @@ export const PRIVACY_URL = "https://gfx-society.vercel.app/privacy";
 
 /** One-line IB disclosure (site line adapted to cover the partner community, balanced Taglish). */
 export const IB_DISCLOSURE =
-  "GFX at ang partner community ay may maaaring kitain na commission mula sa ACCM kung mag-sign up ka through our link. You can use any broker you choose para sa sarili mong trading.";
+  "GFX at ang partner community ay maaaring kumita ng commission mula sa ACCM kapag nag-trade ka via our link.";
 
 /** Appends the IB disclosure as its own (small) line whenever member copy names ACCM. */
 export function withIb(text: string): string {

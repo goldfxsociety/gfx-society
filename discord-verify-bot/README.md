@@ -78,7 +78,7 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 - Member copy is balanced Taglish (roughly half English) and education-only.
 - No income/profit/win-rate claims and no "guaranteed" results. VIP means community access, not results.
 - **ACCM is the only accepted broker.** Every member-facing message that names ACCM carries this one line (enforced by `test/payloads.test.ts`): the panel, the upload modal, the reject and need-more-info DMs, and `/verify-status` for rejected or need-more-info results:
-  > GFX at ang partner community ay may maaaring kitain na commission mula sa ACCM kung mag-sign up ka through our link. You can use any broker you choose para sa sarili mong trading.
+  > GFX at ang partner community ay maaaring kumita ng commission mula sa ACCM kapag nag-trade ka via our link.
 - **Valid deposit** (members see it in the panel and modal; admins see it on every card): an ACCM screenshot showing the member's name or ACCM User ID, dated within the last 30 days. Admins judge the amount. **The bot does not auto-check any of this.**
 - The privacy notice is shown **in the upload modal above the file field** and in the #verify panel. It says the screenshot is only for VIP verification and gets deleted after review, only a decision log is kept, plus goldfx.society@gmail.com and the Privacy Notice link.
 - Slash command descriptions don't name ACCM, because there's no room for the disclosure in 100 characters.
