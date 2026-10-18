@@ -163,6 +163,7 @@ select count(*) from public.lessons where is_published and content like '%Kung m
 -- 8) Old slugs gone. Expect 0.
 select count(*) from public.lessons where slug in ('demo-account-your-practice-ground','demo-vs-live-account');
 
--- 7) 'Halimbawa lang / example only' label on every $1,000 standard-lot example. Expect 3 rows, ok = true.
+-- 9) 'Halimbawa lang / example only' label on the 3 labelled $1,000 standard-lot examples (pips-lots-and-leverage, cents-account-your-first-real-money-practice, types-of-orders). Expect exactly 3 rows, ok = true.
 select slug, (position($q$Halimbawa lang / example only.$q$ in content) > 0 and examples::text like '%'||$q$Halimbawa lang / example only.$q$||'%') as ok
-from public.lessons where content like '%$1,000%' or examples::text like '%$1,000%';
+from public.lessons where id in ('a1caf3d9-689a-4696-9443-f9f947a1dd05','3cb8acf1-27ac-42fb-bd4d-95e5b18b00ef','c7eaf0f2-c415-4b9a-97c9-84f0095a721a')
+order by slug;
