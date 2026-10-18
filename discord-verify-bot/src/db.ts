@@ -129,25 +129,33 @@ export class Db {
    * After the decision: record outcome flags and the #vip-log mirror id. `leftoverCardId` is the approval
    * card id if deleting it FAILED (kept so the cron retries), or null once it's gone.
    */
-  finalize(requestId: string, flags: LogFlag[], logMessageId: string | null, leftoverCardId: string | null, cardAlertAt: string | null): Promise<unknown> {
+  finalize(
+    requestId: string,
+    flags: LogFlag[],
+    logMessageId: string | null,
+    leftoverCardId: string | null,
+    cardAlertAt: string | null,
+    cardTriedAt: string | null,
+  ): Promise<unknown> {
     return this.call(
       "PATCH",
       `?request_id=eq.${requestId}`,
-      { approval_message_id: leftoverCardId, flags, log_message_id: logMessageId, card_alert_at: cardAlertAt },
+      { approval_message_id: leftoverCardId, flags, log_message_id: logMessageId, card_alert_at: cardAlertAt, card_tried_at: cardTriedAt },
       "return=minimal",
     );
   }
 
   /** Decided rows whose approval card (screenshot) still needs deleting. */
+  /** Least-recently-tried first (never tried = first), so permanently failing cards can't starve newer ones. */
   leftoverCards(limit: number): Promise<Pick<RequestRow, "request_id" | "approval_message_id" | "card_alert_at">[]> {
     return this.call(
       "GET",
-      `?select=request_id,approval_message_id,card_alert_at&status=neq.pending&approval_message_id=not.is.null&order=decided_at.asc&limit=${limit}`,
+      `?select=request_id,approval_message_id,card_alert_at&status=neq.pending&approval_message_id=not.is.null&order=card_tried_at.asc.nullsfirst,decided_at.asc&limit=${limit}`,
     );
   }
 
   /** Card deleted (or already gone): clear the id. Optionally record that the one-time alert was posted. */
-  updateCard(requestId: string, patch: { approval_message_id?: null; card_alert_at?: string }): Promise<unknown> {
+  updateCard(requestId: string, patch: { approval_message_id?: null; card_alert_at?: string; card_tried_at?: string }): Promise<unknown> {
     return this.call("PATCH", `?request_id=eq.${requestId}&status=neq.pending`, patch, "return=minimal");
   }
 

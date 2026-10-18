@@ -30,6 +30,8 @@ create table if not exists public.discord_vip_requests (
   log_message_id      text check (log_message_id is null or log_message_id ~ '^[0-9]{17,20}$'),
   -- When the one-time "delete this card manually" alert was posted to #vip-log (card delete failed).
   card_alert_at       timestamptz,
+  -- Last failed attempt to delete the card; the hourly retry goes least-recently-tried first (nulls first).
+  card_tried_at       timestamptz,
   created_at          timestamptz not null default now(),
   decided_at          timestamptz,
   constraint discord_vip_requests_decided_consistency check (
@@ -61,7 +63,7 @@ create index if not exists discord_vip_requests_decided_at
 
 -- Hourly retry of approval cards (screenshots) left behind on decided rows.
 create index if not exists discord_vip_requests_leftover_cards
-  on public.discord_vip_requests (decided_at) where approval_message_id is not null and status <> 'pending';
+  on public.discord_vip_requests (card_tried_at asc nulls first, decided_at) where approval_message_id is not null and status <> 'pending';
 
 alter table public.discord_vip_requests enable row level security;
 

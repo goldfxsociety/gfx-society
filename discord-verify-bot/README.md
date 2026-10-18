@@ -68,7 +68,8 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 | Member left (10007) | No DM. Card deleted, flag `member_left`. |
 | Role hierarchy wrong (50013) | Decision **reverted to pending** and buttons re-enabled. #vip-approvals gets "Ilipat ang bot role sa itaas ng @VIP". Retry after fixing. |
 | Pending > 7 days | Hourly cron expires it, deletes the card and screenshot, and writes a log line (`admin system`). |
-| Card delete fails (non-404) | The card id stays on the row and #vip-log gets **one** alert with a link to the card so an admin can delete it by hand. The hourly cron retries (≤ 4 per run) and clears the id on success or 404. |
+| Card delete fails (non-404) | The card id stays on the row and #vip-log gets **one** alert with a link to the card so an admin can delete it by hand. The hourly cron retries (≤ 4 per run, least-recently-tried first via `card_tried_at`, so permanently failing cards can't starve newer ones) and clears the id on success or 404. |
+| Discord 429 during the cron | No in-request retry. The run stops all further Discord calls and leaves the rest for the next hourly run. A 429 never triggers the stuck-card alert. |
 | Decided > 12 months | Hourly cron deletes the bot's #vip-log mirror message (single-message DELETE). It deletes the DB row only if that worked or returned 404; otherwise the row is kept and retried. Rows with a leftover card are skipped until the card is gone. |
 | @VIP removal | **Never.** @VIP is permanent; there is no re-verification, and no code path removes roles. |
 | Discord 429 | One retry after `retry_after` (max 3 s). |
@@ -94,7 +95,7 @@ Hourly cron (:17) ──► expire pending > 7 days (delete cards) + purge log r
 |---|---|---|
 | Requests | **100,000/day** (resets 00:00 UTC = 8:00 AM PHT). Over the limit: error 1027. | A few per verification (≈ 4–6) |
 | CPU time | **10 ms per HTTP request**. Waiting on fetch doesn't count. Cron: 10 ms. | Ed25519 verify is native Web Crypto; the rest is I/O |
-| Subrequests | **50 per invocation**; 6 simultaneous open connections | ≤ 11 per flow. Cron per run: expiry ≤ 4 rows (≤ 21) + card retry ≤ 4 (≤ 13) + purge ≤ 12 rows (≤ 14) = ≤ 48 |
+| Subrequests | **50 per invocation**; 6 simultaneous open connections | ≤ 11 per flow. Cron per run: expiry ≤ 4 rows (≤ 21) + card retry ≤ 4 (≤ 13) + purge ≤ 12 rows (≤ 14) = ≤ 48, with no cron 429 retries. A test counts real mocked fetch calls in a worst-case run (= 48). |
 | Request body size | **100 MB** (Cloudflare Free/Pro account plan) | Interactions are small JSON; we cap at 256 KB |
 | `waitUntil` | Extends execution **up to 30 s** after the response | Download + re-upload of ≤ 8 MiB |
 | Memory | 128 MB per isolate | ≤ 8 MiB buffered |

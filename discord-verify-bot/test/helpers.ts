@@ -65,6 +65,11 @@ export class FakeSupabase {
     const order = params.get("order");
     if (order?.startsWith("created_at.desc")) out.sort((a, b) => b.created_at.localeCompare(a.created_at));
     if (order?.startsWith("created_at.asc")) out.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    if (order?.startsWith("card_tried_at.asc.nullsfirst"))
+      out.sort((a, b) => {
+        const x = (a.card_tried_at as string | null) ?? "", y = (b.card_tried_at as string | null) ?? "";
+        return x.localeCompare(y) || String(a.decided_at).localeCompare(String(b.decided_at));
+      });
     if (order?.startsWith("decided_at.asc")) out.sort((a, b) => String(a.decided_at).localeCompare(String(b.decided_at)));
     const limit = params.get("limit");
     return limit ? out.slice(0, Number(limit)) : out;
@@ -91,6 +96,7 @@ export class FakeSupabase {
         approval_message_id: null,
         log_message_id: null,
         card_alert_at: null,
+        card_tried_at: null,
         created_at: now().toISOString(),
         decided_at: null,
       };
@@ -131,6 +137,10 @@ export class FakeDiscord {
   cardDeleteFailures = 0;
   /** #vip-log message DELETEs fail with 403 while true. */
   logDeleteFails = false;
+  /** Card message ids whose DELETE always fails with 403. */
+  cardDeleteFailIds = new Set<string>();
+  /** Number of upcoming Discord calls answered with 429. */
+  rateLimitNext = 0;
 
   async handle(method: string, url: URL, init?: RequestInit): Promise<Response> {
     const path = url.pathname.replace("/api/v10", "");
@@ -144,6 +154,10 @@ export class FakeDiscord {
     this.calls.push(call);
     const res = (data: unknown, status = 200) => new Response(data === undefined ? null : JSON.stringify(data), { status });
     const err = (status: number, code: number) => res({ code, message: "x" }, status);
+    if (this.rateLimitNext > 0) {
+      this.rateLimitNext--;
+      return res({ message: "rate limited", retry_after: 0.01, global: false }, 429);
+    }
 
     if (/^\/guilds\/\d+\/members\/\d+$/.test(path) && method === "GET")
       return this.memberRoles === null ? err(404, 10007) : res({ roles: this.memberRoles });
@@ -163,6 +177,8 @@ export class FakeDiscord {
         this.cardDeleteFailures--;
         return err(500, 0);
       }
+      if (method === "DELETE" && path.startsWith(`/channels/${IDS.approvals}/`) && this.cardDeleteFailIds.has(path.split("/").pop()!))
+        return err(403, 50013);
       if (method === "DELETE" && path.startsWith(`/channels/${IDS.logs}/`) && this.logDeleteFails) return err(403, 50001);
       return method === "DELETE" ? res(undefined, 204) : res({ id: "x" });
     }
@@ -181,7 +197,9 @@ export function harness(opts: { cfg?: Partial<Config>; cdnBytes?: Uint8Array; no
   let clock = opts.now ?? new Date("2026-10-18T04:00:00.000Z");
   const now = () => clock;
   const cdnFetches: string[] = [];
+  const counter = { fetches: 0 };
   const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    counter.fetches++;
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     const method = init?.method ?? "GET";
     if (url.hostname.endsWith("supabase.co")) return sb.handle(method, url, typeof init?.body === "string" ? init.body : undefined, now);
@@ -200,7 +218,7 @@ export function harness(opts: { cfg?: Partial<Config>; cdnBytes?: Uint8Array; no
   const flush = async () => {
     while (pending.length) await pending.shift();
   };
-  return { sb, dc, deps, ctx, flush, cdnFetches, setNow: (d: Date) => (clock = d) };
+  return { sb, dc, deps, ctx, flush, cdnFetches, counter, setNow: (d: Date) => (clock = d) };
 }
 
 let seq = 800000000000000000n;

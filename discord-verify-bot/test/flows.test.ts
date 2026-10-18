@@ -1,7 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { APPROVE_DM, APPROVER_GUIDANCE, IB_DISCLOSURE, MSG } from "../src/copy";
 import { expireStale, handleInteraction, LIMITS, maintenance, purgeOldLogs, rateDecision, retentionCutoff, retryLeftoverCards } from "../src/handlers";
+import type { RequestRow } from "../src/types";
 import { button, CDN_URL, harness, IDS, infoSubmit, member, nextId, rejectSubmit, uploadSubmit } from "./helpers";
+
+/** Insert a row directly into the fake DB. */
+function seed(h: ReturnType<typeof harness>, over: Partial<RequestRow>): RequestRow {
+  const decided = over.status !== undefined && over.status !== "pending";
+  const row: RequestRow = {
+    request_id: crypto.randomUUID(),
+    guild_id: IDS.guild,
+    member_id: nextId(),
+    status: "pending",
+    admin_id: null,
+    reason_code: null,
+    flags: [],
+    approval_message_id: null,
+    log_message_id: null,
+    card_alert_at: null,
+    card_tried_at: null,
+    created_at: "2026-10-01T00:00:00.000Z",
+    decided_at: decided ? "2026-10-02T00:00:00.000Z" : null,
+    ...over,
+  };
+  h.sb.rows.push(row);
+  return row;
+}
 
 async function submit(h: ReturnType<typeof harness>, memberId = IDS.member) {
   const i = uploadSubmit(memberId);
@@ -351,9 +375,8 @@ describe("12-month retention purge", () => {
     expect(h.dc.calls.filter((c) => c.method === "DELETE" && /\/members\//.test(c.path))).toHaveLength(0);
   });
 
-  it("cutoff is 12 calendar months; batches stay under 50 subrequests", () => {
+  it("cutoff is 12 calendar months", () => {
     expect(retentionCutoff(new Date("2026-10-18T04:00:00Z")).toISOString()).toBe("2025-10-18T04:00:00.000Z");
-    expect(1 + LIMITS.expireBatch * 5 + 1 + LIMITS.cardRetryBatch * 3 + 1 + LIMITS.purgeBatch + 1).toBeLessThanOrEqual(50);
   });
 
   it("keeps the row when deleting its #vip-log line fails (non-404) and retries next run", async () => {
@@ -424,6 +447,63 @@ describe("leftover approval card (screenshot) when the card delete fails", () =>
     expect(h.sb.rows[0]!.approval_message_id).not.toBeNull();
     expect(await retryLeftoverCards(h.deps)).toBe(1);
     expect(h.sb.rows[0]!.approval_message_id).toBeNull();
+  });
+});
+
+describe("cron subrequest budget (Workers Free: 50 per invocation)", () => {
+  it("worst-case run makes at most 48 real fetch calls", async () => {
+    const h = harness();
+    // More work than the caps allow, every card delete failing (each needs an alert):
+    for (let k = 0; k < 6; k++) seed(h, { approval_message_id: nextId(), created_at: "2026-10-01T00:00:00.000Z" }); // stale pending
+    for (let k = 0; k < 6; k++) seed(h, { status: "rejected", reason_code: "unclear", approval_message_id: nextId() }); // leftover cards
+    for (let k = 0; k < 20; k++) seed(h, { status: "approved", log_message_id: nextId(), decided_at: "2025-01-01T00:00:00.000Z" }); // purge
+    h.dc.cardDeleteFailures = 999;
+    h.counter.fetches = 0;
+    await maintenance(h.deps);
+    expect(h.counter.fetches).toBeLessThanOrEqual(48);
+    expect(h.counter.fetches).toBe(48); // 21 expiry + 13 card retry + 14 purge
+  });
+
+  it("on a 429 the cron does not retry in-request: it stops and leaves the rest for the next run", async () => {
+    const h = harness();
+    for (let k = 0; k < 3; k++) seed(h, { approval_message_id: nextId() });
+    seed(h, { status: "rejected", reason_code: "unclear", approval_message_id: nextId() });
+    seed(h, { status: "approved", log_message_id: nextId(), decided_at: "2025-01-01T00:00:00.000Z" });
+    h.dc.rateLimitNext = 1;
+    await maintenance(h.deps);
+    expect(h.dc.calls).toHaveLength(1); // the 429'd card delete; no retry, no further Discord calls
+    expect(h.sb.rows.filter((r) => r.status === "expired")).toHaveLength(1);
+    expect(h.sb.rows.filter((r) => r.status === "pending")).toHaveLength(2);
+    expect(h.sb.rows.every((r) => r.card_alert_at === null)).toBe(true); // a 429 is not an alert
+    expect(h.sb.rows).toHaveLength(5); // purge row kept
+    // Next run (not rate-limited) finishes the work.
+    await maintenance(h.deps);
+    expect(h.sb.rows.filter((r) => r.status === "pending")).toHaveLength(0);
+    expect(h.sb.rows.every((r) => r.approval_message_id === null)).toBe(true);
+    expect(h.sb.rows).toHaveLength(4);
+  });
+});
+
+describe("leftover-card retry rotation", () => {
+  it("8 cards, the 4 oldest always 403: after enough runs all 8 have been tried and the newer 4 deleted", async () => {
+    const h = harness();
+    const cards = Array.from({ length: 8 }, (_, k) =>
+      seed(h, { status: "approved", approval_message_id: nextId(), decided_at: `2026-10-0${k + 1}T00:00:00.000Z` }),
+    );
+    const ids = cards.map((c) => c.approval_message_id!);
+    ids.slice(0, 4).forEach((id) => h.dc.cardDeleteFailIds.add(id));
+    const tried = new Set<string>();
+    for (let run = 0; run < 3; run++) {
+      h.setNow(new Date(Date.UTC(2026, 9, 18, 4 + run)));
+      await retryLeftoverCards(h.deps);
+      h.dc.find("DELETE", new RegExp(`^/channels/${IDS.approvals}/messages/`)).forEach((c) => tried.add(c.path.split("/").pop()!));
+    }
+    expect([...tried].sort()).toEqual([...ids].sort());
+    expect(cards.slice(4).every((c) => c.approval_message_id === null)).toBe(true);
+    expect(cards.slice(0, 4).every((c) => c.approval_message_id !== null && c.card_tried_at !== null)).toBe(true);
+    // One alert per failing card, not per run.
+    const alerts = h.dc.find("POST", new RegExp(`/channels/${IDS.logs}/messages$`)).filter((c) => (c.json as { content: string }).content.startsWith("⚠️"));
+    expect(alerts).toHaveLength(4);
   });
 });
 

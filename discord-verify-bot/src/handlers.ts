@@ -235,14 +235,16 @@ async function notifyMember(deps: Deps, memberId: string, content: string, flags
 
 const cardUrl = (cfg: Config, messageId: string) => `https://discord.com/channels/${cfg.guildId}/${cfg.approvalsChannelId}/${messageId}`;
 
-/** Deletes an approval card. True if deleted or already gone (404); false on any other error. */
-async function tryDeleteCard(deps: Deps, messageId: string): Promise<boolean> {
+const is429 = (e: unknown) => e instanceof DiscordError && e.status === 429;
+
+/** Deletes an approval card: "gone" if deleted or already gone (404), "limited" on 429 (just retry later), else "failed". */
+async function tryDeleteCard(deps: Deps, messageId: string): Promise<"gone" | "limited" | "failed"> {
   try {
     await deps.discord.deleteOwnMessage(deps.cfg.approvalsChannelId, messageId); // 404 counts as success
-    return true;
+    return "gone";
   } catch (e) {
     log("delete card failed", e);
-    return false;
+    return is429(e) ? "limited" : "failed";
   }
 }
 
@@ -259,7 +261,7 @@ async function postCardAlert(deps: Deps, requestId: string, messageId: string): 
 
 async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, flags: LogFlag[]) {
   const { discord, db, cfg } = deps;
-  const cardGone = messageId ? await tryDeleteCard(deps, messageId) : true;
+  const card = messageId ? await tryDeleteCard(deps, messageId) : "gone";
   const mirror = await discord
     .createMessage(cfg.logChannelId, {
       content: logLine({
@@ -277,11 +279,12 @@ async function closeOut(deps: Deps, row: RequestRow, messageId: string | null, f
       log("log mirror failed", e);
       return null;
     });
-  // Card delete failed: keep its id for the hourly retry and alert admins once.
-  const alertAt = !cardGone && messageId ? await postCardAlert(deps, row.request_id, messageId) : null;
+  // Card delete failed (non-404): keep its id for the hourly retry and alert admins once. A 429 just retries, no alert.
+  const alertAt = card === "failed" && messageId ? await postCardAlert(deps, row.request_id, messageId) : null;
+  const tried = card === "gone" ? null : deps.now().toISOString();
   // Store the mirror's id so the 12-month purge can delete it too.
   await db
-    .finalize(row.request_id, flags, mirror?.id ?? null, cardGone ? null : messageId, alertAt)
+    .finalize(row.request_id, flags, mirror?.id ?? null, card === "gone" ? null : messageId, alertAt, tried)
     .catch((e) => log("finalize failed", e));
 }
 
@@ -415,7 +418,7 @@ export async function purgeOldLogs(deps: Deps): Promise<number> {
       try {
         await deps.discord.deleteOwnMessage(deps.cfg.logChannelId, r.log_message_id);
       } catch (e) {
-        if (e instanceof DiscordError && e.status === 429) {
+        if (is429(e)) {
           log("purge rate-limited; will retry next run", e);
           break;
         }
@@ -435,19 +438,31 @@ export async function retryLeftoverCards(deps: Deps): Promise<number> {
   let deleted = 0;
   for (const r of rows) {
     if (!r.approval_message_id) continue;
-    if (await tryDeleteCard(deps, r.approval_message_id)) {
+    const res = await tryDeleteCard(deps, r.approval_message_id);
+    if (res === "limited") break; // leave the rest for the next run
+    if (res === "gone") {
       await deps.db.updateCard(r.request_id, { approval_message_id: null }).catch((e) => log("clear card failed", e));
       deleted++;
-    } else if (!r.card_alert_at) {
-      const at = await postCardAlert(deps, r.request_id, r.approval_message_id);
-      if (at) await deps.db.updateCard(r.request_id, { card_alert_at: at }).catch((e) => log("mark alert failed", e));
+      continue;
     }
+    // Failed: move it to the back of the queue; alert once.
+    const patch: { card_tried_at: string; card_alert_at?: string } = { card_tried_at: deps.now().toISOString() };
+    if (!r.card_alert_at) {
+      const at = await postCardAlert(deps, r.request_id, r.approval_message_id);
+      if (at) patch.card_alert_at = at;
+    }
+    await deps.db.updateCard(r.request_id, patch).catch((e) => log("mark card attempt failed", e));
   }
   return deleted;
 }
 
-/** Hourly cron: expiry + leftover-card retry + retention purge. */
-export async function maintenance(deps: Deps): Promise<{ expired: number; cards: number; purged: number }> {
+/**
+ * Hourly cron: expiry + leftover-card retry + retention purge. Uses a Discord client with no in-request 429
+ * retry: after the first 429, every later Discord call in this run is skipped (no fetch) and the work waits
+ * for the next run, so the worst case stays at ≤ 48 subrequests.
+ */
+export async function maintenance(input: Deps): Promise<{ expired: number; cards: number; purged: number }> {
+  const deps: Deps = { ...input, discord: input.discord.forCron() };
   const expired = await expireStale(deps).catch((e) => {
     log("expiry failed", e);
     return 0;
@@ -469,6 +484,7 @@ export async function expireStale(deps: Deps): Promise<number> {
   const stale = await deps.db.stalePending(cutoff, LIMITS.expireBatch);
   let n = 0;
   for (const r of stale) {
+    if (deps.discord.rateLimited) break; // leave the rest for the next run
     try {
       const res = await deps.db.decide(r.request_id, "expired", null, deps.now().toISOString());
       if (!res.won) continue;

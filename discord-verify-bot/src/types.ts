@@ -140,6 +140,8 @@ export interface RequestRow {
   log_message_id: string | null;
   /** When the one-time "delete this card manually" alert was posted to #vip-log (card delete failed). */
   card_alert_at: string | null;
+  /** Last failed cron/decision attempt to delete the card; the retry queue is ordered by this (nulls first). */
+  card_tried_at: string | null;
   created_at: string;
   decided_at: string | null;
 }

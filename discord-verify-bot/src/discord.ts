@@ -22,13 +22,24 @@ export const DiscordCode = {
 type Body = { json?: unknown; form?: FormData };
 
 export class Discord {
+  /** Cron mode only: set after the first 429; every later call in this run fails fast with no fetch. */
+  rateLimited = false;
+
   constructor(
     private token: string,
     private appId: string,
     private fetchImpl: typeof fetch = fetch,
+    /** Interactions: one short in-request retry on 429. Cron: false (stop and leave the rest for the next run). */
+    private retry429 = true,
   ) {}
 
+  /** Client for the hourly cron: no in-request 429 retry, so the subrequest worst case stays fixed. */
+  forCron(): Discord {
+    return new Discord(this.token, this.appId, this.fetchImpl, false);
+  }
+
   async request<T = unknown>(method: string, route: string, body?: Body, auth = true, attempt = 0): Promise<T> {
+    if (this.rateLimited) throw new DiscordError(429, undefined, `${method} (skipped: rate-limited this run)`);
     const headers: Record<string, string> = { "User-Agent": "DiscordBot (https://gfx-society.vercel.app, 0.1.0)" };
     if (auth) headers.Authorization = `Bot ${this.token}`;
     let payload: BodyInit | undefined;
@@ -37,6 +48,10 @@ export class Discord {
       payload = JSON.stringify(body.json);
     } else if (body?.form) payload = body.form;
     const res = await this.fetchImpl(API + route, { method, headers, body: payload });
+    if (res.status === 429 && !this.retry429) {
+      this.rateLimited = true;
+      throw new DiscordError(429, undefined, `${method} ${route}`);
+    }
     if (res.status === 429 && attempt < 1) {
       const data = (await res.json().catch(() => ({}))) as { retry_after?: number };
       const wait = Math.min(Number(data.retry_after ?? 1), 3);
