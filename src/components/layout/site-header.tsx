@@ -5,7 +5,9 @@ export function SiteHeader() {
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-2xl items-center px-6">
         <Link href="/" className="inline-flex min-h-11 items-center font-heading text-lg font-bold tracking-tight text-primary">
-          GFX <span className="text-foreground">Society</span>
+          <span>
+            GFX <span className="text-foreground">Society</span>
+          </span>
         </Link>
       </div>
     </header>
