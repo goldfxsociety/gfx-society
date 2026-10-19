@@ -1,0 +1,42 @@
+# GFX Discord VIP verification bot — Cloudflare Worker config.
+# PLACEHOLDERS ONLY. Nothing here is secret. Do not commit real tokens or keys.
+#
+# Secrets are NEVER put in this file or in the website (Vercel) env. Set them on the Worker with:
+#   npx wrangler secret put DISCORD_PUBLIC_KEY
+#   npx wrangler secret put DISCORD_BOT_TOKEN
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# (or Cloudflare dashboard → Workers & Pages → gfx-discord-verify-bot → Settings → Variables and Secrets → type "Secret").
+
+name = "gfx-discord-verify-bot"
+main = "src/index.ts"
+compatibility_date = "2026-04-20"
+workers_dev = true
+
+# Hourly maintenance at :17 (one Cron Trigger):
+#  - expire pending requests older than 7 days (deletes the approval message + screenshot), max 5 per run
+#  - delete decision-log rows older than 12 months and their #vip-log mirror messages, max 20 per run
+# Batches keep each run under the Workers Free limit of 50 subrequests. Nothing here ever removes @VIP.
+[triggers]
+crons = ["17 * * * *"]
+
+[observability]
+enabled = true
+
+[vars]
+# Discord Application ID (public, from Developer Portal → General Information).
+DISCORD_APP_ID = "REPLACE_WITH_APPLICATION_ID"
+# PDE x GFX Society server (guild) id.
+GUILD_ID = "REPLACE_WITH_GUILD_ID"
+# @VIP role id. The bot's own role must sit directly ABOVE this role.
+VIP_ROLE_ID = "REPLACE_WITH_VIP_ROLE_ID"
+# REQUIRED, comma-separated admin role id(s). Only members with one of these roles can Approve / Need more info / Reject.
+# Manage Roles or Administrator alone is NOT enough. The bot refuses to start (500) if this is empty.
+ADMIN_ROLE_IDS = "REPLACE_WITH_ADMIN_ROLE_ID"
+# Channel ids.
+VERIFY_CHANNEL_ID = "REPLACE_WITH_VERIFY_CHANNEL_ID"
+APPROVALS_CHANNEL_ID = "REPLACE_WITH_VIP_APPROVALS_CHANNEL_ID"
+LOG_CHANNEL_ID = "REPLACE_WITH_VIP_LOG_CHANNEL_ID"
+# Supabase project URL (not secret). The service key is a Worker secret.
+SUPABASE_URL = "https://REPLACE_WITH_PROJECT_REF.supabase.co"
+# Max screenshot size in bytes (also capped by Discord's attachment_size_limit). 8 MiB.
+MAX_UPLOAD_BYTES = "8388608"
