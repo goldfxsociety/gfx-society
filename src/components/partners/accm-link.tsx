@@ -39,26 +39,20 @@ export function AccmLink({
   href: string;
   className?: string;
   children: ReactNode;
-  /** Gated (e.g. /accm self-check below 5/5): not focusable, click does nothing, no tracking. */
+  /** Gated (e.g. /accm self-check below 5/5): rendered with no href, so not focusable, nothing opens, no tracking. */
   disabled?: boolean;
 }) {
   const path = usePathname() ?? "";
+  // Gated: no href at all (not a link, not focusable, nothing to open), until enabled.
+  if (disabled) {
+    return (
+      <a role="link" className={className} aria-disabled="true">
+        {children}
+      </a>
+    );
+  }
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="sponsored noopener noreferrer"
-      className={className}
-      aria-disabled={disabled || undefined}
-      tabIndex={disabled ? -1 : undefined}
-      onClick={(e) => {
-        if (disabled) {
-          e.preventDefault();
-          return;
-        }
-        trackAccmClick(path);
-      }}
-    >
+    <a href={href} target="_blank" rel="sponsored noopener noreferrer" className={className} onClick={() => trackAccmClick(path)}>
       {children}
     </a>
   );
