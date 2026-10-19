@@ -91,7 +91,7 @@ export default async function Home({
         <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           GFX Society · Free gold trading education
         </span>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight min-[381px]:text-3xl">
           {user
             ? isNewAccount
               ? `Welcome${profileName ? `, ${profileName}` : ""}! Simulan na natin ang Lesson 1.`

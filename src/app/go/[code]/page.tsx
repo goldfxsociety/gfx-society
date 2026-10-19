@@ -25,7 +25,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
       <h1 className="text-xl font-bold">Welcome to GFX Society</h1>
       <p className="text-sm text-muted-foreground">
-        Free gold trading education. Taking you to the Academy…
+        Free gold trading education. Dadalhin ka namin sa Academy…
       </p>
       <Link href={target.href} className={`${buttonVariants({ variant: "default" })} min-h-11`}>
         Start learning →
@@ -38,7 +38,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
           Next step: guided training sa partner community namin
         </NextStepLink>
       )}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
       </p>
       <GoRedirect href={target.href} />

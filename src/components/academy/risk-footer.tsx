@@ -8,7 +8,7 @@ export function RiskFooter() {
     <aside
       id="risk-warning"
       aria-label="Risk warning"
-      className="mt-4 scroll-mt-20 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-xs leading-relaxed"
+      className="mt-4 scroll-mt-20 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm leading-relaxed"
     >
       <p>
         <strong>Start small.</strong> Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.

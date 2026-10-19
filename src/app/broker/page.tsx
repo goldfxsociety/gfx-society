@@ -27,8 +27,7 @@ export default function BrokerPage() {
         </span>
         <h1 className="text-2xl font-bold tracking-tight">About ACCM</h1>
         <p className="text-sm text-muted-foreground">
-          GFX Academy is education-first — this page is here if and when you&apos;re
-          ready to open an account, not a requirement to use the Academy.
+          Education-first ang GFX Academy. Nandito ang page na ito kung ready ka nang mag-open ng account. Hindi ito required para magamit ang Academy.
         </p>
       </div>
 
@@ -44,7 +43,7 @@ export default function BrokerPage() {
 
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
         <p className="font-semibold">Start small. Risk warning.</p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.
           Trading forex, gold and CFDs with
           leverage carries a high risk of losing money and is not suitable for

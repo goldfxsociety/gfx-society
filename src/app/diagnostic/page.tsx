@@ -24,16 +24,15 @@ export default async function DiagnosticIntroPage() {
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
         <h1 className="text-2xl font-bold tracking-tight">The GFX Diagnostic</h1>
         <p className="text-sm text-muted-foreground">
-          A short quiz that finds your starting level. It needs a free account so we can
-          save your results and point you to the right lesson.
+          Short quiz ito para malaman ang starting level mo. Kailangan ng free account para ma-save ang results mo at ma-recommend namin ang tamang lesson.
         </p>
         <p className="text-sm text-muted-foreground">
-          Brand new to trading? You don&apos;t need it — start with Lesson 1, no signup needed.
+          Bago ka pa lang sa trading? Hindi mo ito kailangan. Start ka sa Lesson 1, no signup needed.
         </p>
         <Link href="/start" className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}>
           Start here (no signup)
         </Link>
-        <p className="text-sm text-muted-foreground">Already have an account? Log in to save your results.</p>
+        <p className="text-sm text-muted-foreground">May account ka na? Log in para ma-save ang results mo.</p>
         <div className="grid grid-cols-2 gap-3">
           <Link href="/login" className={cn(buttonVariants({ variant: "outline" }), "h-11")}>
             Log in

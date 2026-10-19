@@ -64,8 +64,7 @@ export default async function StartPage() {
         </span>
         <h1 className="text-2xl font-bold tracking-tight">Your first steps (libre)</h1>
         <p className="text-sm text-muted-foreground">
-          No signup needed to learn. Create a free account later if you want to
-          save your progress.
+          No signup needed to learn. Puwede kang mag-create ng free account later kung gusto mong ma-save ang progress mo.
         </p>
       </div>
       <ol className="flex flex-col gap-3">

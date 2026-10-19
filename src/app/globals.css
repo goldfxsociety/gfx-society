@@ -26,6 +26,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-field-border: var(--field-border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -76,6 +77,8 @@
   --success-foreground: #1a0a2e;
   --border: #5a3a90;
   --input: #3a2460;
+  /* Form-control boundary: 3.11:1 vs #3a2460 card, 4.43:1 vs #1a0a2e fill (WCAG 1.4.11). */
+  --field-border: #8a6cc0;
   --ring: #d4a017;
   --chart-1: #d4a017;
   --chart-2: #3dcb8a;
@@ -114,6 +117,8 @@
   --success-foreground: #1a0a2e;
   --border: #5a3a90;
   --input: #3a2460;
+  /* Form-control boundary: 3.11:1 vs #3a2460 card, 4.43:1 vs #1a0a2e fill (WCAG 1.4.11). */
+  --field-border: #8a6cc0;
   --ring: #d4a017;
   --sidebar: #1a0a2e;
   --sidebar-foreground: #f5f0ff;
@@ -163,4 +168,13 @@
 .touch-targets input:is([type="checkbox"], [type="radio"]) {
   width: 22px;
   height: 22px;
+}
+
+/* Risk and helper text minimum 14px (weekly 2026-10-19 #3, Design Guide §4).
+   Muted helper lines (#c4b5d4) never render below 14px; the bottom nav uses
+   its own 11px size and is not affected. */
+.text-xs.text-muted-foreground,
+.text-xs .text-muted-foreground {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
