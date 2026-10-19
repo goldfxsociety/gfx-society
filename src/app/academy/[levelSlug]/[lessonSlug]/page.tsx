@@ -218,7 +218,7 @@ export default async function LessonPage({
       </Link>
 
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">{lesson.title}</h1>
+        <h1 className="text-[22px] leading-tight font-bold tracking-tight sm:text-2xl">{lesson.title}</h1>
         {posInLevel > 0 && (
           <>
             <p className="text-sm text-muted-foreground">

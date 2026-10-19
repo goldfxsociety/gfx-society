@@ -91,7 +91,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle><h1 className="text-lg font-semibold">Create your GFX Society account</h1></CardTitle>
           <CardDescription>
-            Free forever — this just saves your progress across devices.
+            Libre forever. Para lang ma-save ang progress mo sa kahit anong device.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -142,7 +142,7 @@ export default function SignupPage() {
                 id="experienceLevel"
                 value={experienceLevel}
                 onChange={(e) => setExperienceLevel(e.target.value)}
-                className="h-11 rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-11 rounded-lg border border-field-border bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">Pumili ng isa (optional)</option>
                 <option value="never_traded">Never traded</option>
@@ -214,7 +214,7 @@ export default function SignupPage() {
             <Link href="/privacy" className="-my-3.5 inline-block py-3.5 underline">Privacy Notice</Link>. We
             never sell your data or share it with brokers without your consent.
             Education only — not financial advice.{" "}
-            <Link href="/risk" className="underline">Risk warning</Link>.
+            <Link href="/risk" className="-my-3.5 inline-block py-3.5 underline">Risk warning</Link>.
           </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}

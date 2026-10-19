@@ -30,7 +30,7 @@ export default function CommunityPage() {
         <p className="font-semibold">Ganito ang steps</p>
         <ol className="mt-2 flex flex-col gap-1 text-muted-foreground">
           <li>1. Tapusin ang basics sa Academy (libre).</li>
-          <li>2. Kapag ready ka na, mag-register sa ACCM: start small sa cents account, max 1% risk, laging may stop loss.</li>
+          <li>2. Kapag ready ka na, mag-register sa ACCM: start small sa cents account, pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.</li>
           <li>3. Mag-apply sa Discord community namin.</li>
         </ol>
       </div>

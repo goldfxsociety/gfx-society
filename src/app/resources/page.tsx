@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -73,7 +74,11 @@ export default async function ResourcesPage() {
                 )}
               </div>
             </a>
-          ))}
+          )).flatMap((el, i) =>
+            /ACCM/.test(`${items[i].title} ${items[i].description ?? ""}`)
+              ? [el, <IbDisclosureShort key={`${items[i].id}-ib`} />]
+              : [el],
+          )}
         </div>
       ))}
 

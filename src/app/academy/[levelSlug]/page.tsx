@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 import { RiskFooter } from "@/components/academy/risk-footer";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
@@ -94,6 +95,7 @@ export default async function LevelPage({
             </Card>
           </Link>
         ))}
+        {list.some((l) => /ACCM/.test(l.title)) && <IbDisclosureShort />}
       </div>
 
       {list.length > 0 && !allDone && (
