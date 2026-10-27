@@ -2,6 +2,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AccmBridge } from "@/components/academy/accm-bridge";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -85,6 +86,9 @@ export default async function AcademyPage() {
           </p>
         )}
       </div>
+
+      {/* Optional ACCM step: secondary section after the learning path, never the headline. */}
+      <AccmBridge />
     </div>
   );
 }
