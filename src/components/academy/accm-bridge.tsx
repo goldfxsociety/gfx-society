@@ -22,7 +22,7 @@ export function AccmBridge() {
         max 1% risk per trade, laging may stop loss.
       </p>
       <p className="text-sm text-muted-foreground">
-        Kung pipiliin mo ang ACCM through our link, makakasali ka rin sa PDE x GFX Society Discord para sa trainings at
+        Kung pipiliin mo ang ACCM through our link, makakasali ka rin sa GFX Society Discord para sa trainings at
         Q&amp;A with the community. Optional ito, at pwede ka namang gumamit ng ibang broker.
       </p>
       <Link
