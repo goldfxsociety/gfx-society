@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 
@@ -24,13 +25,12 @@ export function AccmBridge() {
         Kung pipiliin mo ang ACCM through our link, makakasali ka rin sa PDE x GFX Society Discord para sa trainings at
         Q&amp;A with the community. Optional ito, at pwede ka namang gumamit ng ibang broker.
       </p>
-      <a
+      <Link
         href="/accm"
-        rel="sponsored noopener"
         className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-sm")}
       >
         Open ACCM account (optional)
-      </a>
+      </Link>
       <p className="text-sm text-muted-foreground">{ACCM_BRIDGE_DISCLOSURE}</p>
       <p className="text-sm text-muted-foreground">
         Max 1% risk, laging may stop loss. Cents account? Pera lang na kaya mong mawala. Education lang, not financial
