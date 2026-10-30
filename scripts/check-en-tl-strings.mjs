@@ -21,10 +21,10 @@ function enRoutes(dir = "src/app/en") {
 }
 
 // Common Tagalog markers (whole-word, case-insensitive) + exact TL UI strings found on /en.
-const WORDS = ["ang","ng","mga","sa","ka","mo","ito","kung","hindi","para","lang","muna","pwede","puwede","buksan","simulan","tingnan","basahin","kaya","natin","ninyo","ako","ikaw","at","na","po","namin","kami","ninyo","dito","iyan","bawat","libre","isulat","alamin","laging","walang","bago"];
+const WORDS = ["ang","ng","mga","sa","ka","mo","ito","kung","hindi","para","lang","muna","pwede","puwede","buksan","simulan","tingnan","basahin","kaya","natin","ninyo","ako","ikaw","at","na","po","namin","kami","ninyo","dito","iyan","bawat","libre","isulat","alamin","laging","walang","bago","wala","pang","ngayon","tapos","ituloy","naman","yung","ko","rin","din","kayo","tayo"];
 const PHRASES = ["Buksan ang lesson", "Simulan sa Step 1", "Tingnan ang steps", "para sa Filipino traders", "laging may stop loss"];
 // Intentional / proper nouns. Removed from text before matching.
-const ALLOW = ["Lesson in Taglish for now", "(the sign-up pages are in Taglish for now)", "Tagalog / Taglish", "Taglish", "Tagalog",
+const ALLOW = ["Lesson in Taglish for now", "(the sign-up pages are in Taglish for now)", "Tagalog / Taglish",
   // English phrases containing a marker word
   "at risk"];
 
@@ -36,10 +36,10 @@ function extract(html) {
   const parts = [];
   const head = html.match(/<head[\s\S]*?<\/head>/i)?.[0] ?? "";
   const t = head.match(/<title>([\s\S]*?)<\/title>/i); if (t) parts.push(["<title>", t[1]]);
-  for (const m of head.matchAll(/<meta\s[^>]*content="([^"]*)"[^>]*>/gi)) parts.push(["meta " + (m[0].match(/(?:name|property)="([^"]*)"/)?.[1] ?? ""), m[1]]);
+  for (const m of head.matchAll(/<meta\s[^>]*content=(?:"([^"]*)"|'([^']*)')[^>]*>/gi)) parts.push(["meta " + (m[0].match(/(?:name|property)=["']([^"']*)["']/)?.[1] ?? ""), m[1] ?? m[2]]);
   const body = (html.match(/<body[\s\S]*<\/body>/i)?.[0] ?? html)
     .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
-  for (const m of body.matchAll(/\s(aria-label|alt|title|placeholder)="([^"]*)"/gi)) parts.push([m[1], m[2]]);
+  for (const m of body.matchAll(/\s(aria-label|alt|title|placeholder)=(?:"([^"]*)"|'([^']*)')/gi)) parts.push([m[1], m[2] ?? m[3]]);
   parts.push(["text", body.replace(/<[^>]+>/g, " ")]);
   return parts.map(([w, s]) => [w, decode(s).replace(/\s+/g, " ")]);
 }
