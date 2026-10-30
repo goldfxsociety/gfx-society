@@ -23,7 +23,16 @@ function subscribe(cb: () => void) {
 }
 
 /** 7-day checklist; ticks are stored only in this browser's localStorage. */
-export function SevenDayChecklist({ days, storageKey = DEFAULT_KEY }: { days: Day[]; storageKey?: string }) {
+export function SevenDayChecklist({
+  days,
+  storageKey = DEFAULT_KEY,
+  lessonLinkLabel = "Buksan ang lesson →",
+}: {
+  days: Day[];
+  storageKey?: string;
+  /** Per-card lesson link text; defaults to the Taglish copy. */
+  lessonLinkLabel?: string;
+}) {
   const KEY = storageKey;
   const raw = useSyncExternalStore(subscribe, () => read(KEY), () => "[]");
   let done: number[] = [];
@@ -53,7 +62,7 @@ export function SevenDayChecklist({ days, storageKey = DEFAULT_KEY }: { days: Da
           <div className="mt-1 text-sm leading-relaxed text-muted-foreground">{d.body}</div>
           {d.href && (
             <Link href={d.href} className="mt-1 inline-flex min-h-11 items-center text-sm font-medium underline">
-              Buksan ang lesson →
+              {lessonLinkLabel}
             </Link>
           )}
         </li>

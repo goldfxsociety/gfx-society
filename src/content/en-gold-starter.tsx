@@ -26,6 +26,7 @@ export const PATH = [
   { level: "highschool", slug: "position-sizing-and-lot-calculation", title: "5. Position Sizing: The 1% Rule", desc: "How to work out lot size so no more than 1% of your account is at risk per trade." },
 ];
 export const LESSON_NOTE = "Lesson in Taglish for now";
+export const OPEN_LESSON = "Open lesson →";
 
 const JOURNAL = (
   <>

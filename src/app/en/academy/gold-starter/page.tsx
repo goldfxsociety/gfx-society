@@ -7,7 +7,7 @@ import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist } from "@/components/funnel/seven-day-checklist";
 import { LanguageSwitch } from "@/components/academy/language-switch";
 import { StarterCta } from "@/components/academy/starter-cta";
-import { TITLE, DESCRIPTION, HERO, PATH, LESSON_NOTE, DAYS, BOX, RISK_LINE_EN, FAQ, DISCLAIMER, PRIVACY } from "@/content/en-gold-starter";
+import { TITLE, DESCRIPTION, HERO, PATH, LESSON_NOTE, OPEN_LESSON, DAYS, BOX, RISK_LINE_EN, FAQ, DISCLAIMER, PRIVACY } from "@/content/en-gold-starter";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -95,7 +95,7 @@ export default async function EnGoldStarterPage() {
         <p className="text-sm italic text-muted-foreground">
           About 20–30 minutes a day. It doesn&apos;t have to be perfect. Just keep going.
         </p>
-        <SevenDayChecklist days={DAYS} storageKey="gfx_gold_starter_7day_en" />
+        <SevenDayChecklist days={DAYS} storageKey="gfx_gold_starter_7day_en" lessonLinkLabel={OPEN_LESSON} />
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
           <p className="font-semibold">{BOX.title}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 leading-relaxed">
