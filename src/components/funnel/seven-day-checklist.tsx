@@ -4,9 +4,9 @@ import { useSyncExternalStore } from "react";
 
 export type Day = { title: string; body: React.ReactNode; href?: string };
 
-const KEY = "gfx_gold_starter_7day";
+const DEFAULT_KEY = "gfx_gold_starter_7day";
 const listeners = new Set<() => void>();
-function read(): string {
+function read(KEY: string): string {
   try {
     return localStorage.getItem(KEY) ?? "[]";
   } catch {
@@ -23,8 +23,9 @@ function subscribe(cb: () => void) {
 }
 
 /** 7-day checklist; ticks are stored only in this browser's localStorage. */
-export function SevenDayChecklist({ days }: { days: Day[] }) {
-  const raw = useSyncExternalStore(subscribe, read, () => "[]");
+export function SevenDayChecklist({ days, storageKey = DEFAULT_KEY }: { days: Day[]; storageKey?: string }) {
+  const KEY = storageKey;
+  const raw = useSyncExternalStore(subscribe, () => read(KEY), () => "[]");
   let done: number[] = [];
   try {
     done = JSON.parse(raw);

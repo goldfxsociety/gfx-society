@@ -7,6 +7,7 @@ import { FIRST_LESSON_PATH } from "@/config/academy";
 import { NextStepLink } from "@/components/funnel/next-step-link";
 import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-checklist";
+import { LanguageSwitch } from "@/components/academy/language-switch";
 
 // Copy: /workspace/gfx-funnel/drafts/01 + 04 (founder-approved). Broker-neutral:
 // no broker names, logos or partner links on this page (spec 08).
@@ -17,7 +18,10 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  alternates: { canonical: "/academy/gold-starter" },
+  alternates: {
+    canonical: "/academy/gold-starter",
+    languages: { en: "/en/academy/gold-starter", "fil-PH": "/academy/gold-starter", "x-default": "/academy/gold-starter" },
+  },
   openGraph: { title: TITLE, description: DESCRIPTION, url: "/academy/gold-starter", images: ["/opengraph-image"] },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
@@ -175,11 +179,12 @@ async function lessonMinutes(): Promise<Record<string, number>> {
 export default async function GoldStarterPage() {
   const minutes = await lessonMinutes();
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-10">
+    <div lang="fil" className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-10">
       <FirstTouch />
 
       {/* 1. Hero */}
       <section className="flex flex-col gap-3">
+        <LanguageSwitch current="tl" />
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           GFX Society Academy · Libre
         </p>
