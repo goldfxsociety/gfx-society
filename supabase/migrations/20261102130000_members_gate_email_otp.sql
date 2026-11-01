@@ -15,7 +15,10 @@
 --    so email changes and list removals apply immediately (14-day grace only for list removals,
 --    set by import_allowlist).
 --  * Send gate returns a boolean only, rate-limited 3/hour per email hash and 10/hour per IP hash;
---    the app always shows the same neutral message.
+--    the app always shows the same neutral message. The gate only CHECKS the limits; a slot is
+--    used (public.member_code_record) only after Supabase Auth accepted the send. CAPTCHA/Auth
+--    rejections go to a separate per-IP-only bucket (20/hour), so junk tokens from a stranger
+--    can never use up a member's per-email slots.
 --  * Logs keep hashes + timestamps only, deleted after 1 day (daily cron + on every send).
 
 -- Old claim step: no longer used.
@@ -34,6 +37,14 @@ create index if not exists member_code_requests_email on private.member_code_req
 create index if not exists member_code_requests_ip on private.member_code_requests (ip_hash, requested_at);
 revoke all on private.member_code_requests from public, anon, authenticated;
 
+-- Per-IP-only bucket for sends that Supabase Auth rejected (bad/missing CAPTCHA etc.). No email.
+create table if not exists private.member_code_rejects (
+  ip_hash     text not null,
+  rejected_at timestamptz not null default now()
+);
+create index if not exists member_code_rejects_ip on private.member_code_rejects (ip_hash, rejected_at);
+revoke all on private.member_code_rejects from public, anon, authenticated;
+
 -- True only when the current session was established by email OTP.
 create or replace function public.session_is_otp()
 returns boolean language sql stable set search_path = public, pg_temp as $$
@@ -47,17 +58,19 @@ grant execute on function public.session_is_otp() to authenticated;
 
 create or replace function public.purge_member_gate_logs()
 returns jsonb language plpgsql security definer set search_path = private, pg_temp as $$
-declare v int;
+declare v int; r int;
 begin
   with d as (delete from private.member_code_requests where requested_at < now() - interval '1 day' returning 1)
     select count(*) into v from d;
-  return jsonb_build_object('code_requests', v);
+  with d as (delete from private.member_code_rejects where rejected_at < now() - interval '1 day' returning 1)
+    select count(*) into r from d;
+  return jsonb_build_object('code_requests', v, 'code_rejects', r);
 end;
 $$;
 revoke all on function public.purge_member_gate_logs() from public, anon, authenticated;
 grant execute on function public.purge_member_gate_logs() to service_role;
 
--- Server-only send gate. Boolean only; never says why.
+-- Server-only send gate. Boolean only; never says why. Checks limits but uses no slot.
 create or replace function public.member_code_allowed(p_email text, p_ip text)
 returns boolean language plpgsql security definer set search_path = private, pg_temp as $$
 declare
@@ -67,15 +80,31 @@ begin
   perform public.purge_member_gate_logs();
   if coalesce(btrim(p_email), '') = '' then return false; end if;
   if (select count(*) from private.member_code_requests where email_hash = v_eh and requested_at > now() - interval '1 hour') >= 3
-     or (select count(*) from private.member_code_requests where ip_hash = v_ih and requested_at > now() - interval '1 hour') >= 10 then
+     or (select count(*) from private.member_code_requests where ip_hash = v_ih and requested_at > now() - interval '1 hour') >= 10
+     or (select count(*) from private.member_code_rejects where ip_hash = v_ih and rejected_at > now() - interval '1 hour') >= 20 then
     return false;
   end if;
-  insert into private.member_code_requests (email_hash, ip_hash) values (v_eh, v_ih);
   return exists (select 1 from private.member_allowlist where email_hash = v_eh);
 end;
 $$;
 revoke all on function public.member_code_allowed(text, text) from public, anon, authenticated;
 grant execute on function public.member_code_allowed(text, text) to service_role;
+
+-- Server-only, called after the send attempt: accepted -> uses an email + IP slot;
+-- rejected (CAPTCHA/Auth) -> per-IP reject bucket only, never the email bucket.
+create or replace function public.member_code_record(p_email text, p_ip text, p_accepted boolean)
+returns void language plpgsql security definer set search_path = private, pg_temp as $$
+declare v_ih text := private.email_hash('ip:' || coalesce(p_ip, 'unknown'));
+begin
+  if p_accepted is true and coalesce(btrim(p_email), '') <> '' then
+    insert into private.member_code_requests (email_hash, ip_hash) values (private.email_hash(p_email), v_ih);
+  else
+    insert into private.member_code_rejects (ip_hash) values (v_ih);
+  end if;
+end;
+$$;
+revoke all on function public.member_code_record(text, text, boolean) from public, anon, authenticated;
+grant execute on function public.member_code_record(text, text, boolean) to service_role;
 
 -- Effective membership: 'active' | 'grace' | 'none'.
 create or replace function public.my_membership()
@@ -168,4 +197,5 @@ end;
 $$;
 revoke all on function private.import_allowlist(jsonb) from public, anon, authenticated;
 
-comment on table private.member_code_requests is 'GFX members gate: code-send rate limit. Hashes + timestamp only; deleted after 1 day.';
+comment on table private.member_code_requests is 'GFX members gate: code-send rate limit (accepted sends only). Hashes + timestamp only; deleted after 1 day.';
+comment on table private.member_code_rejects is 'GFX members gate: per-IP bucket for rejected sends (CAPTCHA/Auth). IP hash + timestamp only; deleted after 1 day.';

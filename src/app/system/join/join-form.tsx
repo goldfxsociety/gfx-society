@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { Turnstile } from "@/components/members/turnstile";
+import { CaptchaError, Turnstile } from "@/components/members/turnstile";
+import { captchaBlocksSubmit, initialCaptchaState, type CaptchaState } from "@/lib/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { JOIN_COPY as C } from "@/content/members-gate";
 import { joinStep, type JoinState } from "./actions";
@@ -13,6 +14,10 @@ export function JoinForm() {
   const [state, action, pending] = useActionState<JoinState, FormData>(joinStep, { step: "email", email: "", result: "idle" });
   const [consent, setConsent] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Browser-side Turnstile status (flag off: always "off", nothing changes).
+  const [captcha, setCaptcha] = useState<CaptchaState>(initialCaptchaState);
+  const captchaBlocked = captchaBlocksSubmit(captcha);
+  const captchaFailed = captcha.status === "error";
 
   // 60s resend cooldown from the last accepted request (server-side rate limits still apply).
   useEffect(() => {
@@ -89,14 +94,16 @@ export function JoinForm() {
           <div className="mt-2 flex flex-col gap-3">
             <p className="leading-relaxed">{C.noCodeBody}</p>
             <form action={action}>
-              <Turnstile key={`resend-${state.sentAt ?? 0}`} />
+              <Turnstile key={`resend-${state.sentAt ?? 0}`} onState={setCaptcha} />
+              <CaptchaError id="captcha-error-resend" show={captchaFailed} />
               <Button
                 type="submit"
                 name="intent"
                 value="resend"
                 variant="outline"
                 className="h-11 w-full"
-                disabled={pending || cooldown > 0}
+                disabled={pending || cooldown > 0 || captchaBlocked}
+                aria-describedby={captchaFailed ? "captcha-error-resend" : undefined}
               >
                 {C.resend}
               </Button>
@@ -151,8 +158,16 @@ export function JoinForm() {
         </span>
       </label>
       {alert}
-      <Turnstile key={`send-${state.sentAt ?? 0}-${state.result}`} />
-      <Button type="submit" name="intent" value="send" className="h-11 w-full" disabled={pending || !consent}>
+      <Turnstile key={`send-${state.sentAt ?? 0}-${state.result}`} onState={setCaptcha} />
+      <CaptchaError id="captcha-error-send" show={captchaFailed} />
+      <Button
+        type="submit"
+        name="intent"
+        value="send"
+        className="h-11 w-full"
+        disabled={pending || !consent || captchaBlocked}
+        aria-describedby={captchaFailed ? "captcha-error-send" : undefined}
+      >
         {C.sendCode}
       </Button>
       {links}

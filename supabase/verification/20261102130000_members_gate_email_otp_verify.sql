@@ -6,6 +6,10 @@ select bool_and(ok) from (values
   (not has_function_privilege('anon', 'public.member_code_allowed(text,text)', 'execute')),
   (not has_function_privilege('authenticated', 'public.member_code_allowed(text,text)', 'execute')),
   (has_function_privilege('service_role', 'public.member_code_allowed(text,text)', 'execute')),
+  (to_regclass('private.member_code_rejects') is not null),
+  (not has_function_privilege('anon', 'public.member_code_record(text,text,boolean)', 'execute')),
+  (not has_function_privilege('authenticated', 'public.member_code_record(text,text,boolean)', 'execute')),
+  (has_function_privilege('service_role', 'public.member_code_record(text,text,boolean)', 'execute')),
   (not has_function_privilege('authenticated', 'public.purge_member_gate_logs()', 'execute')),
   (has_function_privilege('authenticated', 'public.record_member_consent(text)', 'execute')),
   ((select prosrc like '%session_is_otp%' from pg_proc where oid = 'public.my_membership()'::regprocedure))

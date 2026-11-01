@@ -8,6 +8,7 @@ import { MEMBERS_CONSENT_VERSION } from "@/content/members-gate";
 import { replyFloorMs, requestCode, verifyCode, type OtpDeps, type SendResult, type VerifyResult } from "@/lib/members/otp-flow";
 import { MEMBERS_HOME } from "@/lib/members/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CAPTCHA_FIELD, captchaEnabled, withCaptcha } from "@/lib/auth/captcha";
 import { createClient } from "@/lib/supabase/server";
 
 export type JoinState = { step: "email" | "code"; email: string; result: "idle" | SendResult | VerifyResult; sentAt?: number };
@@ -28,7 +29,13 @@ async function deps(): Promise<OtpDeps> {
       }
       return data === true;
     },
-    captchaRequired: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
+    recordSend: async (email, ip, accepted) => {
+      const admin = createAdminClient();
+      if (!admin) return;
+      const { error } = await admin.rpc("member_code_record", { p_email: email, p_ip: ip, p_accepted: accepted });
+      if (error) console.error("[system/join] member_code_record failed", { code: error.code });
+    },
+    captchaRequired: captchaEnabled(),
     sendOtp: async (email, captchaToken) => {
       // Only reached for allowlisted emails; runs in after(), outside the response path. Uses a
       // cookie-less anon client (6-digit code needs no PKCE verifier cookie). Creates the auth user
@@ -36,7 +43,7 @@ async function deps(): Promise<OtpDeps> {
       const anon = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
         auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
       });
-      const { error } = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: true, ...(captchaToken ? { captchaToken } : {}) },
+      const { error } = await anon.auth.signInWithOtp({ email, options: withCaptcha({ shouldCreateUser: true }, captchaToken),
       });
       if (error) console.error("[system/join] send code failed", { status: error.status });
       return !error;
@@ -76,7 +83,7 @@ export async function joinStep(prev: JoinState, formData: FormData): Promise<Joi
   if (intent === "send" || intent === "resend") {
     const email = String(formData.get("email") ?? prev.email);
     const consent = intent === "resend" ? prev.step === "code" : formData.get("consent") === "on";
-    const token = String(formData.get("cf-turnstile-response") ?? "");
+    const token = String(formData.get(CAPTCHA_FIELD) ?? "");
     const r = await requestCode(await deps(), email, consent, await clientIp(), token);
     return { step: r === "sent" ? "code" : "email", email, result: r, sentAt: r === "sent" ? Date.now() : prev.sentAt };
   }

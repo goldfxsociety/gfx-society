@@ -6,15 +6,18 @@ import type { NextConfig } from "next";
 // - Supabase REST/Auth/Realtime (https + wss on *.supabase.co)
 // Tighten to nonces later if/when we add a nonce-based proxy.
 const isDev = process.env.NODE_ENV !== "production";
+// Cloudflare Turnstile (invisible CAPTCHA) is allowed ONLY when its flag is set at build time.
+// Flag off: the CSP is exactly as before (frame-src 'none', no Cloudflare origin).
+const TURNSTILE = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? " https://challenges.cloudflare.com" : "";
 
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com${TURNSTILE}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com",
-  "frame-src 'none'",
+  TURNSTILE ? `frame-src${TURNSTILE}` : "frame-src 'none'",
   "media-src 'self'",
   "worker-src 'self' blob:",
   "object-src 'none'",

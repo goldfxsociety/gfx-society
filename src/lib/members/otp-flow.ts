@@ -6,8 +6,13 @@ export type SendResult = "sent" | "consent_required" | "invalid_email" | "error"
 export type VerifyResult = "active" | "wrong_code" | "expired_code" | "not_verified" | "error";
 
 export type OtpDeps = {
-  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). */
+  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). Uses no slot. */
   codeAllowed: (email: string, ip: string) => Promise<boolean | null>;
+  /**
+   * service_role RPC public.member_code_record, after the send attempt: accepted -> email + IP slot;
+   * rejected (CAPTCHA/Auth) -> per-IP reject bucket only. Optional; errors are logged, never surfaced.
+   */
+  recordSend?: (email: string, ip: string, accepted: boolean) => Promise<void>;
   /** signInWithOtp; captchaToken is forwarded to Supabase Auth (Turnstile) when present. */
   sendOtp: (email: string, captchaToken?: string) => Promise<boolean>;
   /** True when the Turnstile flag (NEXT_PUBLIC_TURNSTILE_SITE_KEY) is set: a token is then required. */
@@ -62,13 +67,24 @@ async function requestCodeInner(
   // Design: a CAPTCHA failure shows the same neutral screen (padded), logged server-side only.
   if (deps.captchaRequired && (!captchaToken || captchaToken.length > 4096)) {
     console.error("[system/join] captcha token missing or invalid; no code sent");
+    deps.defer(async () => deps.recordSend?.(email, ip, false));
     return "sent";
   }
   const allowed = await deps.codeAllowed(email, ip);
   if (allowed === null) return "error"; // gate not configured / RPC failed: never send blindly
   // Timing (QA P2-B): the send is never awaited in the response path, so listed and unlisted
   // replies cost the same; failures are logged by the deferred task and never surfaced.
-  if (allowed) deps.defer(() => deps.sendOtp(email, deps.captchaRequired ? captchaToken : undefined));
+  // P3-T: the slot is used only after Supabase accepts; rejections go to the per-IP reject bucket.
+  if (allowed)
+    deps.defer(async () => {
+      let ok = false;
+      try {
+        ok = await deps.sendOtp(email, deps.captchaRequired ? captchaToken : undefined);
+      } finally {
+        await deps.recordSend?.(email, ip, ok);
+      }
+      return ok;
+    });
   return "sent";
 }
 

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SIGNUP_CONSENT_VERSION } from "@/config/legal";
+import { isCaptchaError, withCaptcha } from "@/lib/auth/captcha";
 
 export type SignupInput = {
   displayName: string;
@@ -11,6 +12,8 @@ export type SignupInput = {
   experienceLevel: string;
   consentRequired: boolean;
   consentMarketing: boolean;
+  /** Turnstile token (only sent when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set). */
+  captchaToken?: string;
 };
 
 export type SignupResult =
@@ -49,7 +52,7 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
+      options: withCaptcha({
         data: {
           display_name: String(input.displayName ?? "").slice(0, 100),
           experience_level: experienceLevel,
@@ -59,7 +62,7 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
           consented_at: new Date().toISOString(),
         },
         ...(origin ? { emailRedirectTo: `${origin}/auth/callback` } : {}),
-      },
+      }, input.captchaToken),
     });
     if (error) {
       return { ok: false, error: friendlyAuthError(error.message) };
@@ -72,6 +75,8 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
 
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
+  // Supabase CAPTCHA rejection: same generic message as other temporary failures.
+  if (isCaptchaError(message)) return "We couldn't create your account just now. Please try again in a minute.";
   if (m.includes("already registered") || m.includes("already exists")) {
     return "An account with this email already exists. Try logging in instead.";
   }
