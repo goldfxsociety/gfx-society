@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { MEMBERS_IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { JOIN_COPY as C } from "@/content/members-gate";
 import { getMembership } from "@/lib/members/membership";
 import { createClient } from "@/lib/supabase/server";
@@ -31,7 +31,7 @@ export default async function JoinPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    body = user?.email_confirmed_at ? <JoinForm ibDisclosure={IB_DISCLOSURE_TEXT} /> : <p className="text-sm">{C.verifyEmailFirst}</p>;
+    body = user?.email_confirmed_at ? <JoinForm ibDisclosure={MEMBERS_IB_DISCLOSURE_TEXT} /> : <p className="text-sm">{C.verifyEmailFirst}</p>;
   }
 
   return (

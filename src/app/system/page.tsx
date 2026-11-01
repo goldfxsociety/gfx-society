@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { SYSTEM_COPY as C } from "@/content/members-gate";
-import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { MEMBERS_IB_DISCLOSURE_TEXT } from "@/config/partners";
 
 export const metadata: Metadata = { title: "GFX Trading System | GFX Society" };
 
@@ -16,7 +16,7 @@ export default function SystemPage() {
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{C.whoTitle}</h2>
         <p className="text-sm leading-relaxed">{C.who}</p>
-        <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
+        <p className="text-xs text-muted-foreground">{MEMBERS_IB_DISCLOSURE_TEXT}</p>
       </section>
       <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full sm:w-auto")}>
         {C.joinCta}

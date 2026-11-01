@@ -25,6 +25,13 @@ export type Partner = {
 export const IB_DISCLOSURE_TEXT =
   "GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose.";
 
+/**
+ * Members-area (/system, /system/join) IB disclosure. Approved per Jarvis as Ben's delegate, 2 Nov.
+ * Members-only; the site-wide IB_DISCLOSURE_TEXT above is unchanged.
+ */
+export const MEMBERS_IB_DISCLOSURE_TEXT =
+  "Disclosure: GFX may earn a commission from ACCM based on clients' trading activity. Hindi mo kailangang mag-trade o mag-deposit para sumali.";
+
 export const NEUTRAL_LICENSING_TEXT =
   "Check the broker's licensing for your country before opening an account.";
 
