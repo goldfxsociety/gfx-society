@@ -29,12 +29,12 @@ export function JoinForm() {
     : state.result === "error" ? C.error
     : null;
   const alert = msg && (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-start gap-1">
       <p className="text-sm text-destructive" role="alert">
         {msg}
       </p>
       {state.result === "not_verified" && (
-        <Link href="/academy" className="text-sm underline">
+        <Link href="/academy" className="text-sm underline inline-flex min-h-11 items-center py-2">
           {C.notVerifiedAcademyLink}
         </Link>
       )}
@@ -49,11 +49,11 @@ export function JoinForm() {
   );
 
   const links = (
-    <div className="flex flex-col gap-2 text-sm">
-      <Link href="/academy" className="underline">
+    <div className="flex flex-col items-start text-sm">
+      <Link href="/academy" className="underline inline-flex min-h-11 items-center py-2">
         {C.academyLink}
       </Link>
-      <Link href="/accm" className="text-xs text-muted-foreground underline">
+      <Link href="/accm" className="text-xs text-muted-foreground underline inline-flex min-h-11 items-center py-2">
         {C.accmLink}
       </Link>
     </div>
@@ -143,7 +143,7 @@ export function JoinForm() {
         />
         <span>
           {C.consentCheckbox}{" "}
-          <Link href="/privacy" className="underline">
+          <Link href="/privacy" className="underline inline-flex min-h-11 items-center py-2">
             {C.privacyLink}
           </Link>
         </span>

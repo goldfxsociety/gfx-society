@@ -100,8 +100,9 @@ begin
   if v_uid is null or not public.session_is_otp() then
     return 'none';
   end if;
-  if coalesce(btrim(p_version), '') = '' or length(p_version) > 20 then
-    raise exception 'consent version required' using errcode = '22023';
+  -- Only the current consent text version is accepted (keep in sync with MEMBERS_CONSENT_VERSION).
+  if p_version is distinct from 'join-v2' then
+    raise exception 'unknown consent version' using errcode = '22023';
   end if;
   select a.role into v_role from private.member_allowlist a join auth.users u on u.id = v_uid
    where a.email_hash = private.email_hash(u.email);

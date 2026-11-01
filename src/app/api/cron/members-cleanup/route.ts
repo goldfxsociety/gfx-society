@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -8,9 +9,15 @@ export const dynamic = "force-dynamic";
  * Protected by CRON_SECRET (Vercel sends "Authorization: Bearer <CRON_SECRET>").
  * The same purge also runs on every code request, so the 1-day retention holds without the cron.
  */
+function secretMatches(header: string | null, secret: string): boolean {
+  const a = Buffer.from(header ?? "");
+  const b = Buffer.from(`Bearer ${secret}`);
+  return a.length === b.length && timingSafeEqual(a, b); // length guard first (timingSafeEqual throws otherwise)
+}
+
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || !secretMatches(request.headers.get("authorization"), secret)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const admin = createAdminClient();

@@ -1,9 +1,11 @@
 "use server";
 
+import { createClient as createPlainClient } from "@supabase/supabase-js";
+import { after } from "next/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { MEMBERS_CONSENT_VERSION } from "@/content/members-gate";
-import { requestCode, verifyCode, type OtpDeps, type SendResult, type VerifyResult } from "@/lib/members/otp-flow";
+import { replyFloorMs, requestCode, verifyCode, type OtpDeps, type SendResult, type VerifyResult } from "@/lib/members/otp-flow";
 import { MEMBERS_HOME } from "@/lib/members/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -27,8 +29,13 @@ async function deps(): Promise<OtpDeps> {
       return data === true;
     },
     sendOtp: async (email) => {
-      // Only reached for allowlisted emails. Creates the auth user if needed (passwordless).
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      // Only reached for allowlisted emails; runs in after(), outside the response path. Uses a
+      // cookie-less anon client (6-digit code needs no PKCE verifier cookie). Creates the auth user
+      // if needed (passwordless).
+      const anon = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+        auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
+      });
+      const { error } = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
       if (error) console.error("[system/join] send code failed", { status: error.status });
       return !error;
     },
@@ -45,6 +52,15 @@ async function deps(): Promise<OtpDeps> {
       }
       return typeof data === "string" ? data : null;
     },
+    defer: (work) =>
+      after(async () => {
+        try {
+          await work();
+        } catch {
+          console.error("[system/join] deferred send failed");
+        }
+      }),
+    minReplyMs: replyFloorMs,
   };
 }
 

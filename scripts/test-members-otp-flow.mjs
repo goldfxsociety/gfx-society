@@ -1,14 +1,17 @@
 // Offline unit tests for src/lib/members/otp-flow.ts + otp-amr.ts (Node >= 22, type stripping).
 // Run: node scripts/test-members-otp-flow.mjs
 import assert from "node:assert/strict";
-import { requestCode, verifyCode } from "../src/lib/members/otp-flow.ts";
+import { replyFloorMs, requestCode, verifyCode } from "../src/lib/members/otp-flow.ts";
 import { sessionIsOtp } from "../src/lib/members/otp-amr.ts";
 const LISTED = "member@example.test";
 const mk = (o = {}) => {
   const log = [];
-  return { log, deps: {
+  const deferred = [];
+  return { log, deferred, run: () => Promise.all(deferred.map((w) => w())), deps: {
+    defer: (w) => deferred.push(w),
+    minReplyMs: () => o.floor ?? 0,
     codeAllowed: async (e, ip) => { log.push(["gate", e, ip]); return o.gate === undefined ? e === LISTED : o.gate; },
-    sendOtp: async (e) => { log.push(["send", e]); return true; },
+    sendOtp: async (e) => { if (o.sendMs) await new Promise((r) => setTimeout(r, o.sendMs)); if (o.sendThrows) throw new Error("smtp down"); log.push(["send", e]); return true; },
     verifyOtp: async (e, t) => { log.push(["verify", e, t]); return o.verify ?? (t === "123456" ? "ok" : "wrong"); },
     recordConsent: async () => { log.push(["consent"]); return o.consent === undefined ? "active" : o.consent; },
   } };
@@ -17,7 +20,22 @@ let n = 0;
 const t = async (name, fn) => { await fn(); n++; console.log("PASS", name); };
 await t("no consent -> nothing called", async () => { const m = mk(); assert.equal(await requestCode(m.deps, LISTED, false, "1.1.1.1"), "consent_required"); assert.equal(m.log.length, 0); });
 await t("bad email -> invalid", async () => { assert.equal(await requestCode(mk().deps, "nope", true, "x"), "invalid_email"); });
-await t("listed (normalized) -> code sent, neutral 'sent'", async () => { const m = mk(); assert.equal(await requestCode(m.deps, "  Member@Example.TEST ", true, "1.1.1.1"), "sent"); assert.deepEqual(m.log.at(-1), ["send", LISTED]); });
+await t("listed (normalized) -> code sent after the reply (deferred), neutral 'sent'", async () => { const m = mk(); assert.equal(await requestCode(m.deps, "  Member@Example.TEST ", true, "1.1.1.1"), "sent"); assert.ok(!m.log.some((l) => l[0] === "send")); assert.equal(m.deferred.length, 1); await m.run(); assert.deepEqual(m.log.at(-1), ["send", LISTED]); });
+await t("send failure never reaches the reply", async () => { const m = mk({ sendThrows: true }); assert.equal(await requestCode(m.deps, LISTED, true, "1"), "sent"); await assert.rejects(m.run()); });
+await t("timing: listed (slow 800ms send) and unlisted replies take the same padded time", async () => {
+  const time = async (email) => { const m = mk({ floor: 300, sendMs: 800 }); const s = performance.now(); await requestCode(m.deps, email, true, "1"); return performance.now() - s; };
+  const L = [], U = [];
+  for (let i = 0; i < 5; i++) { L.push(await time(LISTED)); U.push(await time("x@example.test")); }
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  console.log(`   listed avg ${avg(L).toFixed(1)}ms, unlisted avg ${avg(U).toFixed(1)}ms`);
+  assert.ok(Math.min(...L, ...U) >= 295, "every reply is padded to the floor");
+  assert.ok(Math.abs(avg(L) - avg(U)) < 25, "listed vs unlisted differ by < 25ms");
+  assert.ok(Math.max(...L) < 600, "slow send is not awaited");
+});
+await t("padding applies to every outcome (no consent / invalid / error)", async () => {
+  for (const [args, o] of [[[LISTED, false], {}], [["nope", true], {}], [[LISTED, true], { gate: null }]]) { const m = mk({ ...o, floor: 150 }); const s = performance.now(); await requestCode(m.deps, args[0], args[1], "1"); assert.ok(performance.now() - s >= 145); }
+});
+await t("replyFloorMs is ~1.2s with jitter", async () => { for (let i = 0; i < 50; i++) { const f = replyFloorMs(); assert.ok(f >= 1200 && f < 1500); } });
 await t("unlisted -> NO send, same neutral 'sent'", async () => { const m = mk(); assert.equal(await requestCode(m.deps, "x@example.test", true, "1.1.1.1"), "sent"); assert.ok(!m.log.some((l) => l[0] === "send")); });
 await t("gate unavailable -> error, never sends", async () => { const m = mk({ gate: null }); assert.equal(await requestCode(m.deps, LISTED, true, "1"), "error"); assert.ok(!m.log.some((l) => l[0] === "send")); });
 await t("wrong code", async () => { const m = mk(); assert.equal(await verifyCode(m.deps, LISTED, "000000"), "wrong_code"); assert.ok(!m.log.some((l) => l[0] === "consent")); });
