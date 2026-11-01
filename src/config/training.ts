@@ -20,8 +20,15 @@ export const BUY_ENABLED = REFUND_COPY.tl.trim().length > 0;
 
 /** B6: ideas + chat ship in slices 3–4. */
 export const COMING_LATER_NOTE = "(Live Market Breakdowns at chat: coming in a later update.)";
-export const INCLUDED_NOTE =
-  "Kasama sa kahit anong paid GFX course: lifetime access sa live Gold Market Breakdowns (London at NY sessions) at sa member chat. One-time payment, walang monthly fee.";
+export const INCLUDED_NOTE = "Paid courses: one-time payment, walang monthly fee. Kasama lang ang nakalista sa bawat course.";
+
+/** Design, 2 Nov (QA P2): optional muted note under the inclusions list; never next to the price or Pay. */
+export const COMING_LATER_COURSE_NOTE =
+  "Paparating pa: Market Breakdowns at member chat para sa verified members. Hindi ito kasama sa presyo ng course na ito.";
+
+export const peso = (n: number) => `₱${Number(n).toLocaleString("en-PH")}`;
+/** Short refund form for /courses cards (Design, 2 Nov). Full REFUND_COPY stays on /pay and the course page. */
+export const cardPriceLine = (pricePhp: number) => `${peso(pricePhp)} · one-time · Non-refundable`;
 
 export const PLACEMENT_PASS_PCT = 80;
 export const PLACEMENT_COOLDOWN_HOURS = 24;
@@ -54,8 +61,9 @@ export const CATALOG: CatalogCourse[] = [
     forWho: "Basahin ang Gold chart gamit ang H4/H1 at mag-plan bago pumasok.",
     included: [
       "5 modules: Market Structure, Supply and Demand, EMA Pullback (20/50), Fibonacci, Trade Management",
-      "Capstone: 3 complete trade plans",
-      'Badge "Gold Basics Complete" + lifetime live Market Breakdowns at chat',
+      "Lessons with a quiz per lesson",
+      "Capstone self-check: 3 complete trade plans",
+      "Pag-unlock ng Gold Advanced Setups",
     ],
     modules: ["Market Structure", "Supply and Demand", "EMA Pullback (20/50)", "Fibonacci", "Trade Management"],
   },
@@ -66,8 +74,8 @@ export const CATALOG: CatalogCourse[] = [
     forWho: "Session at liquidity setups para sa London at NY, kasama ang news discipline.",
     included: [
       "6 modules: SMC and ICT Concepts, ORB, First Candle Theory, Asian Range Breakout, Session Liquidity Sweep, News Trading Discipline",
-      "Capstone: session playbook",
-      'Badge "Gold Advanced Complete" + lifetime live Market Breakdowns at chat',
+      "Lessons with a quiz per lesson",
+      "Capstone self-check: session playbook",
     ],
     modules: [
       "SMC and ICT Concepts",

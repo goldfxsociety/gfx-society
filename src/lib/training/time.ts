@@ -10,3 +10,12 @@ export function formatPht(iso: string | null | undefined): string {
   }).format(new Date(iso));
   return `${s} PHT`;
 }
+
+/** Date only, e.g. "Nov 9, 2026 PHT". */
+export function formatPhtDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const s = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric" }).format(
+    new Date(iso),
+  );
+  return `${s} PHT`;
+}

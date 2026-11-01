@@ -239,14 +239,20 @@ grant execute on function public.submit_lesson_quiz(uuid, integer[]) to authenti
 
 create or replace function public.set_practice_done(p_lesson_id uuid, p_done boolean)
 returns void language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_has_quiz boolean;
 begin
   if not private.lesson_access(p_lesson_id) then raise exception 'no access' using errcode = '42501'; end if;
-  insert into public.training_progress as tp (user_id, lesson_id, practice_done)
-  values (auth.uid(), p_lesson_id, p_done)
+  -- QA P1 (B-AC2): "has a quiz" comes from private.training_quizzes, never from a missing score.
+  -- Quiz lessons complete only with practice done AND a submitted passing score (>= 80%).
+  v_has_quiz := exists (select 1 from private.training_quizzes q where q.lesson_id = p_lesson_id
+                        and jsonb_array_length(q.questions) > 0);
+  insert into public.training_progress as tp (user_id, lesson_id, practice_done, completed_at)
+  values (auth.uid(), p_lesson_id, p_done, case when p_done and not v_has_quiz then now() end)
   on conflict (user_id, lesson_id) do update set practice_done = excluded.practice_done, updated_at = now(),
-    completed_at = case when excluded.practice_done and (tp.quiz_total is null or tp.quiz_score * 5 >= tp.quiz_total * 4)
+    completed_at = case when excluded.practice_done
+                             and (not v_has_quiz
+                                  or (tp.quiz_total is not null and tp.quiz_total > 0 and tp.quiz_score * 5 >= tp.quiz_total * 4))
                         then coalesce(tp.completed_at, now()) else null end;
-  -- lessons without a quiz complete on practice alone
 end $$;
 revoke all on function public.set_practice_done(uuid, boolean) from public, anon;
 grant execute on function public.set_practice_done(uuid, boolean) to authenticated;
@@ -314,7 +320,9 @@ grant execute on function public.course_complete(uuid) to authenticated;
 -- Placement quiz (B9): questions per course, answers private; pass >= 80%; retry after 24 h cooldown.
 create table if not exists private.placement_quizzes (
   course_id uuid primary key references public.training_courses(id) on delete cascade,
-  questions jsonb not null                    -- [{q, options[], answer_index, explain}]
+  questions jsonb not null,                   -- [{q, options[], answer_index, explain}]
+  -- QA P3: a row here IS the published placement quiz, so it must have exactly 10 questions.
+  constraint placement_quizzes_ten check (jsonb_typeof(questions) = 'array' and jsonb_array_length(questions) = 10)
 );
 revoke all on private.placement_quizzes from public, anon, authenticated;
 
@@ -397,7 +405,7 @@ begin
   v_next := private.placement_next_at(auth.uid(), c.id);
   if v_next > now() then return jsonb_build_object('cooldown_until', v_next); end if;
   select questions into v_q from private.placement_quizzes where course_id = c.id;
-  if v_q is null or jsonb_array_length(v_q) = 0 then raise exception 'no quiz content' using errcode = 'P0002'; end if;
+  if v_q is null or jsonb_array_length(v_q) <> 10 then raise exception 'no quiz content' using errcode = 'P0002'; end if;
   v_total := jsonb_array_length(v_q);
   for i in 0 .. v_total - 1 loop
     if p_answers is not null and coalesce(array_length(p_answers, 1), 0) > i and p_answers[i + 1] = (v_q->i->>'answer_index')::int then
@@ -511,7 +519,9 @@ begin
       decided_at = null, decided_by = null, reject_reason = null, receipt_deleted_at = null
     where id = p.id returning id into v_id;
   end if;
-  return jsonb_build_object('id', v_id, 'payment_code', private.payment_code(v_uid, c.id), 'flags', to_jsonb(v_flags),
+  -- QA P3: duplicate_ref / duplicate_image are admin-only (no oracle about other members' submissions).
+  return jsonb_build_object('id', v_id, 'payment_code', private.payment_code(v_uid, c.id),
+                            'flags', to_jsonb(array(select f from unnest(v_flags) f where f in ('amount_mismatch', 'check_format'))),
                             'old_receipt_path', case when p.receipt_path is distinct from p_receipt_path then p.receipt_path end);
 end $$;
 revoke all on function public.submit_course_purchase(text, numeric, text, text, text) from public, anon;
@@ -582,10 +592,11 @@ revoke all on function public.mark_receipt_deleted(uuid) from public, anon;
 grant execute on function public.mark_receipt_deleted(uuid) to authenticated;
 
 -- ---------------------------------------------------------------- pending summary (Jarvis poll)
--- Called by GET /api/admin/pending-summary with the anon key AFTER the route checked the bearer token
--- against env (constant time). The RPC re-checks sha256(token) against private.app_settings
--- ('payments_summary_token_sha256', set by Ben at go-live) and rate-limits globally, so the anon
--- grant leaks nothing without the token. Returns counts only.
+-- Called by GET /api/admin/pending-summary with the anon key. The route passes the bearer token through
+-- (no env check in the route); this RPC checks sha256(token) against private.app_settings
+-- ('payments_summary_token_sha256', set by Ben at go-live). Returns counts only.
+-- QA P2: the token is checked FIRST. A valid token is never counted or rate-limited. Only failed
+-- attempts are counted, per client IP (60 per hour), so junk calls can't lock out the real token.
 create table if not exists private.api_rate_limits (
   bucket text not null,
   window_start timestamptz not null,
@@ -594,24 +605,29 @@ create table if not exists private.api_rate_limits (
 );
 revoke all on private.api_rate_limits from public, anon, authenticated;
 
-create or replace function public.pending_payments_summary(p_token text)
+drop function if exists public.pending_payments_summary(text);
+create or replace function public.pending_payments_summary(p_token text, p_client_ip text default null)
 returns jsonb language plpgsql volatile security definer set search_path = public, extensions, pg_temp as $$
-declare v_hash text; v_win timestamptz := date_trunc('hour', now()); v_hits int;
+declare v_hash text; v_win timestamptz := date_trunc('hour', now()); v_hits int; v_ip text; v_hdr json;
 begin
-  insert into private.api_rate_limits as rl (bucket, window_start, hits) values ('pending_summary', v_win, 1)
+  select value into v_hash from private.app_settings where key = 'payments_summary_token_sha256';
+  if v_hash is not null and p_token is not null and length(p_token) <= 512
+     and encode(extensions.digest(p_token, 'sha256'), 'hex') = lower(v_hash) then
+    return (select jsonb_build_object('pending_count', count(*), 'oldest_pending_at', min(submitted_at))
+            from public.course_purchases where status = 'pending');
+  end if;
+  -- Failed attempt: count per IP. Direct RPC calls use PostgREST's forwarded IP; the route passes the caller's IP.
+  begin v_hdr := nullif(current_setting('request.headers', true), '')::json; exception when others then v_hdr := null; end;
+  v_ip := left(coalesce(nullif(trim(p_client_ip), ''),
+                        nullif(trim(split_part(v_hdr->>'x-forwarded-for', ',', 1)), ''), 'unknown'), 64);
+  insert into private.api_rate_limits as rl (bucket, window_start, hits) values ('pending_summary_fail:' || v_ip, v_win, 1)
   on conflict (bucket, window_start) do update set hits = rl.hits + 1 returning hits into v_hits;
   delete from private.api_rate_limits where window_start < now() - interval '1 day';
   if v_hits > 60 then return jsonb_build_object('error', 'rate_limited'); end if;
-  select value into v_hash from private.app_settings where key = 'payments_summary_token_sha256';
-  if v_hash is null or p_token is null
-     or encode(extensions.digest(p_token, 'sha256'), 'hex') <> lower(v_hash) then
-    return jsonb_build_object('error', 'unauthorized');
-  end if;
-  return (select jsonb_build_object('pending_count', count(*), 'oldest_pending_at', min(submitted_at))
-          from public.course_purchases where status = 'pending');
+  return jsonb_build_object('error', 'unauthorized');
 end $$;
-revoke all on function public.pending_payments_summary(text) from public;
-grant execute on function public.pending_payments_summary(text) to anon, authenticated;
+revoke all on function public.pending_payments_summary(text, text) from public;
+grant execute on function public.pending_payments_summary(text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------- storage (private buckets)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

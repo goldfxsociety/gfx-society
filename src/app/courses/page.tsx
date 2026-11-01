@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { COMING_LATER_NOTE, CONTACT_EMAIL, INCLUDED_NOTE } from "@/config/training";
+import { cardPriceLine, COMING_LATER_NOTE, INCLUDED_NOTE } from "@/config/training";
 import { getAllCourseViews, nextLesson, type CourseView } from "@/lib/training/courses";
 import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
+import { GraceBanner } from "@/components/training/grace-banner";
 import { MembersFooter } from "@/components/training/members-footer";
 
 export const metadata: Metadata = { title: "Courses | GFX Trading System" };
@@ -58,7 +59,7 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
       return (
         <>
           <p className="text-sm text-muted-foreground">
-            Natanggap namin ang receipt mo noong {formatPht(v.pay.submitted_at)}. Check /account for updates.
+            Natanggap namin ang receipt mo noong {formatPht(v.pay.submitted_at)}. Tingnan ang status sa My courses.
           </p>
           <Link href="/account" className={style(false)}>View status</Link>
         </>
@@ -92,7 +93,7 @@ const CHIP: Record<CourseView["state"], [string, "neutral" | "amber" | "green" |
   free_new: ["Free", "gold"],
   free_progress: ["In progress", "gold"],
   free_done: ["Done ✓", "green"],
-  not_owned: ["₱2,000 one-time", "neutral"],
+  not_owned: ["Available", "neutral"],
   pending: ["Pending review", "amber"],
   rejected: ["Needs re-upload", "red"],
   owned: ["Owned ✓", "green"],
@@ -114,9 +115,7 @@ export default async function CoursesPage() {
       </header>
 
       {membership === "grace" && (
-        <p role="status" className="rounded-lg border border-amber-500/60 p-3 text-sm">
-          Hindi na namin ma-verify ang membership mo. May access ka pa sa ngayon. Kung mali ito, email {CONTACT_EMAIL}.
-        </p>
+        <GraceBanner />
       )}
 
       <section className="rounded-lg border border-border bg-card p-4 text-sm leading-relaxed">
@@ -130,16 +129,16 @@ export default async function CoursesPage() {
           return (
             <li key={v.catalog.slug}>
               <article
-                aria-label={`${v.catalog.title}, ${v.catalog.priceLine}, ${chip?.[0] ?? "members only"}`}
+                aria-label={`${v.catalog.title}, ${v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}, ${chip?.[0] ?? "members only"}`}
                 className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-bold">
-                    <Link href={`/courses/${v.catalog.slug}`} className="hover:underline">{v.catalog.title}</Link>
+                    <Link href={`/courses/${v.catalog.slug}`} className="inline-flex min-h-11 items-center hover:underline">{v.catalog.title}</Link>
                   </h2>
                   {chip && <Chip tone={chip[1]}>{chip[0]}</Chip>}
                 </div>
-                <p className="text-sm font-semibold">{v.catalog.priceLine}</p>
+                <p className="text-sm font-semibold">{v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}</p>
                 <p className="text-sm">{v.catalog.forWho}</p>
                 <ul className="list-disc pl-5 text-sm text-muted-foreground">
                   {v.catalog.included.map((i) => (

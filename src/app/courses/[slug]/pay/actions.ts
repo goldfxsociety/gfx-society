@@ -73,7 +73,35 @@ export async function submitReceipt(input: {
     return { ok: false, error: "network" };
   }
   const res = data as { payment_code: string; old_receipt_path: string | null };
-  // B4: re-upload replaces the old receipt; delete the old file (owner may delete unreferenced files).
-  if (res.old_receipt_path) await supabase.storage.from("receipts").remove([res.old_receipt_path]);
+  // B4: re-upload replaces the old receipt. QA P3: retry a failed delete once, then log it; the orphan
+  // sweep below also picks it up on the member's next submit.
+  if (res.old_receipt_path) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error: rmErr } = await supabase.storage.from("receipts").remove([res.old_receipt_path]);
+      if (!rmErr) break;
+      if (attempt === 2) console.error("[pay] old receipt delete failed; will retry on next submit", { code: rmErr.name });
+    }
+  }
+  await sweepOrphanReceipts(supabase, user.id, path);
   return { ok: true, paymentCode: res.payment_code };
+}
+
+/**
+ * QA P3: remove files in the member's own receipts folder that no purchase points at (abandoned uploads,
+ * failed deletes). Storage RLS lets the owner delete only unreferenced files, so this can't touch a live receipt.
+ */
+async function sweepOrphanReceipts(supabase: Awaited<ReturnType<typeof createClient>>, uid: string, keep: string) {
+  try {
+    const { data: files } = await supabase.storage.from("receipts").list(uid, { limit: 100 });
+    if (!files?.length) return;
+    const { data: rows } = await supabase.from("course_purchases").select("receipt_path").eq("user_id", uid);
+    const live = new Set([keep, ...(rows ?? []).map((r) => r.receipt_path).filter(Boolean)]);
+    const orphans = files.map((f) => `${uid}/${f.name}`).filter((p) => !live.has(p));
+    if (orphans.length) {
+      const { error } = await supabase.storage.from("receipts").remove(orphans);
+      if (error) console.error("[pay] orphan sweep failed", { count: orphans.length });
+    }
+  } catch {
+    console.error("[pay] orphan sweep error");
+  }
 }

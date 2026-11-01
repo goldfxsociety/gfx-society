@@ -26,8 +26,8 @@ const EXT: Record<string, "jpg" | "png" | "pdf"> = { "image/jpeg": "jpg", "image
 const peso = (n: number) => `₱${n.toLocaleString("en-PH")}`;
 
 const SERVER_ERR: Record<string, string> = {
-  duplicate: "May pending o approved ka nang purchase para sa course na ito. Tingnan sa /account.",
-  network: "Hindi na-submit. Hindi ka pa nasisingil ulit; subukan ulit.",
+  duplicate: "May pending o approved ka nang purchase para sa course na ito. Tingnan ang status sa My courses.",
+  network: "Hindi na-submit ang receipt. Subukan ulit.",
   upload: "Hindi na-upload. Check ang connection mo at subukan ulit.",
   type: "JPG, PNG o PDF lang ang puwede.",
   size: "Masyadong malaki ang file (max 5 MB). Subukan ang screenshot imbes na photo.",
@@ -192,7 +192,7 @@ export function PayForm(p: Props) {
         </p>
         <p className="text-sm">GCash Ref No.: {normalizeGcashRef(ref)}</p>
         <p className="text-sm">Ive-verify ni GFX ang bayad mo within {APPROVAL_TIME}.</p>
-        <p className="text-sm text-muted-foreground">Wala pa kaming email updates. Check /account para sa status.</p>
+        <p className="text-sm text-muted-foreground">Wala pa kaming email updates. Tingnan ang status sa My courses.</p>
         <Link href="/account" className={cn(buttonVariants({ variant: "default" }), "min-h-11 w-full")}>
           Go to My courses →
         </Link>
@@ -224,7 +224,7 @@ export function PayForm(p: Props) {
             {p.paymentCode}
           </span>
           <Button type="button" variant="outline" className="min-h-11" onClick={() => void copy()}>
-            Copy
+            Copy code
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -289,13 +289,13 @@ export function PayForm(p: Props) {
             value={ref}
             onChange={(e) => setRef(e.target.value)}
             aria-invalid={Boolean(errors.ref)}
-            aria-describedby="h-ref w-ref"
+            aria-describedby={["h-ref", "w-ref", errors.ref && "e-ref"].filter(Boolean).join(" ")}
             className="min-h-11 rounded-md border border-border bg-background px-3"
           />
           <p id="h-ref" className="text-xs text-muted-foreground">
             13 digits, nasa GCash receipt (e.g. 1234 567 890123)
           </p>
-          {errors.ref && <p className="text-sm text-red-300">{errors.ref}</p>}
+          {errors.ref && <p id="e-ref" className="text-sm text-red-300">{errors.ref}</p>}
           {/* Soft check only: never blocks submit (Jarvis + Design, 2 Nov). Admin still gets the check_format flag. */}
           <p id="w-ref" aria-live="polite" className="text-sm text-amber-300">
             {!errors.ref && refLooksOff ? "Karaniwang 13 digits ang GCash Ref No. Paki-check ulit bago mag-submit." : ""}

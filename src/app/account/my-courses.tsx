@@ -1,15 +1,19 @@
 import Link from "next/link";
-import { APPROVAL_TIME, STATUS_SURFACE_NOTE } from "@/config/training";
+import { APPROVAL_TIME, CONTACT_EMAIL, STATUS_SURFACE_NOTE } from "@/config/training";
 import { getAllCourseViews } from "@/lib/training/courses";
 import { formatPht } from "@/lib/training/time";
+import { GraceBanner } from "@/components/training/grace-banner";
 import { Chip } from "@/components/training/chip";
 
 /** Payment status surface (no email updates yet). Members only; non-members see nothing. */
 export async function MyCourses() {
   const { membership, views } = await getAllCourseViews();
   if (membership === "none") return null;
+  const grace = membership === "grace";
   const rows = views.filter((v) => ["free_new", "free_progress", "free_done", "pending", "rejected", "owned"].includes(v.state));
   return (
+    <>
+    {grace && <GraceBanner />}
     <section aria-labelledby="my-courses-h" className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <h2 id="my-courses-h" className="text-lg font-semibold">My courses</h2>
       <p className="text-sm text-muted-foreground">{STATUS_SURFACE_NOTE}</p>
@@ -28,7 +32,7 @@ export async function MyCourses() {
                 {v.state === "pending" ? (
                   <Chip tone="amber">Pending review</Chip>
                 ) : v.state === "rejected" ? (
-                  <Chip tone="red">Hindi na-approve</Chip>
+                  <Chip tone="red">Needs re-upload</Chip>
                 ) : v.state === "owned" ? (
                   <Chip tone="green">Unlocked</Chip>
                 ) : (
@@ -44,9 +48,12 @@ export async function MyCourses() {
               {v.state === "pending" && <p>Ive-verify ni GFX within {APPROVAL_TIME}.</p>}
               {v.state === "rejected" && (
                 <>
-                  {v.pay.reject_reason && <p>Reason: {v.pay.reject_reason}</p>}
+                  <p>
+                    Hindi na-approve{v.pay.reject_reason ? <>: <strong>{v.pay.reject_reason}</strong></> : null}. Puwede kang mag-upload ulit
+                    gamit ang parehong GFX reference code. Kung may tanong, email {CONTACT_EMAIL}.
+                  </p>
                   <Link href={`/courses/${v.catalog.slug}/pay`} className="inline-flex min-h-11 items-center underline">
-                    Mag-upload ulit ng receipt →
+                    Re-upload receipt →
                   </Link>
                 </>
               )}
@@ -60,5 +67,6 @@ export async function MyCourses() {
         </ul>
       )}
     </section>
+    </>
   );
 }

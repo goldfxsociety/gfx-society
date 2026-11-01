@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { APPROVAL_TIME, BUY_ENABLED } from "@/config/training";
+import { APPROVAL_TIME, BUY_ENABLED, COMING_LATER_COURSE_NOTE, peso } from "@/config/training";
 import { findCatalog, getCourseView, nextLesson } from "@/lib/training/courses";
 import { getMembership } from "@/lib/training/gate";
 import { Chip } from "@/components/training/chip";
@@ -23,7 +23,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   if (!catalog) notFound();
   const { membership } = await getMembership();
   const v = await getCourseView(catalog, membership);
-  const paid = catalog.priceLine.startsWith("₱");
+  const paid = v.pricePhp > 0;
   const gold = cn(buttonVariants({ variant: "default" }), "min-h-11 w-full");
   const secondary = cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full");
   const next = nextLesson(v.lessons);
@@ -36,10 +36,10 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
         ← All courses
       </Link>
       <header className="flex flex-col gap-2">
-        <p className="text-xs font-semibold tracking-widest text-primary uppercase">{catalog.title}</p>
+        <p className="text-xs font-semibold tracking-widest text-primary uppercase">GFX Trading System · Course</p>
         <h1 className="text-2xl font-bold tracking-tight">{catalog.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold">{catalog.priceLine}</span>
+          <span className="font-semibold">{paid ? `${peso(v.pricePhp)} · one-time` : catalog.priceLine}</span>
           {v.state === "owned" && <Chip tone="green">Owned ✓</Chip>}
           {v.state === "pending" && <Chip tone="amber">Pending review</Chip>}
           {v.state === "rejected" && <Chip tone="red">Needs re-upload</Chip>}
@@ -62,6 +62,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             <li key={i}>{i}</li>
           ))}
         </ul>
+        {paid && <p className="text-sm text-muted-foreground">{COMING_LATER_COURSE_NOTE}</p>}
       </section>
 
       <section className="flex flex-col gap-2" id="modules">
@@ -112,7 +113,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
         {v.state === "not_owned" &&
           (BUY_ENABLED ? (
             <>
-              <Link href={`/courses/${slug}/pay`} className={gold}>Buy course · {catalog.priceLine.replace(" · one-time", "")} →</Link>
+              <Link href={`/courses/${slug}/pay`} className={gold}>Buy course · {peso(v.pricePhp)} →</Link>
               <p className="text-sm text-muted-foreground">Manual GCash payment. Ive-verify ni GFX ang receipt bago ma-unlock.</p>
             </>
           ) : (
@@ -120,8 +121,8 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           ))}
         {v.state === "pending" && (
           <>
-            <p className="text-sm">Pending review: ive-verify pa ang receipt mo within {APPROVAL_TIME}. Check /account for updates.</p>
-            <Link href="/account" className={secondary}>View status in /account</Link>
+            <p className="text-sm">Pending review: ive-verify pa ang receipt mo within {APPROVAL_TIME}. Tingnan ang status sa My courses.</p>
+            <Link href="/account" className={secondary}>Tingnan ang status sa My courses</Link>
           </>
         )}
         {v.state === "rejected" && (

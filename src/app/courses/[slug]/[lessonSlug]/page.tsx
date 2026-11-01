@@ -95,7 +95,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         </section>
       )}
       {/* Design, 2 Nov: paragraphs on blank lines, markdown symbols stripped, >=16px, ~1.6 line-height, ~65ch. */}
-      <article className="flex max-w-[65ch] flex-col gap-4 text-base leading-[1.6]">
+      <article className="flex max-w-[65ch] flex-col gap-3 text-base leading-relaxed">
         {toParagraphs(lesson.body_md).map((para, i) => (
           <p key={i}>{para}</p>
         ))}
