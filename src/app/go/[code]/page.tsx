@@ -1,3 +1,4 @@
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -38,6 +39,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
           Next step: guided training sa partner community namin
         </NextStepLink>
       )}
+      {GO_NEXT_STEP_HREF && <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>}
       <p className="text-xs text-muted-foreground">
         Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
       </p>
