@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { findCatalog, getPaymentInfo } from "@/lib/training/courses";
 import { getMembership } from "@/lib/training/gate";
-import { MembersFooter } from "@/components/training/members-footer";
+import { ContentDisclaimerFooter } from "@/components/training/content-disclaimer-footer";
 import { CapstoneChecklist } from "./capstone-checklist";
 
 export const metadata: Metadata = { title: "Capstone | GFX", robots: { index: false, follow: false } };
@@ -39,8 +39,7 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
       ) : (
         <p className="text-sm text-muted-foreground">Inihahanda pa ang capstone. Balikan mo ito mamaya.</p>
       )}
-      {cap?.disclaimer ? <p className="text-xs text-muted-foreground">{cap.disclaimer}</p> : null}
-      <MembersFooter />
+      <ContentDisclaimerFooter disclaimer={cap?.disclaimer} />
     </div>
   );
 }
