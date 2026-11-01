@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -40,6 +41,8 @@ export default async function ResourcesPage() {
     return acc;
   }, {});
 
+  const mentionsAccm = resources.some((r) => /ACCM/i.test(`${r.title} ${r.description ?? ""}`));
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
@@ -76,6 +79,8 @@ export default async function ResourcesPage() {
           ))}
         </div>
       ))}
+
+      {mentionsAccm && <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>}
 
       {resources.length === 0 && (
         <p className="text-sm text-muted-foreground">No resources published yet.</p>

@@ -10,9 +10,9 @@ import { DiscordApplyLink } from "@/components/funnel/discord-apply-link";
 
 export const metadata: Metadata = {
   title: "Choosing a Broker",
-  description: "Education-first broker info with IB disclosure. Start small, max 1% risk; you can use any broker.",
+  description: "Education-first broker info with IB disclosure. Start small, max 1% risk.",
   alternates: { canonical: "/broker" },
-  openGraph: { title: "Choosing a Broker", description: "Education-first broker info with IB disclosure. Start small, max 1% risk; you can use any broker.", url: "/broker", images: ["/opengraph-image"] },
+  openGraph: { title: "Choosing a Broker", description: "Education-first broker info with IB disclosure. Start small, max 1% risk.", url: "/broker", images: ["/opengraph-image"] },
 };
 
 export default function BrokerPage() {
@@ -53,8 +53,6 @@ export default function BrokerPage() {
         </p>
       </div>
 
-      <IbDisclosureShort />
-
       {featured && (
         <div className="flex flex-col gap-2">
           <AccmLink
@@ -63,6 +61,7 @@ export default function BrokerPage() {
           >
             Open ACCM Cents Account →
           </AccmLink>
+          <IbDisclosureShort />
           <p className="text-sm text-muted-foreground">Real money, start small — max 1% risk per trade.</p>
           <p className="text-sm text-muted-foreground">
             Optional: may free demo sa loob ng MT5 app kung gusto mo lang matutunan ang buttons (Buy, Sell, SL/TP, Close). Hindi ito required, at hindi nito tine-train ang emotions mo.

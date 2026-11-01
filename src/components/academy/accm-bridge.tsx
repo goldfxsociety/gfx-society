@@ -9,7 +9,7 @@ import { IB_DISCLOSURE_TEXT } from "@/config/partners";
  * Starts with the partner-broker line from the partner config, then the approved bridge copy.
  */
 export const ACCM_BRIDGE_DISCLOSURE =
-  `Disclosure: ${IB_DISCLOSURE_TEXT} Hindi nito binabago ang presyo o fees mo. Hindi kami financial adviser at walang guaranteed profit. Mag-research ka muna at i-check ang regulatory status ng kahit anong broker bago mag-deposit.`;
+  `Disclosure: ${IB_DISCLOSURE_TEXT} Hindi nito binabago ang presyo o fees mo. Hindi kami financial adviser at walang guaranteed profit. Mag-research ka muna at i-check ang regulatory status ng broker bago mag-deposit.`;
 
 export function AccmBridge() {
   return (
@@ -24,7 +24,7 @@ export function AccmBridge() {
       </p>
       <p className="text-sm text-muted-foreground">
         Kung pipiliin mo ang ACCM through our link, makakasali ka rin sa GFX Society Discord para sa trainings at
-        Q&amp;A with the community. Optional ito, at pwede ka namang gumamit ng ibang broker.
+        Q&amp;A with the community. Optional ito.
       </p>
       <Link
         href="/accm"

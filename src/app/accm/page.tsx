@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 const FAQ: { q: string; a: React.ReactNode }[] = [
-  { q: "Kailangan ko ba ng ACCM account para sa Academy?", a: "Hindi. Libre ang Academy, kahit anong broker o kahit wala pa." },
+  { q: "Kailangan ko ba ng ACCM account para sa Academy?", a: "Hindi. Libre ang Academy, kahit wala ka pang broker account." },
   {
     q: "Bakit ACCM para sa Discord community?",
     a: (
