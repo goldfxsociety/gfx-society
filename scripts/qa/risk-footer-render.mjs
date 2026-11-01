@@ -34,7 +34,7 @@ const DISC = "Education lang, not financial advice. Compute your own lot size. M
 const count = (h, s) => h.split(s).length - 1;
 const sentences = ["Max 1% risk per trade.", "Education lang, not financial advice."];
 let pass = 0, fail = 0;
-const chk = (n, ok) => { ok ? pass++ : fail++; console.log(ok ? "PASS" : "FAIL", n); };
+const chk = (n, ok) => { if (ok) pass++; else fail++; console.log(ok ? "PASS" : "FAIL", n); };
 const html = {};
 const r = (el) => renderToStaticMarkup(el);
 

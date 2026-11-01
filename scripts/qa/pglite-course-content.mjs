@@ -62,6 +62,18 @@ if (process.env.EXTRA_MIGRATION) {
 }
 const v = (await db.query(fs.readFileSync(R + 'verification/20261102170000_course_content_verify.sql', 'utf8'))).rows;
 for (const r of v) check(r.ok === true, 'verify: ' + r.check, JSON.stringify(r.detail));
+// negative: the old rubric item (risk sentences repeated in the checklist) must fail the once-per-capstone check
+{
+  const vsql = fs.readFileSync(R + 'verification/20261102170000_course_content_verify.sql', 'utf8');
+  const rk = "risk sentence exactly once per capstone";
+  await db.query('begin');
+  await db.query(`update public.training_capstones set rubric = rubric || '["Naiintindihan ko: Education lang, not financial advice. Compute your own lot size. Max 1% risk per trade."]'::jsonb where course_id = (select id from public.training_courses where slug = 'gold-strategy-basics')`);
+  const bad = (await db.query(vsql)).rows.find((r) => r.check.includes(rk));
+  await db.query('rollback');
+  check(bad && bad.ok === false, 'verify catches risk sentence repeated in capstone rubric', JSON.stringify(bad?.detail));
+  const cap = (await db.query(`select k.rubric->>-1 last from public.training_capstones k join public.training_courses t on t.id = k.course_id where t.slug in ('gold-strategy-basics','gold-advanced-setups')`)).rows;
+  check(cap.length === 2 && cap.every((r) => r.last === 'Naiintindihan ko ang risk rules ng GFX.'), 'last capstone item is the risk-rules acknowledgement', JSON.stringify(cap));
+}
 
 // Ops scripts (supabase/ops): prices, open sales, close sales. Each must be idempotent (0 rows on re-run).
 const ops = (f) => fs.readFileSync(R + 'ops/' + f, 'utf8');

@@ -23,4 +23,10 @@ union all select 'no broker/commission wording (#54 rules)',
   not exists (select 1 from txt where t ~* '(any broker you choose|kahit anong broker|commission|komisyon|rebate|introducing broker)'), null
 union all select 'all 55 lessons published', not exists (select 1 from l where status <> 'published'), (select jsonb_agg(slug) from l where status <> 'published')
 union all select 'all 3 courses open (placement + capstones reachable)', (select count(*) from public.training_courses t join c on c.id = t.id where t.status = 'open') = 3, null
-union all select 'course_content_ready true for all 3', (select bool_and(public.course_content_ready(id)) from c), null;
+union all select 'course_content_ready true for all 3', (select bool_and(public.course_content_ready(id)) from c), null
+union all select 'each risk sentence exactly once per capstone (disclaimer only, not in rubric)',
+  not exists (select 1 from public.training_capstones k join c on c.id = k.course_id
+    cross join (values ('Max 1% risk per trade.'), ('Education lang, not financial advice.')) r(s),
+    lateral (select k.title || ' ' || k.rubric::text || ' ' || coalesce(k.disclaimer,'') t) x
+    where (length(x.t) - length(replace(x.t, r.s, ''))) / length(r.s) <> 1 or position(r.s in k.rubric::text) > 0),
+  (select jsonb_agg(c.slug) from public.training_capstones k join c on c.id = k.course_id where position('Max 1% risk per trade.' in k.rubric::text) > 0);
