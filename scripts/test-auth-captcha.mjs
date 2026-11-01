@@ -26,12 +26,57 @@ for (const [name, build] of Object.entries(PATHS)) {
 t("flag OFF: withCaptcha returns the same object (byte-for-byte)", () => { off(); const o = { a: 1 }; assert.equal(withCaptcha(o, "x"), o); assert.equal(withCaptcha(undefined, "x"), undefined); });
 t("flag ON: missing/blank/oversized token -> no captchaToken added", () => { on(); for (const tok of ["", "  ", undefined, null, 5, "x".repeat(5000)]) assert.equal(withCaptcha({ a: 1 }, tok).captchaToken, undefined); assert.equal(cleanCaptchaToken(" t "), "t"); off(); });
 t("isCaptchaError matches Supabase's message", () => { assert.ok(isCaptchaError("captcha verification process failed")); assert.ok(!isCaptchaError("Invalid login credentials")); });
+// Guard scanner: direct calls (auth.x( / auth?.x( / auth["x"]( , any whitespace) and destructuring
+// (const { x } = supabase.auth, { x: alias } = ..., { auth: { x } } = supabase).
+const CAPTCHA_METHODS = "signInWithOtp|signUp|signInWithPassword|resetPasswordForEmail|signInAnonymously|signInWithIdToken|resend";
+function findAuthCalls(code) {
+  const out = [];
+  // Receivers: `auth` itself plus any alias of it (`const a = supabase.auth;`, `let a = (await c()).auth`).
+  const aliases = [...code.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;\n]*?\.\s*auth\b\s*(?=[;\n)]|$)/g)].map((m) => m[1]);
+  const recv = ["auth", ...new Set(aliases)].map((r) => r.replace(/\$/g, "\\$")).join("|");
+  // A call is `(`, or `.call(` / `.apply(` / `.bind(` on the method.
+  const invoke = `\\s*(?:\\(|\\.\\s*(?:call|apply|bind)\\s*\\()`;
+  for (const m of code.matchAll(new RegExp(`\\b(?:${recv})\\s*\\??\\.\\s*(${CAPTCHA_METHODS})${invoke}|\\b(?:${recv})\\s*\\??\\.?\\s*\\[\\s*["'\`](${CAPTCHA_METHODS})["'\`]\\s*\\]${invoke}`, "g"))) out.push(m[1] ?? m[2]);
+  // Computed member on auth / an alias (`auth[m](...)`): can't be checked statically -> flagged as unsafe.
+  out.push(...[...code.matchAll(new RegExp(`\\b(?:${recv})\\s*\\??\\.?\\s*\\[\\s*(?!["'\`](?:${CAPTCHA_METHODS})["'\`]\\s*\\])`, "g"))].map(() => "COMPUTED"));
+  const destr = (body) => [...body.matchAll(new RegExp(`(?:^|[,{\\s])(${CAPTCHA_METHODS})\\s*(?=[,}:=\\s])`, "g"))].map((m) => m[1]);
+  for (const m of code.matchAll(/\{([^{}]*)\}\s*=\s*[\w$.?\s()]*?\bauth\b\s*[;\n)]/g)) out.push(...destr(m[1]));
+  for (const m of code.matchAll(/\bauth\s*:\s*\{([^{}]*)\}/g)) out.push(...destr(m[1]));
+  return out;
+}
+t("guard scanner catches direct, optional, bracket, destructured, aliased, computed and .call/.apply/.bind auth calls", () => {
+  const cases = {
+    "await supabase.auth.signUp({ email })": ["signUp"],
+    "await supabase.auth\n  .signInWithOtp({ email })": ["signInWithOtp"],
+    "supabase.auth?.resend({ type: 'signup' })": ["resend"],
+    "supabase.auth['resetPasswordForEmail'](e)": ["resetPasswordForEmail"],
+    "const { signUp } = supabase.auth;\nawait signUp({ email });": ["signUp"],
+    "const { signInWithOtp: sendCode, getUser } = client.auth\n": ["signInWithOtp"],
+    "const {\n  resend,\n  signInAnonymously,\n} = (await createClient()).auth;": ["resend", "signInAnonymously"],
+    "const { auth: { signInWithPassword } } = supabase;": ["signInWithPassword"],
+    "const { data: { user } } = await supabase.auth.getUser();": [],
+    "const { signUp } = props;": [],
+    // QA #57 P3: alias, computed member, .call / .apply / .bind
+    "const a = supabase.auth;\nawait a.signUp({ email });": ["signUp"],
+    "const a = (await createClient()).auth\na?.signInWithOtp({ email })": ["signInWithOtp"],
+    "const a = supabase.auth; a['resend']({})": ["resend"],
+    "const m = 'signUp'; await supabase.auth[m]({ email });": ["COMPUTED"],
+    "const a = supabase.auth; await a[m]({ email });": ["COMPUTED"],
+    "supabase.auth.signInWithOtp.call(supabase.auth, { email })": ["signInWithOtp"],
+    "supabase.auth.signUp.apply(supabase.auth, [{ email }])": ["signUp"],
+    "const f = supabase.auth.resend.bind(supabase.auth); f({})": ["resend"],
+    "const a = supabase.auth; a.signInWithPassword.call(a, {})": ["signInWithPassword"],
+    "const a = supabase.auth; await a.getUser();": [],
+    "const a = other.authority; a.signUp()": [],
+  };
+  for (const [code, want] of Object.entries(cases)) assert.deepEqual(findAuthCalls(code).sort(), want.sort(), code);
+});
 t("every Supabase Auth call that CAPTCHA checks goes through withCaptcha", () => {
   const files = { "src/app/system/join/actions.ts": /signInWithOtp\(\{[^}]*options: withCaptcha\(/s, "src/app/signup/actions.ts": /auth\.signUp\(\{[\s\S]*?options: withCaptcha\(/, "src/app/login/page.tsx": /withCaptcha\(undefined, captcha\.token\)[\s\S]*?signInWithPassword\(\{[\s\S]*?\.\.\.\(options \? \{ options \} : \{\}\)/ };
   for (const [f, re] of Object.entries(files)) assert.match(fs.readFileSync(f, "utf8"), re, f);
   // No other CAPTCHA-checked auth call exists (would need withCaptcha too).
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
-  const hits = walk("src").filter((f) => /\.tsx?$/.test(f)).flatMap((f) => [...fs.readFileSync(f, "utf8").matchAll(/auth\.(signInWithOtp|signUp|signInWithPassword|resetPasswordForEmail|signInAnonymously|signInWithIdToken|resend)\(/g)].map((m) => `${f}:${m[1]}`));
+  const hits = walk("src").filter((f) => /\.tsx?$/.test(f)).flatMap((f) => findAuthCalls(fs.readFileSync(f, "utf8")).map((m) => `${f}:${m}`));
   assert.deepEqual(hits.sort(), ["src/app/login/page.tsx:signInWithPassword", "src/app/signup/actions.ts:signUp", "src/app/system/join/actions.ts:signInWithOtp"]);
 });
 // Browser state (Design spec): load failure -> error + disabled; late token -> recovers.

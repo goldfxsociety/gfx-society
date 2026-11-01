@@ -4,16 +4,21 @@ import { isUnknownAcademyPath } from "@/lib/academy/slug-guard";
 import { membersRedirect } from "@/lib/members/proxy-gate";
 import { trainingGate } from "@/lib/training/proxy-gate";
 import { CATALOG } from "@/config/training";
+import { isUnknownGoPath } from "@/lib/links/go-codes";
 
 export async function proxy(request: NextRequest) {
   // Unknown level/lesson slug -> rewrite to an unmatched path so Next.js
   // serves app/not-found.tsx with a real 404 status (before streaming starts).
-  if ((request.method === "GET" || request.method === "HEAD") && (await isUnknownAcademyPath(request.nextUrl.pathname))) {
+  const readLike = request.method === "GET" || request.method === "HEAD";
+  if (
+    readLike &&
+    (isUnknownGoPath(request.nextUrl.pathname) || (await isUnknownAcademyPath(request.nextUrl.pathname)))
+  ) {
     return NextResponse.rewrite(new URL("/_gfx-not-found", request.url));
   }
   // Same for /courses/<unknown>[/...]: real 404 instead of a streamed soft 404.
   const course = /^\/courses\/([^/]+)/.exec(request.nextUrl.pathname)?.[1];
-  if ((request.method === "GET" || request.method === "HEAD") && course && !CATALOG.some((c) => c.slug === course)) {
+  if (readLike && course && !CATALOG.some((c) => c.slug === course)) {
     return NextResponse.rewrite(new URL("/_gfx-not-found", request.url));
   }
   const response = await updateSession(request);

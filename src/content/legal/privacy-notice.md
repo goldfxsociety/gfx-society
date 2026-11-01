@@ -102,7 +102,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Discord Inc. | Discord community and join application, only if you apply to join; deposit verification upload and messages, only if you apply for deposit verification | United States and other regions |
 | Cloudflare, Inc. | Runs the Discord deposit verification bot (the screenshot passes through memory only and is never saved), only if you apply for deposit verification | Global network |
 
-**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
+**We do not share your personal data with any broker** (including ACCM, our partner broker) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
 
 We do not sell your personal data. We may disclose data if required by law, court order, or a government authority.
 
@@ -121,6 +121,7 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Members area verification list | Hashed emails + IB/client role only, refreshed monthly; emails no longer on the ACCM list are deleted within 30 days after the next monthly list refresh. Raw export deleted after import |
 | Members area membership record (status, role, verification date, consent date + version) | While your account exists (members access ends 14 days after your email leaves the list); deleted with your account |
 | Members area code request log | Hashed email + hashed IP + timestamp (no plain email or IP); deleted after 1 day by a daily cleanup and on every new code request |
+| Members area rejected code request log | Hashed IP + timestamp only (no email); used to limit abuse; deleted after 1 day |
 | Members area raw ACCM export file | Deleted manually by our admin right after each monthly import |
 | Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 

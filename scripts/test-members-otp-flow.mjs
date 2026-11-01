@@ -11,8 +11,8 @@ const mk = (o = {}) => {
     defer: (w) => deferred.push(w),
     minReplyMs: () => o.floor ?? 0,
     captchaRequired: o.captcha ?? false,
-    codeAllowed: async (e, ip) => { log.push(["gate", e, ip]); return o.gate === undefined ? e === LISTED : o.gate; },
-    recordSend: async (e, ip, ok) => { log.push(["record", e, ip, ok]); },
+    codeAllowed: async (e, ip) => { log.push(["gate", e, ip]); return o.gate === undefined ? (e === LISTED ? "res-1" : false) : o.gate; },
+    recordSend: async (e, ip, ok, r) => { log.push(["record", e, ip, ok]); (o.resLog ??= []).push(r); },
     sendOtp: async (e, tok) => { log.push(["token", tok]); if (o.sendMs) await new Promise((r) => setTimeout(r, o.sendMs)); if (o.sendThrows) throw new Error("smtp down"); if (o.authRejects) return false; log.push(["send", e]); return true; },
     verifyOtp: async (e, t) => { log.push(["verify", e, t]); return o.verify ?? (t === "123456" ? "ok" : "wrong"); },
     recordConsent: async () => { log.push(["consent"]); return o.consent === undefined ? "active" : o.consent; },
@@ -57,4 +57,16 @@ await t("P3: real send accepted by Supabase -> slot recorded as accepted (email 
 await t("P3: junk token rejected by Supabase -> NOT an email slot (reject bucket only), same neutral padded reply", async () => { const m = mk({ captcha: true, authRejects: true, floor: 150 }); const s0 = performance.now(); assert.equal(await requestCode(m.deps, LISTED, true, "1", "junk"), "sent"); assert.ok(performance.now() - s0 >= 145); await m.run(); assert.deepEqual(m.log.at(-1), ["record", LISTED, "1", false]); assert.ok(!m.log.some((l) => l[0] === "send")); });
 await t("P3: send throws -> recorded as rejected, error stays in the deferred task", async () => { const m = mk({ sendThrows: true }); await requestCode(m.deps, LISTED, true, "1"); await assert.rejects(m.run()); assert.deepEqual(m.log.at(-1), ["record", LISTED, "1", false]); });
 await t("P3: all captcha outcomes give the same neutral 'sent' within the padded floor", async () => { for (const [o, tok] of [[{}, ""], [{ captcha: true }, ""], [{ captcha: true }, "ok"], [{ captcha: true, authRejects: true }, "junk"], [{ captcha: true }, "x".repeat(5000)]]) { const m = mk({ ...o, floor: 120 }); const s0 = performance.now(); assert.equal(await requestCode(m.deps, LISTED, true, "1", tok), "sent"); const d = performance.now() - s0; assert.ok(d >= 115 && d < 200, `padded ${d}`); } });
+await t("P2-1: no-token reject passes reservation null (frees nobody's slot)", async () => { const o = { captcha: true }; const m = mk(o); await requestCode(m.deps, LISTED, true, "1", ""); await m.run(); assert.deepEqual(o.resLog, [null]); });
+await t("P2-1: rejected send releases exactly its own reservation id", async () => { const o = { captcha: true, authRejects: true }; const m = mk(o); await requestCode(m.deps, LISTED, true, "1", "junk"); await m.run(); assert.deepEqual(o.resLog, ["res-1"]); });
+await t("P2-1: slot model, 20 no-token requests interleaved with 10 valid ones -> at most 3 sends/h", async () => {
+  // In-memory model of member_code_reserve/finish semantics (the SQL is tested on real Postgres in tests/postlaunch1).
+  const slots = new Map(); let next = 0, sends = 0; const q = [];
+  const deps = { ...mk({ captcha: true }).deps, defer: (f) => q.push(f),
+    codeAllowed: async () => { if (slots.size >= 3) return false; const id = `r${next++}`; slots.set(id, 1); return id; },
+    recordSend: async (_e, _ip, ok, r) => { if (!ok && r) slots.delete(r); },
+    sendOtp: async () => { sends++; return true; } };
+  for (let i = 0; i < 30; i++) { await requestCode(deps, LISTED, true, "1", i % 3 === 0 ? "tok" : ""); while (q.length) await q.shift()(); }
+  assert.ok(sends <= 3, `sends ${sends}`); assert.equal(sends, 3);
+});
 console.log(`ALL PASS (${n})`);

@@ -22,4 +22,4 @@ Last updated: 18 Oct 2026
 
 **6. Your responsibility.** You are solely responsible for your trading decisions and their results.
 
-**7. Affiliate relationship.** GFX's founder may earn rebates from partner brokers. See the IB Disclosure.
+**7. Affiliate relationship.** GFX's founder may earn rebates from ACCM, our partner broker. See the IB Disclosure.

@@ -54,3 +54,19 @@ export function resolveGoCode(raw: string): GoTarget | null {
   });
   return { code, source, medium, campaign: DEFAULT_CAMPAIGN, content: code, href: `/academy?${qs}` };
 }
+
+/**
+ * Real 404 for unknown /go/<code> (same proxy rewrite as unknown Academy slugs): the page's
+ * notFound() alone can arrive after HTTP 200 is committed. Pure, no network.
+ */
+export function isUnknownGoPath(pathname: string): boolean {
+  const m = /^\/go\/([^/]+)\/?$/.exec(pathname);
+  if (!m) return false;
+  let code: string;
+  try {
+    code = decodeURIComponent(m[1]);
+  } catch {
+    return true;
+  }
+  return resolveGoCode(code) === null;
+}
