@@ -10,6 +10,31 @@ import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
 import { LessonInteractive } from "./lesson-interactive";
 
+/** Plain-text paragraphs: split on blank lines; drop heading #, bold/italic markers, list bullets. */
+function toParagraphs(md: string): string[] {
+  return md
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .map((block) =>
+      block
+        .split("\n")
+        .map((line) =>
+          line
+            .replace(/^\s{0,3}#{1,6}\s+/, "")
+            .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "")
+            .replace(/^\s*>\s?/, "")
+            .replace(/(\*\*|__)(.+?)\1/g, "$2")
+            .replace(/(^|[^*\w])[*_]([^*_\n]+)[*_](?=[^*\w]|$)/g, "$1$2")
+            .replace(/`([^`]+)`/g, "$1")
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+            .trim(),
+        )
+        .filter(Boolean)
+        .join(" "),
+    )
+    .filter(Boolean);
+}
+
 export const metadata: Metadata = { title: "Lesson | GFX Trading System", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
@@ -69,14 +94,11 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <p>{lesson.tldr}</p>
         </section>
       )}
-      {/* body_md rendered as plain paragraphs (no HTML) until the content task picks a renderer. */}
-      <article className="flex flex-col gap-3 leading-relaxed">
-        {lesson.body_md
-          .split(/\n{2,}/)
-          .filter(Boolean)
-          .map((para: string, i: number) => (
-            <p key={i}>{para}</p>
-          ))}
+      {/* Design, 2 Nov: paragraphs on blank lines, markdown symbols stripped, >=16px, ~1.6 line-height, ~65ch. */}
+      <article className="flex max-w-[65ch] flex-col gap-4 text-base leading-[1.6]">
+        {toParagraphs(lesson.body_md).map((para, i) => (
+          <p key={i}>{para}</p>
+        ))}
       </article>
       {lesson.takeaway && (
         <section className="rounded-lg border border-primary/50 p-4 text-sm">

@@ -202,7 +202,7 @@ export function PayForm(p: Props) {
 
   const errList = Object.entries(errors);
   const amountDiffers = amount.trim() !== "" && Number(amount) !== p.price && !errors.amount;
-  const refLooksOff = ref.trim() !== "" && !isValidGcashRef(ref);
+  const refLooksOff = normalizeGcashRef(ref) !== "" && !isValidGcashRef(ref);
 
   return (
     <>
@@ -289,17 +289,17 @@ export function PayForm(p: Props) {
             value={ref}
             onChange={(e) => setRef(e.target.value)}
             aria-invalid={Boolean(errors.ref)}
-            aria-describedby="h-ref"
+            aria-describedby="h-ref w-ref"
             className="min-h-11 rounded-md border border-border bg-background px-3"
           />
           <p id="h-ref" className="text-xs text-muted-foreground">
             13 digits, nasa GCash receipt (e.g. 1234 567 890123)
           </p>
           {errors.ref && <p className="text-sm text-red-300">{errors.ref}</p>}
-          {/* Soft check only: never blocks submit (Jarvis, 2 Nov). */}
-          {!errors.ref && refLooksOff && (
-            <p className="text-sm text-muted-foreground">Usually 13 digits ang GCash Ref No. Check ulit ang receipt mo.</p>
-          )}
+          {/* Soft check only: never blocks submit (Jarvis + Design, 2 Nov). Admin still gets the check_format flag. */}
+          <p id="w-ref" aria-live="polite" className="text-sm text-amber-300">
+            {!errors.ref && refLooksOff ? "Karaniwang 13 digits ang GCash Ref No. Paki-check ulit bago mag-submit." : ""}
+          </p>
         </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="f-file" className="text-sm font-medium">
