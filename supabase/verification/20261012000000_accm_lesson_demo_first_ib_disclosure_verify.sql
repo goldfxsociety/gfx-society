@@ -5,7 +5,7 @@ select md5(content) = '8ff402abb8997fc42d0fed9c551ef5d7'                        
          and position('2. Check the broker''s licence' in content) > position('1. Create a free DEMO' in content)
          and position('3. Optional' in content) > position('2. Check the broker''s licence' in content) as steps_in_order,
        content not ilike '%Open a DEMO account first%'           as old_demo_after_registration_gone,
-       content ilike '%GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose.%' as new_disclosure_present,
+       content ilike '%Disclosure: ACCM is GFX''s partner broker.%' and content not ilike '%any broker you choose%' as new_disclosure_present, -- updated by 20261102160000 (PR #54)
        content not ilike '%VFSC%' and content not ilike '%SEC%'  as no_unverified_regulator_claim,
        jsonb_array_length(key_takeaways) = 3                     as takeaways_3,
        interactive_config is null                                as still_no_quiz,
