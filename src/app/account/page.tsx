@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { DeleteAccountForm } from "./delete-account-form";
+import { MyCourses } from "./my-courses";
 
 export const metadata: Metadata = {
   title: "Account settings",
@@ -37,6 +38,8 @@ export default async function AccountPage() {
         <h1 className="text-2xl font-bold tracking-tight">Account settings</h1>
         <p className="text-sm text-muted-foreground">Logged in as {user.email}</p>
       </div>
+
+      <MyCourses />
 
       <section aria-labelledby="delete-heading" className="flex flex-col gap-3 rounded-lg border border-destructive/50 p-4">
         <h2 id="delete-heading" className="text-lg font-semibold">Delete my account</h2>
