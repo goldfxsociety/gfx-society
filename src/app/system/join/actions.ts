@@ -22,18 +22,23 @@ async function deps(): Promise<OtpDeps> {
         console.error("[system/join] send gate not configured");
         return null;
       }
-      const { data, error } = await admin.rpc("member_code_allowed", { p_email: email, p_ip: ip });
+      const { data, error } = await admin.rpc("member_code_reserve", { p_email: email, p_ip: ip });
       if (error) {
-        console.error("[system/join] member_code_allowed failed", { code: error.code });
+        console.error("[system/join] member_code_reserve failed", { code: error.code });
         return null;
       }
-      return data === true;
+      return typeof data === "string" && data.length > 0 ? data : false;
     },
-    recordSend: async (email, ip, accepted) => {
+    recordSend: async (email, ip, accepted, reservation) => {
       const admin = createAdminClient();
       if (!admin) return;
-      const { error } = await admin.rpc("member_code_record", { p_email: email, p_ip: ip, p_accepted: accepted });
-      if (error) console.error("[system/join] member_code_record failed", { code: error.code });
+      const { error } = await admin.rpc("member_code_finish", {
+        p_reservation: reservation,
+        p_email: email,
+        p_ip: ip,
+        p_accepted: accepted,
+      });
+      if (error) console.error("[system/join] member_code_finish failed", { code: error.code });
     },
     captchaRequired: captchaEnabled(),
     sendOtp: async (email, captchaToken) => {

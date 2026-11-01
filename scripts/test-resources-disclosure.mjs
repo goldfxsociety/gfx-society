@@ -4,23 +4,24 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 let n = 0;
-const t = (name, fn) => { fn(); n++; console.log("PASS", name); };
+const t = async (name, fn) => { await fn(); n++; console.log("PASS", name); }; // awaits async tests (QA #57 P3)
 const page = fs.readFileSync("src/app/resources/page.tsx", "utf8");
 const mig = fs.readFileSync("supabase/migrations/20261102220000_resources_wikifx_copy.sql", "utf8");
-t("disclosure <p> renders IB_DISCLOSURE_TEXT", () => assert.match(page, /<p[^>]*>\{IB_DISCLOSURE_TEXT\}<\/p>/));
-t("disclosure is not behind a condition (no `&&` / ternary on that line)", () => {
+await t("disclosure <p> renders IB_DISCLOSURE_TEXT", () => assert.match(page, /<p[^>]*>\{IB_DISCLOSURE_TEXT\}<\/p>/));
+await t("disclosure is not behind a condition (no `&&` / ternary on that line)", () => {
   const line = page.split("\n").find((l) => l.includes("{IB_DISCLOSURE_TEXT}"));
   assert.ok(line && !/&&|\?/.test(line), line);
   assert.doesNotMatch(page, /mentionsAccm/);
 });
-t("partner text is the approved line", async () => {
+await t("partner text is the approved line", async () => {
+  await Promise.resolve();
   const cfg = fs.readFileSync("src/config/partners.ts", "utf8");
   assert.match(cfg, /IB_DISCLOSURE_TEXT = "Partner broker ng GFX ang ACCM\."/);
 });
-t("after the WikiFX migration no row text mentions ACCM, so a text-driven line would have hidden", () => {
+await t("after the WikiFX migration no row text mentions ACCM, so a text-driven line would have hidden", () => {
   assert.match(mig, /set description = null/);
   const after = { title: "WikiFX — Broker Checker", description: null };
   assert.equal(/ACCM/i.test(`${after.title} ${after.description ?? ""}`), false);
 });
-t("standard line still present", () => assert.match(page, /Education lang, not financial advice\. Max 1% risk per trade\./));
+await t("standard line still present", () => assert.match(page, /Education lang, not financial advice\. Max 1% risk per trade\./));
 console.log(`ALL PASS (${n})`);

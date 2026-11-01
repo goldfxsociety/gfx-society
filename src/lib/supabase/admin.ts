@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Server-only service-role client. Used ONLY for public.member_code_allowed (send gate) and
+ * Server-only service-role client. Used ONLY for public.member_code_reserve / member_code_finish (send gate) and
  * public.purge_member_gate_logs (cron). Never import from a client component.
  * Returns null when SUPABASE_SERVICE_ROLE_KEY isn't configured.
  */

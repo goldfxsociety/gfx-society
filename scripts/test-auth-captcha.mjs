@@ -31,13 +31,20 @@ t("isCaptchaError matches Supabase's message", () => { assert.ok(isCaptchaError(
 const CAPTCHA_METHODS = "signInWithOtp|signUp|signInWithPassword|resetPasswordForEmail|signInAnonymously|signInWithIdToken|resend";
 function findAuthCalls(code) {
   const out = [];
-  for (const m of code.matchAll(new RegExp(`\\bauth\\s*\\??\\.\\s*(${CAPTCHA_METHODS})\\s*\\(|\\bauth\\s*\\??\\.?\\s*\\[\\s*["'\`](${CAPTCHA_METHODS})["'\`]\\s*\\]\\s*\\(`, "g"))) out.push(m[1] ?? m[2]);
+  // Receivers: `auth` itself plus any alias of it (`const a = supabase.auth;`, `let a = (await c()).auth`).
+  const aliases = [...code.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;\n]*?\.\s*auth\b\s*(?=[;\n)]|$)/g)].map((m) => m[1]);
+  const recv = ["auth", ...new Set(aliases)].map((r) => r.replace(/\$/g, "\\$")).join("|");
+  // A call is `(`, or `.call(` / `.apply(` / `.bind(` on the method.
+  const invoke = `\\s*(?:\\(|\\.\\s*(?:call|apply|bind)\\s*\\()`;
+  for (const m of code.matchAll(new RegExp(`\\b(?:${recv})\\s*\\??\\.\\s*(${CAPTCHA_METHODS})${invoke}|\\b(?:${recv})\\s*\\??\\.?\\s*\\[\\s*["'\`](${CAPTCHA_METHODS})["'\`]\\s*\\]${invoke}`, "g"))) out.push(m[1] ?? m[2]);
+  // Computed member on auth / an alias (`auth[m](...)`): can't be checked statically -> flagged as unsafe.
+  out.push(...[...code.matchAll(new RegExp(`\\b(?:${recv})\\s*\\??\\.?\\s*\\[\\s*(?!["'\`](?:${CAPTCHA_METHODS})["'\`]\\s*\\])`, "g"))].map(() => "COMPUTED"));
   const destr = (body) => [...body.matchAll(new RegExp(`(?:^|[,{\\s])(${CAPTCHA_METHODS})\\s*(?=[,}:=\\s])`, "g"))].map((m) => m[1]);
   for (const m of code.matchAll(/\{([^{}]*)\}\s*=\s*[\w$.?\s()]*?\bauth\b\s*[;\n)]/g)) out.push(...destr(m[1]));
   for (const m of code.matchAll(/\bauth\s*:\s*\{([^{}]*)\}/g)) out.push(...destr(m[1]));
   return out;
 }
-t("guard scanner catches direct, optional, bracket and destructured auth calls", () => {
+t("guard scanner catches direct, optional, bracket, destructured, aliased, computed and .call/.apply/.bind auth calls", () => {
   const cases = {
     "await supabase.auth.signUp({ email })": ["signUp"],
     "await supabase.auth\n  .signInWithOtp({ email })": ["signInWithOtp"],
@@ -49,6 +56,18 @@ t("guard scanner catches direct, optional, bracket and destructured auth calls",
     "const { auth: { signInWithPassword } } = supabase;": ["signInWithPassword"],
     "const { data: { user } } = await supabase.auth.getUser();": [],
     "const { signUp } = props;": [],
+    // QA #57 P3: alias, computed member, .call / .apply / .bind
+    "const a = supabase.auth;\nawait a.signUp({ email });": ["signUp"],
+    "const a = (await createClient()).auth\na?.signInWithOtp({ email })": ["signInWithOtp"],
+    "const a = supabase.auth; a['resend']({})": ["resend"],
+    "const m = 'signUp'; await supabase.auth[m]({ email });": ["COMPUTED"],
+    "const a = supabase.auth; await a[m]({ email });": ["COMPUTED"],
+    "supabase.auth.signInWithOtp.call(supabase.auth, { email })": ["signInWithOtp"],
+    "supabase.auth.signUp.apply(supabase.auth, [{ email }])": ["signUp"],
+    "const f = supabase.auth.resend.bind(supabase.auth); f({})": ["resend"],
+    "const a = supabase.auth; a.signInWithPassword.call(a, {})": ["signInWithPassword"],
+    "const a = supabase.auth; await a.getUser();": [],
+    "const a = other.authority; a.signUp()": [],
   };
   for (const [code, want] of Object.entries(cases)) assert.deepEqual(findAuthCalls(code).sort(), want.sort(), code);
 });

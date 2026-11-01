@@ -11,7 +11,7 @@ import { MEMBERS_HOME } from "@/lib/members/routes";
 const MEMBERS_ONLY = [/^\/training\/?$/, /^\/courses\/[^/]+\/[^/]+\/?$/];
 
 export async function trainingGate(request: NextRequest, response: NextResponse): Promise<NextResponse | null> {
-  if (request.method !== "GET") return null;
+  if (request.method !== "GET" && request.method !== "HEAD") return null; // HEAD = GET (QA #57 P3)
   const path = request.nextUrl.pathname;
   const legacyHome = path === "/system/members" || path === "/system/members/";
   const admin = path === "/admin/payments" || path.startsWith("/admin/payments/");
