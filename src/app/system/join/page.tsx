@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { redirect } from "next/navigation";
 import { JOIN_COPY as C, SYSTEM_COPY } from "@/content/members-gate";
 import { getMembership } from "@/lib/members/membership";
@@ -17,6 +18,8 @@ export default async function JoinPage() {
       <h1 className="text-2xl font-bold tracking-tight">{C.title}</h1>
       <JoinForm />
       <p className="text-xs text-muted-foreground">{SYSTEM_COPY.risk}</p>
+      {/* Partner line (Ben, P2-C): public pages that mention ACCM. Shows "Partner broker ng GFX ang ACCM." once #54 lands. */}
+      <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
     </div>
   );
 }

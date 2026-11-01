@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
+import { Turnstile } from "@/components/members/turnstile";
 import { Button } from "@/components/ui/button";
 import { JOIN_COPY as C } from "@/content/members-gate";
 import { joinStep, type JoinState } from "./actions";
@@ -88,6 +89,7 @@ export function JoinForm() {
           <div className="mt-2 flex flex-col gap-3">
             <p className="leading-relaxed">{C.noCodeBody}</p>
             <form action={action}>
+              <Turnstile key={`resend-${state.sentAt ?? 0}`} />
               <Button
                 type="submit"
                 name="intent"
@@ -149,6 +151,7 @@ export function JoinForm() {
         </span>
       </label>
       {alert}
+      <Turnstile key={`send-${state.sentAt ?? 0}-${state.result}`} />
       <Button type="submit" name="intent" value="send" className="h-11 w-full" disabled={pending || !consent}>
         {C.sendCode}
       </Button>

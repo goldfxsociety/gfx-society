@@ -8,7 +8,10 @@ export type VerifyResult = "active" | "wrong_code" | "expired_code" | "not_verif
 export type OtpDeps = {
   /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). */
   codeAllowed: (email: string, ip: string) => Promise<boolean | null>;
-  sendOtp: (email: string) => Promise<boolean>;
+  /** signInWithOtp; captchaToken is forwarded to Supabase Auth (Turnstile) when present. */
+  sendOtp: (email: string, captchaToken?: string) => Promise<boolean>;
+  /** True when the Turnstile flag (NEXT_PUBLIC_TURNSTILE_SITE_KEY) is set: a token is then required. */
+  captchaRequired?: boolean;
   verifyOtp: (email: string, token: string) => Promise<"ok" | "wrong" | "expired">;
   /** public.record_member_consent(version) as the new OTP session. */
   recordConsent: () => Promise<string | null>;
@@ -27,26 +30,45 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const normalizeEmail = (e: string) => e.trim().toLowerCase();
 
 /** Always returns "sent" for any well-formed request, listed or not (no enumeration). */
-export async function requestCode(deps: OtpDeps, rawEmail: string, consent: boolean, ip: string): Promise<SendResult> {
+export async function requestCode(
+  deps: OtpDeps,
+  rawEmail: string,
+  consent: boolean,
+  ip: string,
+  captchaToken = "",
+): Promise<SendResult> {
   const now = deps.now ?? Date.now;
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const start = now();
   const floor = deps.minReplyMs();
-  const result = await requestCodeInner(deps, rawEmail, consent, ip);
+  const result = await requestCodeInner(deps, rawEmail, consent, ip, captchaToken.trim());
   const left = floor - (now() - start);
   if (left > 0) await sleep(left);
   return result;
 }
 
-async function requestCodeInner(deps: OtpDeps, rawEmail: string, consent: boolean, ip: string): Promise<SendResult> {
+async function requestCodeInner(
+  deps: OtpDeps,
+  rawEmail: string,
+  consent: boolean,
+  ip: string,
+  captchaToken: string,
+): Promise<SendResult> {
   if (!consent) return "consent_required";
   const email = normalizeEmail(rawEmail);
   if (!EMAIL_RE.test(email) || email.length > 254) return "invalid_email";
+  // CAPTCHA (Ben, option b): with the flag on, no token = no gate call and no send. Supabase Auth
+  // verifies the token itself (tokens are single-use, so the app doesn't pre-verify it).
+  // Design: a CAPTCHA failure shows the same neutral screen (padded), logged server-side only.
+  if (deps.captchaRequired && (!captchaToken || captchaToken.length > 4096)) {
+    console.error("[system/join] captcha token missing or invalid; no code sent");
+    return "sent";
+  }
   const allowed = await deps.codeAllowed(email, ip);
   if (allowed === null) return "error"; // gate not configured / RPC failed: never send blindly
   // Timing (QA P2-B): the send is never awaited in the response path, so listed and unlisted
   // replies cost the same; failures are logged by the deferred task and never surfaced.
-  if (allowed) deps.defer(() => deps.sendOtp(email));
+  if (allowed) deps.defer(() => deps.sendOtp(email, deps.captchaRequired ? captchaToken : undefined));
   return "sent";
 }
 

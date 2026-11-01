@@ -10,8 +10,9 @@ const mk = (o = {}) => {
   return { log, deferred, run: () => Promise.all(deferred.map((w) => w())), deps: {
     defer: (w) => deferred.push(w),
     minReplyMs: () => o.floor ?? 0,
+    captchaRequired: o.captcha ?? false,
     codeAllowed: async (e, ip) => { log.push(["gate", e, ip]); return o.gate === undefined ? e === LISTED : o.gate; },
-    sendOtp: async (e) => { if (o.sendMs) await new Promise((r) => setTimeout(r, o.sendMs)); if (o.sendThrows) throw new Error("smtp down"); log.push(["send", e]); return true; },
+    sendOtp: async (e, tok) => { log.push(["token", tok]); if (o.sendMs) await new Promise((r) => setTimeout(r, o.sendMs)); if (o.sendThrows) throw new Error("smtp down"); log.push(["send", e]); return true; },
     verifyOtp: async (e, t) => { log.push(["verify", e, t]); return o.verify ?? (t === "123456" ? "ok" : "wrong"); },
     recordConsent: async () => { log.push(["consent"]); return o.consent === undefined ? "active" : o.consent; },
   } };
@@ -47,4 +48,8 @@ await t("consent RPC error -> error", async () => { assert.equal(await verifyCod
 await t("amr: otp session passes", async () => { assert.equal(sessionIsOtp([{ method: "otp", timestamp: 1 }]), true); });
 await t("amr: password session denied", async () => { assert.equal(sessionIsOtp([{ method: "password", timestamp: 1 }]), false); });
 await t("amr: magiclink/missing/garbage denied", async () => { assert.equal(sessionIsOtp([{ method: "magiclink" }]), false); assert.equal(sessionIsOtp(undefined), false); assert.equal(sessionIsOtp("otp"), false); });
+await t("captcha flag OFF: no token needed, none forwarded (flow as before)", async () => { const m = mk(); assert.equal(await requestCode(m.deps, LISTED, true, "1"), "sent"); await m.run(); assert.deepEqual(m.log.find((l) => l[0] === "token"), ["token", undefined]); assert.ok(m.log.some((l) => l[0] === "send")); });
+await t("captcha flag ON + token: token forwarded to signInWithOtp", async () => { const m = mk({ captcha: true }); assert.equal(await requestCode(m.deps, LISTED, true, "1", "tok-123"), "sent"); await m.run(); assert.deepEqual(m.log.find((l) => l[0] === "token"), ["token", "tok-123"]); });
+await t("captcha flag ON, no token: neutral 'sent', no gate call, no send, still padded", async () => { const m = mk({ captcha: true, floor: 150 }); const s0 = performance.now(); assert.equal(await requestCode(m.deps, LISTED, true, "1", ""), "sent"); assert.ok(performance.now() - s0 >= 145); assert.equal(m.log.length, 0); assert.equal(m.deferred.length, 0); });
+await t("captcha flag ON, unlisted + token: neutral 'sent', no send", async () => { const m = mk({ captcha: true }); assert.equal(await requestCode(m.deps, "x@example.test", true, "1", "tok"), "sent"); assert.equal(m.deferred.length, 0); });
 console.log(`ALL PASS (${n})`);

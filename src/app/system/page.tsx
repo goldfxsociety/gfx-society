@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
@@ -25,6 +26,8 @@ export default function SystemPage() {
       </Link>
       <p className="text-sm text-muted-foreground">{C.underCta}</p>
       <p className="text-xs text-muted-foreground">{C.risk}</p>
+      {/* Partner line (Ben, P2-C): public pages that mention ACCM. Shows "Partner broker ng GFX ang ACCM." once #54 lands. */}
+      <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
     </div>
   );
 }

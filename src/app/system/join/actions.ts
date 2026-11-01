@@ -28,14 +28,16 @@ async function deps(): Promise<OtpDeps> {
       }
       return data === true;
     },
-    sendOtp: async (email) => {
+    captchaRequired: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
+    sendOtp: async (email, captchaToken) => {
       // Only reached for allowlisted emails; runs in after(), outside the response path. Uses a
       // cookie-less anon client (6-digit code needs no PKCE verifier cookie). Creates the auth user
       // if needed (passwordless).
       const anon = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
         auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
       });
-      const { error } = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      const { error } = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: true, ...(captchaToken ? { captchaToken } : {}) },
+      });
       if (error) console.error("[system/join] send code failed", { status: error.status });
       return !error;
     },
@@ -74,7 +76,8 @@ export async function joinStep(prev: JoinState, formData: FormData): Promise<Joi
   if (intent === "send" || intent === "resend") {
     const email = String(formData.get("email") ?? prev.email);
     const consent = intent === "resend" ? prev.step === "code" : formData.get("consent") === "on";
-    const r = await requestCode(await deps(), email, consent, await clientIp());
+    const token = String(formData.get("cf-turnstile-response") ?? "");
+    const r = await requestCode(await deps(), email, consent, await clientIp(), token);
     return { step: r === "sent" ? "code" : "email", email, result: r, sentAt: r === "sent" ? Date.now() : prev.sentAt };
   }
   if (intent === "verify" && prev.step === "code") {
