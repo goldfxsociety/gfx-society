@@ -1,4 +1,4 @@
-import { IB_DISCLOSURE_TEXT, NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
+import { IB_DISCLOSURE_TEXT, IB_LONGFORM_PAYMENT_TEXT, NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
 
 /** Short disclosure — place next to every broker link or button. */
 export function IbDisclosureShort() {
@@ -27,7 +27,7 @@ export function IbDisclosureFull() {
         accounts.
       </p>
       <p>
-        <strong>2. How we get paid.</strong> {IB_DISCLOSURE_TEXT} The amount usually depends on how much you trade, which is why we teach a maximum of 1% risk per trade, a stop loss on every trade, and never encourage over-trading.
+        <strong>2. How we get paid.</strong> {IB_LONGFORM_PAYMENT_TEXT} The amount usually depends on how much you trade, which is why we teach a maximum of 1% risk per trade, a stop loss on every trade, and never encourage over-trading.
       </p>
       <p>
         <strong>3. Costs.</strong> Spreads, commissions and fees are set by the

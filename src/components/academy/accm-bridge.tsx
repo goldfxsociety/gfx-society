@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 
 /**
  * Optional ACCM step (copy approved Oct 27, recruitment/accm-bridge.md, site/DM section).
  * Secondary section only: H2, never a page headline. Disclosure always visible under the button.
- * The copy file's disclosure is longer than IB_DISCLOSURE_TEXT, so it is used verbatim here.
+ * Starts with the partner-broker line from the partner config, then the approved bridge copy.
  */
 export const ACCM_BRIDGE_DISCLOSURE =
-  "Disclosure: GFX may earn a commission from ACCM if you sign up through our link. Hindi nito binabago ang presyo o fees mo. Hindi kami financial adviser at walang guaranteed profit. Mag-research ka muna at i-check ang regulatory status ng kahit anong broker bago mag-deposit.";
+  `Disclosure: ${IB_DISCLOSURE_TEXT} Hindi nito binabago ang presyo o fees mo. Hindi kami financial adviser at walang guaranteed profit. Mag-research ka muna at i-check ang regulatory status ng kahit anong broker bago mag-deposit.`;
 
 export function AccmBridge() {
   return (
