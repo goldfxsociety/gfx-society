@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { findCatalog, getPaymentInfo } from "@/lib/training/courses";
-import { requireMember } from "@/lib/training/gate";
+import { getMembership } from "@/lib/training/gate";
 import { MembersFooter } from "@/components/training/members-footer";
 import { CapstoneChecklist } from "./capstone-checklist";
 
@@ -14,8 +14,11 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const catalog = findCatalog(slug);
   if (!catalog) notFound();
-  await requireMember(`/courses/${slug}/capstone`);
+  const { loggedIn, membership } = await getMembership();
+  if (!loggedIn) redirect(`/login?next=/courses/${slug}/capstone`);
   const info = await getPaymentInfo(slug);
+  // S8 = A: a removed member keeps the capstone of a bought course.
+  if (membership === "none" && info.state !== "approved") redirect("/system/join");
   if (!info.course_id) redirect(`/courses/${slug}`);
   const supabase = await createClient();
   const [{ data: cap }, { data: prog }] = await Promise.all([

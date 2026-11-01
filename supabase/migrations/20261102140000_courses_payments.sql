@@ -218,7 +218,9 @@ begin
   if not private.lesson_access(p_lesson_id) then raise exception 'no access' using errcode = '42501'; end if;
   select questions into v_q from private.training_quizzes where lesson_id = p_lesson_id;
   if v_q is null then raise exception 'no quiz' using errcode = 'P0002'; end if;
-  v_total := jsonb_array_length(v_q);
+  v_total := case when jsonb_typeof(v_q) = 'array' then jsonb_array_length(v_q) else 0 end;
+  -- QA re-check: a quiz with zero questions can never be passed (fail closed; fix the content instead).
+  if v_total = 0 then raise exception 'quiz has no questions' using errcode = 'P0002'; end if;
   for i in 0 .. v_total - 1 loop
     if p_answers is not null and array_length(p_answers, 1) > i and p_answers[i + 1] = (v_q->i->>'answer_index')::int then
       v_score := v_score + 1;
@@ -244,8 +246,8 @@ begin
   if not private.lesson_access(p_lesson_id) then raise exception 'no access' using errcode = '42501'; end if;
   -- QA P1 (B-AC2): "has a quiz" comes from private.training_quizzes, never from a missing score.
   -- Quiz lessons complete only with practice done AND a submitted passing score (>= 80%).
-  v_has_quiz := exists (select 1 from private.training_quizzes q where q.lesson_id = p_lesson_id
-                        and jsonb_array_length(q.questions) > 0);
+  -- Any quiz row counts, even an empty one: an empty quiz can't be passed, so the lesson stays open (fail closed).
+  v_has_quiz := exists (select 1 from private.training_quizzes q where q.lesson_id = p_lesson_id);
   insert into public.training_progress as tp (user_id, lesson_id, practice_done, completed_at)
   values (auth.uid(), p_lesson_id, p_done, case when p_done and not v_has_quiz then now() end)
   on conflict (user_id, lesson_id) do update set practice_done = excluded.practice_done, updated_at = now(),
@@ -306,11 +308,13 @@ grant execute on function public.set_capstone_items(uuid, integer[]) to authenti
 create or replace function public.course_complete(p_course_id uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select auth.uid() is not null
-    and exists (select 1 from public.training_lessons l join public.training_modules m on m.id = l.module_id where m.course_id = p_course_id)
+    -- QA re-check: only published lessons count toward completion.
+    and exists (select 1 from public.training_lessons l join public.training_modules m on m.id = l.module_id
+                where m.course_id = p_course_id and l.status = 'published')
     and not exists (
       select 1 from public.training_lessons l join public.training_modules m on m.id = l.module_id
       left join public.training_progress tp on tp.lesson_id = l.id and tp.user_id = auth.uid()
-      where m.course_id = p_course_id and tp.completed_at is null)
+      where m.course_id = p_course_id and l.status = 'published' and tp.completed_at is null)
     and (not exists (select 1 from public.training_capstones where course_id = p_course_id)
          or exists (select 1 from public.capstone_progress where course_id = p_course_id and user_id = auth.uid() and completed_at is not null));
 $$;
@@ -355,14 +359,32 @@ revoke all on function public.prereq_met(uuid) from public, anon;
 grant execute on function public.prereq_met(uuid) to authenticated;
 
 -- Redefine course access now that prereq_met exists: locked courses (B9) grant no lesson access even if paid.
+-- S8 SWITCH (plan §0.22, Ben 2 Nov: "A for now, lets decide later on"): true = bought courses stay open
+-- after the member is removed from the allowlist. Flip to false to go back to option B (lock on delist).
+create or replace function private.keep_bought_courses_after_delist()
+returns boolean language sql immutable set search_path = pg_temp as $$ select true $$;
+revoke all on function private.keep_bought_courses_after_delist() from public, anon, authenticated;
+
+-- Approved purchase of an open paid course; used only for the S8 owner path (no membership check).
+create or replace function private.owns_open_course(p_user uuid, p_course_id uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
+  select private.keep_bought_courses_after_delist() and exists (
+    select 1 from public.training_courses c join public.course_purchases p on p.course_id = c.id
+    where c.id = p_course_id and c.status = 'open' and c.price_php > 0
+      and p.user_id = p_user and p.status = 'approved');
+$$;
+revoke all on function private.owns_open_course(uuid, uuid) from public, anon, authenticated;
+
 create or replace function public.has_course_access(p_course_id uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as $$
-  select auth.uid() is not null and public.is_member() and public.prereq_met(p_course_id) and exists (
-    select 1 from public.training_courses c
-    where c.id = p_course_id and c.status = 'open'
-      and (c.price_php = 0 or exists (
-        select 1 from public.course_purchases p
-        where p.user_id = auth.uid() and p.course_id = c.id and p.status = 'approved')));
+  select auth.uid() is not null and (
+    private.owns_open_course(auth.uid(), p_course_id)
+    or (public.is_member() and public.prereq_met(p_course_id) and exists (
+      select 1 from public.training_courses c
+      where c.id = p_course_id and c.status = 'open'
+        and (c.price_php = 0 or exists (
+          select 1 from public.course_purchases p
+          where p.user_id = auth.uid() and p.course_id = c.id and p.status = 'approved')))));
 $$;
 
 create or replace function private.placement_next_at(p_user uuid, p_course uuid)
@@ -453,8 +475,12 @@ create or replace function public.my_payment_info(p_course_slug text)
 returns jsonb language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare c public.training_courses; p public.course_purchases; v_state text;
 begin
-  if auth.uid() is null or not public.is_member() then return jsonb_build_object('state', 'not_member'); end if;
+  if auth.uid() is null then return jsonb_build_object('state', 'not_member'); end if;
   select * into c from public.training_courses where slug = p_course_slug and status = 'open';
+  -- S8: a delisted owner still sees 'approved' for a bought course; everything else needs membership.
+  if not public.is_member() and not (c.id is not null and private.owns_open_course(auth.uid(), c.id)) then
+    return jsonb_build_object('state', 'not_member');
+  end if;
   if c.id is null then return jsonb_build_object('state', 'not_found'); end if;
   select * into p from public.course_purchases where user_id = auth.uid() and course_id = c.id;
   v_state := case
@@ -616,10 +642,14 @@ begin
     return (select jsonb_build_object('pending_count', count(*), 'oldest_pending_at', min(submitted_at))
             from public.course_purchases where status = 'pending');
   end if;
-  -- Failed attempt: count per IP. Direct RPC calls use PostgREST's forwarded IP; the route passes the caller's IP.
+  -- Failed attempt: count per IP taken from the request headers (x-forwarded-for). p_client_ip is honoured
+  -- ONLY for service_role callers (QA re-check: anon could rotate fake IPs). No IP -> one shared 'unknown' bucket.
   begin v_hdr := nullif(current_setting('request.headers', true), '')::json; exception when others then v_hdr := null; end;
-  v_ip := left(coalesce(nullif(trim(p_client_ip), ''),
-                        nullif(trim(split_part(v_hdr->>'x-forwarded-for', ',', 1)), ''), 'unknown'), 64);
+  v_ip := left(coalesce(
+            case when coalesce(nullif(current_setting('request.jwt.claim.role', true), ''),
+                               nullif(current_setting('request.jwt.claims', true), '')::json->>'role') = 'service_role'
+                 then nullif(trim(p_client_ip), '') end,
+            nullif(trim(split_part(v_hdr->>'x-forwarded-for', ',', 1)), ''), 'unknown'), 64);
   insert into private.api_rate_limits as rl (bucket, window_start, hits) values ('pending_summary_fail:' || v_ip, v_win, 1)
   on conflict (bucket, window_start) do update set hits = rl.hits + 1 returning hits into v_hits;
   delete from private.api_rate_limits where window_start < now() - interval '1 day';

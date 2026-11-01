@@ -104,7 +104,7 @@ export async function getLessons(courseId: string): Promise<{ lessons: LessonRow
 }
 
 function cardState(membership: Membership, pay: PaymentInfo, lessons: LessonRow[], done: number): CardState {
-  if (membership === "none") return "verify";
+  if (membership === "none") return pay.state === "approved" ? "owned" : "verify";
   switch (pay.state) {
     case "approved":
       return "owned";
@@ -126,7 +126,8 @@ function cardState(membership: Membership, pay: PaymentInfo, lessons: LessonRow[
 }
 
 export async function getCourseView(catalog: CatalogCourse, membership: Membership): Promise<CourseView> {
-  const pay: PaymentInfo = membership === "none" ? { state: "not_member" } : await getPaymentInfo(catalog.slug);
+  // S8 = A: a removed member still gets 'approved' for a bought course from my_payment_info; anything else is not_member.
+  const pay: PaymentInfo = await getPaymentInfo(catalog.slug);
   const courseId = pay.course_id ?? null;
   const { lessons, lastActivity } =
     courseId && (pay.state === "approved" || pay.state === "free") ? await getLessons(courseId) : { lessons: [], lastActivity: null };

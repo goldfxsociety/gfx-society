@@ -22,9 +22,11 @@ export const BUY_ENABLED = REFUND_COPY.tl.trim().length > 0;
 export const COMING_LATER_NOTE = "(Live Market Breakdowns at chat: coming in a later update.)";
 export const INCLUDED_NOTE = "Paid courses: one-time payment, walang monthly fee. Kasama lang ang nakalista sa bawat course.";
 
-/** Design, 2 Nov (QA P2): optional muted note under the inclusions list; never next to the price or Pay. */
+/** Design spec §E3 (Ben: "Kasama pagka launch"): muted line under the inclusions list; never next to the price or Pay. */
 export const COMING_LATER_COURSE_NOTE =
-  "Paparating pa: Market Breakdowns at member chat para sa verified members. Hindi ito kasama sa presyo ng course na ito.";
+  "Paparating pa: Market Breakdowns at member chat. Kasama ito para sa course owners kapag na-launch na.";
+/** Design §E3, S8 = A: shown when membership is in grace or removed. */
+export const BOUGHT_STAY_OPEN_NOTE = "Bukas pa rin ang mga course na nabili mo.";
 
 export const peso = (n: number) => `₱${Number(n).toLocaleString("en-PH")}`;
 /** Short refund form for /courses cards (Design, 2 Nov). Full REFUND_COPY stays on /pay and the course page. */

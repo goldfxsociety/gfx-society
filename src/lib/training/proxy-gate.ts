@@ -43,6 +43,14 @@ export async function trainingGate(request: NextRequest, response: NextResponse)
     const { data: m, error } = await supabase.rpc("my_membership");
     member = !error && (m === "active" || m === "grace");
   }
+  if (!member && otp && !legacyHome) {
+    // S8 = A: a removed member keeps lessons + capstone of a bought course (not /pay or /placement).
+    const m = path.match(/^\/courses\/([^/]+)\/([^/]+)\/?$/);
+    if (m && m[2] !== "pay" && m[2] !== "placement") {
+      const { data: info } = await supabase.rpc("my_payment_info", { p_course_slug: decodeURIComponent(m[1]) });
+      if ((info as { state?: string } | null)?.state === "approved") return null;
+    }
+  }
   if (!member) return go("/system/join");
   return legacyHome ? go(MEMBERS_HOME) : null;
 }

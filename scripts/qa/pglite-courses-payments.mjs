@@ -86,13 +86,17 @@ await expectOk('non-member cannot see QR','authenticated',N,`select name from st
 await expectOk('anon cannot see QR','anon','',`select name from storage.objects`,r=>r.length===0);
 // access after approval
 await expectOk('access after approval','authenticated',M,`select public.has_course_access(id) a, public.has_paid_access() p from public.training_courses where slug='test-paid'`,r=>r[0].a===true&&r[0].p===true);
-// S8 (Jarvis, 2 Nov): keep the lock on delist; purchase stays; relist restores without re-payment.
+// S8 = A (Ben, 2 Nov: "A for now, lets decide later on"): bought course stays open after delist; switch is private.keep_bought_courses_after_delist().
 await x(`delete from private.member_allowlist where email_hash=private.email_hash('m@example.test'); update public.member_status set allowlist_status='grace', grace_until=now()-interval '1 day' where user_id='${M}'`);
-await expectOk('S8 delisted: course locked','authenticated',M,`select public.has_course_access(id) a, public.is_member() m from public.training_courses where slug='test-paid'`,r=>r[0].a===false&&r[0].m===false);
-await expectOk('S8 delisted: no lessons readable','authenticated',M,`select count(*)::int c from public.training_lessons l join public.training_modules m on m.id=l.module_id join public.training_courses c on c.id=m.course_id where c.slug='test-paid'`,r=>r[0].c===0);
+await expectOk('S8 delisted: not a member, bought course still open','authenticated',M,`select public.has_course_access(id) a, public.is_member() m, public.my_payment_info('test-paid')->>'state' s from public.training_courses where slug='test-paid'`,r=>r[0].a===true&&r[0].m===false&&r[0].s==='approved');
+await expectOk('S8 delisted: bought lessons readable','authenticated',M,`select count(*)::int c from public.training_lessons l join public.training_modules m on m.id=l.module_id join public.training_courses c on c.id=m.course_id where c.slug='test-paid'`,r=>r[0].c>0);
+await expectOk('S8 delisted: quiz still usable','authenticated',M,`select public.get_lesson_quiz(l.id) q from public.training_lessons l where slug='l1'`,r=>r.length===1);
+await expectOk('S8 delisted: free/unbought courses locked','authenticated',M,`select bool_or(public.has_course_access(id)) a from public.training_courses where slug<>'test-paid'`,r=>r[0].a!==true);
+await expectOk('S8 delisted: other course pay state not_member','authenticated',M,`select public.my_payment_info(slug)->>'state' s from public.training_courses where slug<>'test-paid' and status='open' and price_php>0 limit 1`,r=>r.length===0||r[0].s==='not_member');
+await expectErr('S8 delisted: cannot buy new course','authenticated',M,sub(P(8),M,2000,'1111111111111','f','gold-advanced-setups'),/not a member/);
 await expectOk('S8 delisted: purchase record kept','authenticated',AD,`select count(*)::int c from public.course_purchases where user_id='${M}' and status='approved'`,r=>r[0].c===1);
 await x(`select private.import_allowlist('[{"email":"m@example.test","role":"client"},{"email":"ad@example.test","role":"ib"},{"email":"m2@example.test","role":"client"}]')`);
-await expectOk('S8 relisted: access restored, no re-payment','authenticated',M,`select public.has_course_access(id) a, (public.my_payment_info('test-paid'))->>'state' s, (select count(*)::int from public.course_purchases where user_id='${M}') n from public.training_courses where slug='test-paid'`,r=>r[0].a===true&&r[0].s==='approved'&&r[0].n===1);
+await expectOk('S8 relisted: nothing changes for bought course, no re-payment','authenticated',M,`select public.has_course_access(id) a, (public.my_payment_info('test-paid'))->>'state' s, (select count(*)::int from public.course_purchases where user_id='${M}') n from public.training_courses where slug='test-paid'`,r=>r[0].a===true&&r[0].s==='approved'&&r[0].n===1);
 await expectOk('published lesson visible after approval','authenticated',M,`select slug from public.training_lessons`,r=>r.some(x=>x.slug==='l1'));
 await expectOk('M2 (rejected) still no access','authenticated',M2,`select public.has_paid_access() p`,r=>r[0].p===false);
 const before=(await db.query(`select id,payment_code from public.course_purchases where user_id='${M2}'`)).rows[0];
@@ -138,8 +142,16 @@ await x(`delete from private.api_rate_limits`);
 for(let i=0;i<61;i++) await as('anon','',`select public.pending_payments_summary('nope')`);
 await expectOk('QA P2: 61 junk calls -> junk caller rate limited','anon','',`select public.pending_payments_summary('nope') s`,r=>r[0].s.error==='rate_limited');
 await expectOk('QA P2: valid token still works after junk flood','anon','',`select public.pending_payments_summary('test-token') s`,r=>typeof r[0].s.pending_count==='number');
-await expectOk('QA P2: failures bucketed per IP','anon','',`select public.pending_payments_summary('nope','203.0.113.9') s`,r=>r[0].s.error==='unauthorized');
-await expectOk('QA P2: valid token not counted','postgres','',`select coalesce(sum(hits),0)::int h from private.api_rate_limits where bucket not like 'pending_summary_fail:unknown'`,r=>r[0].h===1);
+await expectOk('QA P3: anon-passed IP ignored (stays in shared bucket, still limited)','anon','',`select public.pending_payments_summary('nope','203.0.113.9') s`,r=>r[0].s.error==='rate_limited');
+await expectOk('QA P3: rotating fake IPs add no rows','postgres','',`select count(*)::int n from private.api_rate_limits where bucket like 'pending_summary_fail:%'`,r=>r[0].n===1);
+await x(`select set_config('request.headers','{"x-forwarded-for":"198.51.100.7, 10.0.0.1"}',false)`);
+await expectOk('QA P3: IP from request headers gets its own bucket','anon','',`select public.pending_payments_summary('nope','203.0.113.9') s`,r=>r[0].s.error==='unauthorized');
+await x(`select set_config('request.headers','',false)`);
+await x(`select set_config('request.jwt.claim.role','service_role',false)`);
+await expectOk('QA P3: service_role may pass the IP','anon','',`select public.pending_payments_summary('nope','192.0.2.44') s`,r=>r[0].s.error==='unauthorized');
+await x(`select set_config('request.jwt.claim.role','',false)`);
+await expectOk('QA P3: buckets = unknown, header IP, service_role IP','postgres','',`select array_agg(bucket order by bucket) b from private.api_rate_limits where bucket like 'pending_summary_fail:%'`,r=>JSON.stringify(r[0].b)===JSON.stringify(['pending_summary_fail:192.0.2.44','pending_summary_fail:198.51.100.7','pending_summary_fail:unknown']));
+
 // quiz answers hidden
 await x(`insert into private.training_quizzes select id,'[{"q":"1% of 10000?","options":["10","100"],"answer_index":1,"explain":"x"}]' from public.training_lessons where slug='l1'`);
 await x(`insert into public.course_purchases(id,user_id,course_id,price_php,amount_entered,payment_code,gcash_ref,receipt_sha256,status,decided_at) select '${P(5)}','${AD}',id,2000,2000,'x','5555555555555','${'e'.repeat(64)}','approved',now() from public.training_courses where slug='test-paid'`);
@@ -180,4 +192,12 @@ await as('authenticated',M2,`select public.submit_lesson_quiz(id, array[1]) from
 await expectOk('QA P1: passing quiz + practice -> complete, Advanced unlocked','authenticated',M2,QS,r=>r[0].d===true&&r[0].b===true&&r[0].a===true&&r[0].s==='open');
 // ---- QA P3: placement must have exactly 10 questions
 await expectErr('QA P3: 2-question placement rejected by DB','postgres','',`insert into private.placement_quizzes select id,'[{"q":"1","options":["a","b"],"answer_index":1},{"q":"2","options":["a","b"],"answer_index":1}]' from public.training_courses where slug='q-adv'`,/placement_quizzes_ten/);
+// ---- QA re-check: empty quiz fails closed; completion counts published lessons only
+await x(`insert into public.training_lessons(module_id,sort,slug,title,status) select id,3,'qbe','QBE','published' from public.training_modules where slug='qbm';
+insert into private.training_quizzes select id,'[]' from public.training_lessons where slug='qbe';`);
+await expectErr('QA: zero-question quiz cannot be passed','authenticated',M2,`select public.submit_lesson_quiz(id, array[]::int[]) from public.training_lessons where slug='qbe'`,/no questions/);
+await as('authenticated',M2,`select public.set_practice_done(id,true) from public.training_lessons where slug='qbe'`);
+await expectOk('QA: empty-quiz lesson stays incomplete after practice','authenticated',M2,`select (select completed_at is null from public.training_progress p join public.training_lessons l on l.id=p.lesson_id where l.slug='qbe' and p.user_id=auth.uid()) i, public.course_complete((select id from public.training_courses where slug='q-basics')) b`,r=>r[0].i===true&&r[0].b===false);
+await x(`update public.training_lessons set status='draft' where slug='qbe'; insert into public.training_lessons(module_id,sort,slug,title,status) select id,4,'qbd','QBD','draft' from public.training_modules where slug='qbm';`);
+await expectOk('QA: unpublished lessons do not block completion','authenticated',M2,`select public.course_complete(id) b from public.training_courses where slug='q-basics'`,r=>r[0].b===true);
 console.log(`\n${pass} passed, ${fail} failed`);

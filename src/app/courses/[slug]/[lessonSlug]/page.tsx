@@ -44,9 +44,9 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   if (!catalog) notFound();
   const { loggedIn, membership } = await getMembership();
   if (!loggedIn) redirect(`/login?next=/courses/${slug}/${lessonSlug}`);
-  if (membership === "none") redirect("/system/join");
-
   const v = await getCourseView(catalog, membership);
+  // S8 = A: a removed member keeps bought courses (v.state "owned"); everything else needs membership.
+  if (membership === "none" && v.state !== "owned") redirect("/system/join");
   const idx = v.lessons.findIndex((l) => l.slug === lessonSlug);
   // Not owned / draft / locked: RLS returns nothing, so no body ever reaches the client.
   if (idx < 0) redirect(`/courses/${slug}#modules`);

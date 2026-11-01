@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APPROVAL_TIME, CONTACT_EMAIL, STATUS_SURFACE_NOTE } from "@/config/training";
+import { APPROVAL_TIME, CONTACT_EMAIL, STATUS_SURFACE_NOTE, BOUGHT_STAY_OPEN_NOTE } from "@/config/training";
 import { getAllCourseViews } from "@/lib/training/courses";
 import { formatPht } from "@/lib/training/time";
 import { GraceBanner } from "@/components/training/grace-banner";
@@ -8,12 +8,19 @@ import { Chip } from "@/components/training/chip";
 /** Payment status surface (no email updates yet). Members only; non-members see nothing. */
 export async function MyCourses() {
   const { membership, views } = await getAllCourseViews();
-  if (membership === "none") return null;
+  const removed = membership === "none";
   const grace = membership === "grace";
   const rows = views.filter((v) => ["free_new", "free_progress", "free_done", "pending", "rejected", "owned"].includes(v.state));
+  // S8 = A: a removed member with no bought course sees nothing here; with one, only the owned rows.
+  if (removed && rows.length === 0) return null;
   return (
     <>
     {grace && <GraceBanner />}
+    {removed && (
+      <p role="status" className="rounded-lg border border-border p-3 text-sm">
+        {BOUGHT_STAY_OPEN_NOTE}
+      </p>
+    )}
     <section aria-labelledby="my-courses-h" className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <h2 id="my-courses-h" className="text-lg font-semibold">My courses</h2>
       <p className="text-sm text-muted-foreground">{STATUS_SURFACE_NOTE}</p>

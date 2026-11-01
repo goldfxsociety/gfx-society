@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { CONTACT_EMAIL } from "@/config/training";
+import { BOUGHT_STAY_OPEN_NOTE, CONTACT_EMAIL } from "@/config/training";
 import { formatPhtDate } from "@/lib/training/time";
 
 /** Shown on /courses and /account while membership is in grace (Design F4). */
@@ -15,7 +15,7 @@ export async function GraceBanner() {
   return (
     <p role="status" className="rounded-lg border border-amber-500/60 p-3 text-sm">
       Hindi na namin ma-verify ang membership mo. May access ka pa {until ? `hanggang ${until}` : "sa ngayon"}. Kung mali ito, email{" "}
-      {CONTACT_EMAIL}.
+      {CONTACT_EMAIL}. {BOUGHT_STAY_OPEN_NOTE}
     </p>
   );
 }
