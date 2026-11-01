@@ -1,5 +1,5 @@
 -- GFX post-launch fix 1, item 5: atomic slot reservation for the 3-codes/hour cap.
--- NOT APPLIED. Apply AFTER 20261102130000_members_gate_email_otp.sql. Re-runnable.
+-- NOT APPLIED. Apply AFTER 20261102130000_members_gate_email_otp.sql and #56's 20261102170000_course_content.sql. Re-runnable.
 --
 -- Before: member_code_allowed only CHECKED the limits and member_code_record inserted the slot after
 -- the send, so N parallel requests for one email could all pass the check (check-then-record race).

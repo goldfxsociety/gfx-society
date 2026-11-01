@@ -121,6 +121,7 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Members area verification list | Hashed emails + IB/client role only, refreshed monthly; emails no longer on the ACCM list are deleted within 30 days after the next monthly list refresh. Raw export deleted after import |
 | Members area membership record (status, role, verification date, consent date + version) | While your account exists (members access ends 14 days after your email leaves the list); deleted with your account |
 | Members area code request log | Hashed email + hashed IP + timestamp (no plain email or IP); deleted after 1 day by a daily cleanup and on every new code request |
+| Members area rejected code request log | Hashed IP + timestamp only (no email); used to limit abuse; deleted after 1 day |
 | Members area raw ACCM export file | Deleted manually by our admin right after each monthly import |
 | Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 

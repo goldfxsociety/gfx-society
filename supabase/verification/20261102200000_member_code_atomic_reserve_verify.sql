@@ -1,4 +1,4 @@
--- Read-only. Returns one boolean: true when 20261102170000 is in place.
+-- Read-only. Returns one boolean: true when 20261102200000 is in place.
 select
   position('pg_advisory_xact_lock' in pg_get_functiondef('public.member_code_allowed(text,text)'::regprocedure)) > 0
   and position('insert into private.member_code_requests' in pg_get_functiondef('public.member_code_allowed(text,text)'::regprocedure)) > 0

@@ -41,8 +41,6 @@ export default async function ResourcesPage() {
     return acc;
   }, {});
 
-  const mentionsAccm = resources.some((r) => /ACCM/i.test(`${r.title} ${r.description ?? ""}`));
-
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
@@ -80,7 +78,8 @@ export default async function ResourcesPage() {
         </div>
       ))}
 
-      {mentionsAccm && <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>}
+      {/* Always shown: the Broker Verification card links to ACCM's WikiFX page (post-launch fix 1). */}
+      <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
 
       <p className="text-xs text-muted-foreground">
         Education lang, not financial advice. Max 1% risk per trade.

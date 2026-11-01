@@ -6,7 +6,7 @@ export type SendResult = "sent" | "consent_required" | "invalid_email" | "error"
 export type VerifyResult = "active" | "wrong_code" | "expired_code" | "not_verified" | "error";
 
 export type OtpDeps = {
-  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). When true it has already reserved the email + IP slot (atomic, migration 20261102170000). */
+  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). When true it has already reserved the email + IP slot (atomic, migration 20261102200000). */
   codeAllowed: (email: string, ip: string) => Promise<boolean | null>;
   /**
    * service_role RPC public.member_code_record, after the send attempt: accepted -> keeps the reserved slot;
