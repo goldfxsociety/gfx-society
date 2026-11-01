@@ -1,26 +1,71 @@
 "use server";
 
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { MEMBERS_CONSENT_VERSION } from "@/content/members-gate";
+import { requestCode, verifyCode, type OtpDeps, type SendResult, type VerifyResult } from "@/lib/members/otp-flow";
+import { MEMBERS_HOME } from "@/lib/members/routes";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export type JoinResult = "idle" | "matched" | "no_match" | "rate_limited" | "unverified_email" | "consent_required" | "error";
-export type JoinState = { result: JoinResult };
+export type JoinState = { step: "email" | "code"; email: string; result: "idle" | SendResult | VerifyResult; sentAt?: number };
 
-/**
- * Calls public.claim_membership(consent). The RPC matches ONLY the caller's own
- * confirmed auth email against the hashed allowlist; no email is sent from here.
- */
-export async function claimMembership(_prev: JoinState, formData: FormData): Promise<JoinState> {
-  if (formData.get("consent") !== "on") return { result: "consent_required" };
+async function deps(): Promise<OtpDeps> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { result: "error" };
-  const { data, error } = await supabase.rpc("claim_membership", { p_consent: true });
-  if (error) {
-    console.error("[system/join] claim_membership failed", { code: error.code });
-    return { result: "error" };
+  return {
+    codeAllowed: async (email, ip) => {
+      const admin = createAdminClient();
+      if (!admin) {
+        console.error("[system/join] send gate not configured");
+        return null;
+      }
+      const { data, error } = await admin.rpc("member_code_allowed", { p_email: email, p_ip: ip });
+      if (error) {
+        console.error("[system/join] member_code_allowed failed", { code: error.code });
+        return null;
+      }
+      return data === true;
+    },
+    sendOtp: async (email) => {
+      // Only reached for allowlisted emails. Creates the auth user if needed (passwordless).
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      if (error) console.error("[system/join] send code failed", { status: error.status });
+      return !error;
+    },
+    verifyOtp: async (email, token) => {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+      if (!error) return "ok";
+      return error.code === "otp_expired" || /expired/i.test(error.message) ? "expired" : "wrong";
+    },
+    recordConsent: async () => {
+      const { data, error } = await supabase.rpc("record_member_consent", { p_version: MEMBERS_CONSENT_VERSION });
+      if (error) {
+        console.error("[system/join] record_member_consent failed", { code: error.code });
+        return null;
+      }
+      return typeof data === "string" ? data : null;
+    },
+  };
+}
+
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  return (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || "unknown";
+}
+
+export async function joinStep(prev: JoinState, formData: FormData): Promise<JoinState> {
+  const intent = formData.get("intent");
+  if (intent === "send" || intent === "resend") {
+    const email = String(formData.get("email") ?? prev.email);
+    const consent = intent === "resend" ? prev.step === "code" : formData.get("consent") === "on";
+    const r = await requestCode(await deps(), email, consent, await clientIp());
+    return { step: r === "sent" ? "code" : "email", email, result: r, sentAt: r === "sent" ? Date.now() : prev.sentAt };
   }
-  const ok: JoinResult[] = ["matched", "no_match", "rate_limited", "unverified_email"];
-  return { result: ok.includes(data as JoinResult) ? (data as JoinResult) : "error" };
+  if (intent === "verify" && prev.step === "code") {
+    const r = await verifyCode(await deps(), prev.email, String(formData.get("code") ?? ""));
+    if (r === "active") redirect(MEMBERS_HOME);
+    return { step: "code", email: prev.email, result: r, sentAt: prev.sentAt };
+  }
+  if (intent === "restart") return { step: "email", email: "", result: "idle" };
+  return { ...prev, result: "error" };
 }

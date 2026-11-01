@@ -1,58 +1,130 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "cn";
+import { useActionState, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { JOIN_COPY as C } from "@/content/members-gate";
-import { claimMembership, type JoinState } from "./actions";
+import { joinStep, type JoinState } from "./actions";
 
-export function JoinForm({ ibDisclosure }: { ibDisclosure: string }) {
-  const [state, action, pending] = useActionState<JoinState, FormData>(claimMembership, { result: "idle" });
+const COOLDOWN_S = 60;
 
-  if (state.result === "matched") {
-    return (
-      <div className="flex flex-col gap-4" role="status">
-        <p className="text-lg font-semibold">{C.matched}</p>
-        <Link href="/system/members" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
-          {C.matchedCta}
-        </Link>
-      </div>
-    );
-  }
-  if (state.result === "no_match") {
-    return (
-      <div className="flex flex-col gap-3" role="status">
-        <p className="text-lg font-semibold">{C.noMatch}</p>
-        <Link href="/academy" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
-          {C.noMatchLearn}
-        </Link>
-        <a href="mailto:goldfx.society@gmail.com" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
-          {C.noMatchContact}
-        </a>
-        <p className="text-sm text-muted-foreground">{C.noMatchMonthly}</p>
-        <Link href="/accm" className="text-sm underline">
-          {C.noMatchPartner}
-        </Link>
-        <p className="text-xs text-muted-foreground">{ibDisclosure}</p>
-      </div>
-    );
-  }
+export function JoinForm() {
+  const [state, action, pending] = useActionState<JoinState, FormData>(joinStep, { step: "email", email: "", result: "idle" });
+  const [consent, setConsent] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  // 60s resend cooldown from the last accepted request (server-side rate limits still apply).
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const cooldown = state.sentAt ? Math.max(0, COOLDOWN_S - Math.floor((now - state.sentAt) / 1000)) : 0;
 
   const msg =
     state.result === "consent_required" ? C.consentRequired
-    : state.result === "rate_limited" ? C.rateLimited
-    : state.result === "unverified_email" ? C.verifyEmailFirst
+    : state.result === "invalid_email" ? C.invalidEmail
+    : state.result === "wrong_code" ? C.wrongCode
+    : state.result === "expired_code" ? C.expiredCode
+    : state.result === "not_verified" ? C.notVerified
     : state.result === "error" ? C.error
     : null;
+  const alert = msg && (
+    <p className="text-sm text-destructive" role="alert">
+      {msg}
+    </p>
+  );
+
+  const links = (
+    <div className="flex flex-col gap-2 text-sm">
+      <Link href="/academy" className="underline">
+        {C.academyLink}
+      </Link>
+      <Link href="/accm" className="text-xs text-muted-foreground underline">
+        {C.accmLink}
+      </Link>
+    </div>
+  );
+
+  if (state.step === "code") {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm leading-relaxed" role="status">
+          {C.sent}
+        </p>
+        <form action={action} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-2 text-sm">
+            {C.codeLabel}
+            <input
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9 ]{6,7}"
+              maxLength={7}
+              required
+              className="h-11 rounded-md border px-3 text-base tracking-widest"
+            />
+          </label>
+          {alert}
+          <Button type="submit" name="intent" value="verify" className="h-11 w-full" disabled={pending}>
+            {C.verify}
+          </Button>
+        </form>
+        <details className="text-sm">
+          <summary className="cursor-pointer underline">{C.noCodeToggle}</summary>
+          <div className="mt-2 flex flex-col gap-3">
+            <p className="leading-relaxed">{C.noCodeBody}</p>
+            <form action={action}>
+              <Button
+                type="submit"
+                name="intent"
+                value="resend"
+                variant="outline"
+                className="h-11 w-full"
+                disabled={pending || cooldown > 0}
+              >
+                {C.resend}
+              </Button>
+            </form>
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {cooldown > 0 ? C.resendIn(cooldown) : ""}
+            </p>
+            <form action={action}>
+              <button type="submit" name="intent" value="restart" className="text-sm underline">
+                {C.otherEmail}
+              </button>
+            </form>
+          </div>
+        </details>
+        {links}
+      </div>
+    );
+  }
 
   return (
     <form action={action} className="flex flex-col gap-4">
+      <p className="text-sm">{C.intro}</p>
+      <label className="flex flex-col gap-2 text-sm">
+        {C.emailLabel}
+        <input
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          defaultValue={state.email}
+          className="h-11 rounded-md border px-3 text-base"
+        />
+      </label>
       <p className="text-sm leading-relaxed">
         <strong>{C.consentLead}</strong> {C.consentBody}
       </p>
       <label className="flex items-start gap-3 text-sm">
-        <input type="checkbox" name="consent" className="mt-1 size-5" />
+        <input
+          type="checkbox"
+          name="consent"
+          className="mt-1 size-5"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+        />
         <span>
           {C.consentCheckbox}{" "}
           <Link href="/privacy" className="underline">
@@ -60,17 +132,11 @@ export function JoinForm({ ibDisclosure }: { ibDisclosure: string }) {
           </Link>
         </span>
       </label>
-      <p className="text-xs text-muted-foreground">
-        {ibDisclosure} {C.consentAfter}
-      </p>
-      {msg && (
-        <p className="text-sm text-destructive" role="alert">
-          {msg}
-        </p>
-      )}
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
-        {C.submit}
+      {alert}
+      <Button type="submit" name="intent" value="send" className="h-11 w-full" disabled={pending || !consent}>
+        {C.sendCode}
       </Button>
+      {links}
     </form>
   );
 }

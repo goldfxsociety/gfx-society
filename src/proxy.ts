@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { isUnknownAcademyPath } from "@/lib/academy/slug-guard";
+import { membersRedirect } from "@/lib/members/proxy-gate";
 
 export async function proxy(request: NextRequest) {
   // Unknown level/lesson slug -> rewrite to an unmatched path so Next.js
@@ -8,7 +9,8 @@ export async function proxy(request: NextRequest) {
   if (request.method === "GET" && (await isUnknownAcademyPath(request.nextUrl.pathname))) {
     return NextResponse.rewrite(new URL("/_gfx-not-found", request.url));
   }
-  return await updateSession(request);
+  const response = await updateSession(request);
+  return (await membersRedirect(request, response)) ?? response;
 }
 
 export const config = {

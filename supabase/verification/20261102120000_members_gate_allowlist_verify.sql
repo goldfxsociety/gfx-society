@@ -1,3 +1,4 @@
+-- ORDER: run this BEFORE 20261102130000_members_gate_email_otp.sql (it checks claim_membership, which that migration drops). After m2, run 20261102130000_members_gate_email_otp_verify.sql instead.
 -- Read-only checks after applying 20261102120000_members_gate_allowlist.sql. Every row should be true.
 select 'allowlist has no plaintext/PII columns' as check, (select array_agg(column_name::text order by column_name) from information_schema.columns where table_schema='private' and table_name='member_allowlist') = array['added_at','email_hash','role','seen_at'] as ok
 union all select 'anon cannot read member_status', not has_table_privilege('anon','public.member_status','select')
