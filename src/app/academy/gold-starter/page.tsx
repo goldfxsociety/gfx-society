@@ -5,6 +5,7 @@ import { cn } from "cn";
 import { createClient } from "@/lib/supabase/server";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { NextStepLink } from "@/components/funnel/next-step-link";
+import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-checklist";
 import { LanguageSwitch } from "@/components/academy/language-switch";
@@ -280,6 +281,7 @@ export default async function GoldStarterPage() {
         <NextStepLink location="gold_starter" className="inline-flex min-h-11 items-center self-start font-medium underline">
           Tingnan ang steps →
         </NextStepLink>
+        <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
       </section>
 
       {/* 7. FAQ */}
