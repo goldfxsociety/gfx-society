@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  if (!findCatalog(slug)) notFound(); // resolve 404 before the page streams (root loading.tsx would commit 200)
   return { title: `${findCatalog(slug)?.title ?? "Course"} | GFX Trading System` };
 }
 
