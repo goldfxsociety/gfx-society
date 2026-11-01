@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { COMING_LATER_NOTE } from "@/config/training";
+import { COMING_LATER_COURSE_NOTE } from "@/config/training";
 import { getAllCourseViews, nextLesson } from "@/lib/training/courses";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
@@ -70,7 +70,7 @@ export default async function TrainingPage() {
           ))}
         </ul>
       </section>
-      <p className="text-sm text-muted-foreground">{COMING_LATER_NOTE}</p>
+      <p className="text-sm text-muted-foreground">{COMING_LATER_COURSE_NOTE}</p>
       <MembersFooter />
     </div>
   );

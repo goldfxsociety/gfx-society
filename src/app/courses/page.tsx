@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { cardPriceLine, COMING_LATER_NOTE, INCLUDED_NOTE } from "@/config/training";
+import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
 import { getAllCourseViews, nextLesson, type CourseView } from "@/lib/training/courses";
 import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
@@ -120,7 +120,7 @@ export default async function CoursesPage() {
 
       <section className="rounded-lg border border-border bg-card p-4 text-sm leading-relaxed">
         <p>{INCLUDED_NOTE}</p>
-        <p className="mt-1 text-muted-foreground">{COMING_LATER_NOTE}</p>
+        <p className="mt-1 text-muted-foreground">{COMING_LATER_COURSE_NOTE}</p>
       </section>
 
       <ul className="flex flex-col gap-4">
