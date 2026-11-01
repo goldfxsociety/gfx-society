@@ -6,11 +6,11 @@ export type SendResult = "sent" | "consent_required" | "invalid_email" | "error"
 export type VerifyResult = "active" | "wrong_code" | "expired_code" | "not_verified" | "error";
 
 export type OtpDeps = {
-  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). Uses no slot. */
+  /** service_role RPC public.member_code_allowed: boolean only (listed + under rate limits). When true it has already reserved the email + IP slot (atomic, migration 20261102170000). */
   codeAllowed: (email: string, ip: string) => Promise<boolean | null>;
   /**
-   * service_role RPC public.member_code_record, after the send attempt: accepted -> email + IP slot;
-   * rejected (CAPTCHA/Auth) -> per-IP reject bucket only. Optional; errors are logged, never surfaced.
+   * service_role RPC public.member_code_record, after the send attempt: accepted -> keeps the reserved slot;
+   * rejected (CAPTCHA/Auth) -> releases it and adds a per-IP reject row. Optional; errors are logged, never surfaced.
    */
   recordSend?: (email: string, ip: string, accepted: boolean) => Promise<void>;
   /** signInWithOtp; captchaToken is forwarded to Supabase Auth (Turnstile) when present. */

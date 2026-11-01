@@ -26,12 +26,38 @@ for (const [name, build] of Object.entries(PATHS)) {
 t("flag OFF: withCaptcha returns the same object (byte-for-byte)", () => { off(); const o = { a: 1 }; assert.equal(withCaptcha(o, "x"), o); assert.equal(withCaptcha(undefined, "x"), undefined); });
 t("flag ON: missing/blank/oversized token -> no captchaToken added", () => { on(); for (const tok of ["", "  ", undefined, null, 5, "x".repeat(5000)]) assert.equal(withCaptcha({ a: 1 }, tok).captchaToken, undefined); assert.equal(cleanCaptchaToken(" t "), "t"); off(); });
 t("isCaptchaError matches Supabase's message", () => { assert.ok(isCaptchaError("captcha verification process failed")); assert.ok(!isCaptchaError("Invalid login credentials")); });
+// Guard scanner: direct calls (auth.x( / auth?.x( / auth["x"]( , any whitespace) and destructuring
+// (const { x } = supabase.auth, { x: alias } = ..., { auth: { x } } = supabase).
+const CAPTCHA_METHODS = "signInWithOtp|signUp|signInWithPassword|resetPasswordForEmail|signInAnonymously|signInWithIdToken|resend";
+function findAuthCalls(code) {
+  const out = [];
+  for (const m of code.matchAll(new RegExp(`\\bauth\\s*\\??\\.\\s*(${CAPTCHA_METHODS})\\s*\\(|\\bauth\\s*\\??\\.?\\s*\\[\\s*["'\`](${CAPTCHA_METHODS})["'\`]\\s*\\]\\s*\\(`, "g"))) out.push(m[1] ?? m[2]);
+  const destr = (body) => [...body.matchAll(new RegExp(`(?:^|[,{\\s])(${CAPTCHA_METHODS})\\s*(?=[,}:=\\s])`, "g"))].map((m) => m[1]);
+  for (const m of code.matchAll(/\{([^{}]*)\}\s*=\s*[\w$.?\s()]*?\bauth\b\s*[;\n)]/g)) out.push(...destr(m[1]));
+  for (const m of code.matchAll(/\bauth\s*:\s*\{([^{}]*)\}/g)) out.push(...destr(m[1]));
+  return out;
+}
+t("guard scanner catches direct, optional, bracket and destructured auth calls", () => {
+  const cases = {
+    "await supabase.auth.signUp({ email })": ["signUp"],
+    "await supabase.auth\n  .signInWithOtp({ email })": ["signInWithOtp"],
+    "supabase.auth?.resend({ type: 'signup' })": ["resend"],
+    "supabase.auth['resetPasswordForEmail'](e)": ["resetPasswordForEmail"],
+    "const { signUp } = supabase.auth;\nawait signUp({ email });": ["signUp"],
+    "const { signInWithOtp: sendCode, getUser } = client.auth\n": ["signInWithOtp"],
+    "const {\n  resend,\n  signInAnonymously,\n} = (await createClient()).auth;": ["resend", "signInAnonymously"],
+    "const { auth: { signInWithPassword } } = supabase;": ["signInWithPassword"],
+    "const { data: { user } } = await supabase.auth.getUser();": [],
+    "const { signUp } = props;": [],
+  };
+  for (const [code, want] of Object.entries(cases)) assert.deepEqual(findAuthCalls(code).sort(), want.sort(), code);
+});
 t("every Supabase Auth call that CAPTCHA checks goes through withCaptcha", () => {
   const files = { "src/app/system/join/actions.ts": /signInWithOtp\(\{[^}]*options: withCaptcha\(/s, "src/app/signup/actions.ts": /auth\.signUp\(\{[\s\S]*?options: withCaptcha\(/, "src/app/login/page.tsx": /withCaptcha\(undefined, captcha\.token\)[\s\S]*?signInWithPassword\(\{[\s\S]*?\.\.\.\(options \? \{ options \} : \{\}\)/ };
   for (const [f, re] of Object.entries(files)) assert.match(fs.readFileSync(f, "utf8"), re, f);
   // No other CAPTCHA-checked auth call exists (would need withCaptcha too).
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
-  const hits = walk("src").filter((f) => /\.tsx?$/.test(f)).flatMap((f) => [...fs.readFileSync(f, "utf8").matchAll(/auth\.(signInWithOtp|signUp|signInWithPassword|resetPasswordForEmail|signInAnonymously|signInWithIdToken|resend)\(/g)].map((m) => `${f}:${m[1]}`));
+  const hits = walk("src").filter((f) => /\.tsx?$/.test(f)).flatMap((f) => findAuthCalls(fs.readFileSync(f, "utf8")).map((m) => `${f}:${m}`));
   assert.deepEqual(hits.sort(), ["src/app/login/page.tsx:signInWithPassword", "src/app/signup/actions.ts:signUp", "src/app/system/join/actions.ts:signInWithOtp"]);
 });
 // Browser state (Design spec): load failure -> error + disabled; late token -> recovers.

@@ -102,7 +102,7 @@ We share personal data only with service providers that help us run GFX, under a
 | Discord Inc. | Discord community and join application, only if you apply to join; deposit verification upload and messages, only if you apply for deposit verification | United States and other regions |
 | Cloudflare, Inc. | Runs the Discord deposit verification bot (the screenshot passes through memory only and is never saved), only if you apply for deposit verification | Global network |
 
-**We do not share your personal data with any broker** (including our partner brokers) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
+**We do not share your personal data with any broker** (including ACCM, our partner broker) unless you give separate, explicit consent for a specific referral. Signing up through a broker link on our site happens on the broker's own website under the broker's privacy policy. If you open an ACCM account through our link, ACCM may share your account and trading activity with GFX so we can track commissions.
 
 We do not sell your personal data. We may disclose data if required by law, court order, or a government authority.
 
