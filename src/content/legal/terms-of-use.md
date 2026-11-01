@@ -1,6 +1,6 @@
 # GFX Society Terms of Use
 
-**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner brokers (basahin ang IB Disclosure). Maging respectful sa community.
+**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner broker namin, ang ACCM (basahin ang IB Disclosure). Maging respectful sa community.
 
 Last updated: 2 Nov 2026 · Version: 1.3
 
