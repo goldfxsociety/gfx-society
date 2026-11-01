@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 
 export default function NotFound() {
   return (
@@ -9,10 +10,10 @@ export default function NotFound() {
         We couldn&apos;t find that page. It may have moved, or the link may be wrong.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link href="/academy" className={buttonVariants({ variant: "default" })}>
+        <Link href="/academy" className={cn(buttonVariants({ variant: "default" }), "min-h-11")}>
           Back to the Academy
         </Link>
-        <Link href="/start" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/start" className={cn(buttonVariants({ variant: "outline" }), "min-h-11")}>
           Start here
         </Link>
       </div>

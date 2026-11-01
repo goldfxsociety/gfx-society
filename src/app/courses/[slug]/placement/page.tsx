@@ -1,4 +1,3 @@
-import { RISK_LINE } from "@/config/training";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -40,7 +39,7 @@ export default async function PlacementPage({ params }: { params: Promise<{ slug
       ) : (
         <PlacementForm slug={slug} questions={quiz.questions} />
       )}
-      <p className="text-xs text-muted-foreground">{quiz?.disclaimer || RISK_LINE}</p>
+      {quiz?.disclaimer ? <p className="text-xs text-muted-foreground">{quiz.disclaimer}</p> : null}
       <MembersFooter />
     </div>
   );

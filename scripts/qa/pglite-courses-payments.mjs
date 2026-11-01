@@ -206,4 +206,25 @@ await expectOk('capstone disclaimer readable by owner','authenticated',AD,`selec
 await expectErr('disclaimer must be trimmed','postgres','',`update public.training_capstones set disclaimer=' x ' where course_id=(select id from public.training_courses where slug='test-paid')`,/check constraint/);
 await x(`update private.placement_quizzes set disclaimer='Max 1% risk per trade.' where course_id=(select id from public.training_courses where slug='t-adv')`);
 await expectOk('get_placement_quiz returns disclaimer','authenticated',M2,`select public.get_placement_quiz('t-adv')->>'disclaimer' d`,r=>r[0].d==='Max 1% risk per trade.');
-console.log(`\n${pass} passed, ${fail} failed`);
+
+// ---- loader BANNED list: 'lifetime' and 'live' (word-boundary) are rejected in disclaimers; 'delivery' is not
+{
+  const { spawnSync } = await import('child_process');
+  const os = await import('os');
+  const pth = await import('path');
+  const qs = Array.from({ length: 10 }, (_, i) => ({ prompt: `Q${i}`, options: ['a', 'b'], correct: 0, explanation: 'e' }));
+  const runLoader = (disclaimer) => {
+    const d = fs.mkdtempSync(pth.join(os.tmpdir(), 'gfx-loader-'));
+    fs.mkdirSync(pth.join(d, 'basics'));
+    fs.writeFileSync(pth.join(d, 'basics', 'placement.json'), JSON.stringify({ questions: qs, disclaimer }));
+    const r = spawnSync(process.execPath, ['scripts/build-course-content-sql.mjs', '--dry-run', d], { encoding: 'utf8' });
+    fs.rmSync(d, { recursive: true, force: true });
+    return r;
+  };
+  const chk = (name, ok) => { if (ok) { pass++; console.log('PASS', name); } else { fail++; console.log('FAIL', name); } };
+  for (const bad of ['lifetime access + live sessions', 'Lifetime access', 'Join the LIVE room'])
+    chk(`loader rejects "${bad}"`, runLoader(bad).status !== 0);
+  chk('loader allows "Education lang, not financial advice. Max 1% risk per trade."', runLoader('Education lang, not financial advice. Max 1% risk per trade.').status === 0);
+  chk('loader allows "delivery" (word boundary)', runLoader('Lesson delivery is self-paced.').status === 0);
+}
+console.log(`\n${pass} passed, ${fail} failed (incl. loader)`);

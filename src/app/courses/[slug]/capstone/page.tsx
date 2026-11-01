@@ -1,4 +1,3 @@
-import { RISK_LINE } from "@/config/training";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -40,7 +39,7 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
       ) : (
         <p className="text-sm text-muted-foreground">Inihahanda pa ang capstone. Balikan mo ito mamaya.</p>
       )}
-      <p className="text-xs text-muted-foreground">{cap?.disclaimer || RISK_LINE}</p>
+      {cap?.disclaimer ? <p className="text-xs text-muted-foreground">{cap.disclaimer}</p> : null}
       <MembersFooter />
     </div>
   );

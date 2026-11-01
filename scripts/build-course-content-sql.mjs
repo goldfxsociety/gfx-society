@@ -32,7 +32,7 @@ function checkQuestions(where, qs, exact) {
 }
 // Optional 'disclaimer' (placement.json, capstone.json): trimmed string, max 500 chars, no income/profit/win-rate
 // or other banned wording. Optional extra check: set GFX_COMPLIANCE_CHECK to compliance_check.py to run it too.
-const BANNED = /\b(income|profit|profits|kita|kumita|win[- ]?rate|winrate|guarantee[ds]?|garantisado|sure ?win|signals?|vip|pde|passive|returns?|roi)\b|\d+\s*%\s*(win|accuracy|return)/i;
+const BANNED = /\b(income|profit|profits|kita|kumita|win[- ]?rate|winrate|guarantee[ds]?|garantisado|sure ?win|signals?|vip|pde|passive|returns?|roi|lifetime|live)\b|\d+\s*%\s*(win|accuracy|return)/i;
 function checkDisclaimer(where, v) {
   if (v === undefined || v === null) return null;
   if (typeof v !== "string") { fail(where, "disclaimer must be a string"); return null; }
