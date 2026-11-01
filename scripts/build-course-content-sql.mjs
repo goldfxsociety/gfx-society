@@ -10,8 +10,11 @@ import { spawnSync } from "node:child_process";
 // --dry-run: parse + validate only; prints a summary to stderr and writes no SQL.
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
+// --publish: emit every lesson as 'published' (ignores each file's status) and open the course
+// (training_courses.status = 'open'; sales_open/price untouched) so placement + capstone are reachable.
+const publish = args.includes("--publish");
 const dir = args.find((a) => !a.startsWith("--"));
-if (!dir) { console.error("usage: build-course-content-sql.mjs [--dry-run] <content-dir>"); process.exit(2); }
+if (!dir) { console.error("usage: build-course-content-sql.mjs [--dry-run] [--publish] <content-dir>"); process.exit(2); }
 const SLUG = /^[a-z0-9-]+$/;
 const errors = [];
 const fail = (where, msg) => errors.push(`${where}: ${msg}`);
@@ -57,6 +60,7 @@ for (const course of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir
   if (!SLUG.test(course)) { fail(course, "course folder must be a slug"); continue; }
   const cdir = path.join(dir, course);
   const modsFile = path.join(cdir, "modules.json");
+  if (publish) out.push(`update public.training_courses set status = 'open', updated_at = now() where slug = ${q(course)} and status <> 'open';`);
   const mods = fs.existsSync(modsFile) ? read(modsFile) : [];
   const seenSort = new Set();
   for (const m of mods ?? []) {
@@ -66,7 +70,8 @@ for (const course of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir
     if (!Number.isInteger(m?.order) || seenSort.has(m.order)) fail(w, "order must be a unique integer"); else seenSort.add(m.order);
     out.push(`insert into public.training_modules (course_id, sort, slug, title, learning_goal, practice_task)
 select c.id, ${m.order}, ${q(m.slug)}, ${q(m.title)}, ${q(m.learning_goal)}, ${q(m.practice_task)} from public.training_courses c where c.slug = ${q(course)}
-on conflict (course_id, slug) do update set sort = excluded.sort, title = excluded.title, learning_goal = excluded.learning_goal, practice_task = excluded.practice_task;`);
+on conflict (course_id, slug) do update set sort = excluded.sort, title = excluded.title, learning_goal = excluded.learning_goal, practice_task = excluded.practice_task
+where (training_modules.sort, training_modules.title, training_modules.learning_goal, training_modules.practice_task) is distinct from (excluded.sort, excluded.title, excluded.learning_goal, excluded.practice_task);`);
   }
   const ldir = path.join(cdir, "lessons");
   for (const mod of fs.existsSync(ldir) ? fs.readdirSync(ldir).sort() : []) {
@@ -81,13 +86,15 @@ on conflict (course_id, slug) do update set sort = excluded.sort, title = exclud
       if (!["draft", "published"].includes(L.status)) fail(w, "status must be draft or published");
       if (L.quiz) checkQuestions(w + " quiz", L.quiz);
       out.push(`insert into public.training_lessons (module_id, sort, slug, title, tldr, body_md, takeaway, practice_task, status)
-select m.id, ${L.order}, ${q(slug)}, ${q(L.title)}, ${q(L.tldr)}, ${q(L.body)}, ${q(L.takeaway)}, ${q(L.practice_task)}, ${q(L.status)}
+select m.id, ${L.order}, ${q(slug)}, ${q(L.title)}, ${q(L.tldr)}, ${q(L.body)}, ${q(L.takeaway)}, ${q(L.practice_task)}, ${q(publish ? "published" : L.status)}
 from public.training_modules m join public.training_courses c on c.id = m.course_id where c.slug = ${q(course)} and m.slug = ${q(mod)}
-on conflict (module_id, slug) do update set sort = excluded.sort, title = excluded.title, tldr = excluded.tldr, body_md = excluded.body_md, takeaway = excluded.takeaway, practice_task = excluded.practice_task, status = excluded.status;`);
+on conflict (module_id, slug) do update set sort = excluded.sort, title = excluded.title, tldr = excluded.tldr, body_md = excluded.body_md, takeaway = excluded.takeaway, practice_task = excluded.practice_task, status = excluded.status
+where (training_lessons.sort, training_lessons.title, training_lessons.tldr, training_lessons.body_md, training_lessons.takeaway, training_lessons.practice_task, training_lessons.status) is distinct from (excluded.sort, excluded.title, excluded.tldr, excluded.body_md, excluded.takeaway, excluded.practice_task, excluded.status);`);
       if (L.quiz?.length) out.push(`insert into private.training_quizzes (lesson_id, questions)
 select l.id, ${j(toDb(L.quiz))} from public.training_lessons l join public.training_modules m on m.id = l.module_id join public.training_courses c on c.id = m.course_id
 where c.slug = ${q(course)} and m.slug = ${q(mod)} and l.slug = ${q(slug)}
-on conflict (lesson_id) do update set questions = excluded.questions;`);
+on conflict (lesson_id) do update set questions = excluded.questions
+where (training_quizzes.questions) is distinct from (excluded.questions);`);
     }
   }
   const pf = path.join(cdir, "placement.json");
@@ -95,7 +102,8 @@ on conflict (lesson_id) do update set questions = excluded.questions;`);
     const D = checkDisclaimer(`${course}/placement.json`, P.disclaimer);
     summary.push(`${course}/placement.json: ${P.questions?.length ?? 0} questions, disclaimer: ${D === null ? "(none -> default risk line)" : JSON.stringify(D)}`);
     out.push(`insert into private.placement_quizzes (course_id, questions, disclaimer) select c.id, ${j(toDb(P.questions ?? []))}, ${D === null ? "null" : q(D)} from public.training_courses c where c.slug = ${q(course)}
-on conflict (course_id) do update set questions = excluded.questions, disclaimer = excluded.disclaimer;`); } }
+on conflict (course_id) do update set questions = excluded.questions, disclaimer = excluded.disclaimer
+where (placement_quizzes.questions, placement_quizzes.disclaimer) is distinct from (excluded.questions, excluded.disclaimer);`); } }
   const kf = path.join(cdir, "capstone.json");
   if (fs.existsSync(kf)) { const K = read(kf); if (K) {
     if (!K.title) fail(`${course}/capstone.json`, "title");
@@ -103,7 +111,8 @@ on conflict (course_id) do update set questions = excluded.questions, disclaimer
     const D = checkDisclaimer(`${course}/capstone.json`, K.disclaimer);
     summary.push(`${course}/capstone.json: ${K.rubric?.length ?? 0} rubric items, disclaimer: ${D === null ? "(none -> default risk line)" : JSON.stringify(D)}`);
     out.push(`insert into public.training_capstones (course_id, title, rubric, disclaimer) select c.id, ${q(K.title)}, ${j(K.rubric ?? [])}, ${D === null ? "null" : q(D)} from public.training_courses c where c.slug = ${q(course)}
-on conflict (course_id) do update set title = excluded.title, rubric = excluded.rubric, disclaimer = excluded.disclaimer;`); } }
+on conflict (course_id) do update set title = excluded.title, rubric = excluded.rubric, disclaimer = excluded.disclaimer
+where (training_capstones.title, training_capstones.rubric, training_capstones.disclaimer) is distinct from (excluded.title, excluded.rubric, excluded.disclaimer);`); } }
 }
 out.push("commit;");
 if (errors.length) { console.error(errors.map((e) => "ERROR " + e).join("\n")); process.exit(1); }

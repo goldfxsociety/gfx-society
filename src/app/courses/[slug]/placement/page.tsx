@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { findCatalog } from "@/lib/training/courses";
 import { requireMember } from "@/lib/training/gate";
 import { formatPht } from "@/lib/training/time";
-import { MembersFooter } from "@/components/training/members-footer";
+import { ContentDisclaimerFooter } from "@/components/training/content-disclaimer-footer";
 import { PlacementForm } from "./placement-form";
 
 export const metadata: Metadata = { title: "Placement quiz | GFX", robots: { index: false, follow: false } };
@@ -39,8 +39,7 @@ export default async function PlacementPage({ params }: { params: Promise<{ slug
       ) : (
         <PlacementForm slug={slug} questions={quiz.questions} />
       )}
-      {quiz?.disclaimer ? <p className="text-xs text-muted-foreground">{quiz.disclaimer}</p> : null}
-      <MembersFooter />
+      <ContentDisclaimerFooter disclaimer={quiz?.disclaimer} />
     </div>
   );
 }
