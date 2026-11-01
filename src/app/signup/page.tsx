@@ -14,6 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { signUpWithConsent } from "./actions";
+import { CaptchaError, Turnstile } from "@/components/members/turnstile";
+import { captchaBlocksSubmit, initialCaptchaState, type CaptchaState } from "@/lib/auth/captcha";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -27,6 +29,10 @@ export default function SignupPage() {
   // Both consent boxes are unticked by default (RA 10173). Never pre-tick.
   const [consentRequired, setConsentRequired] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
+  // Turnstile (flag off: "off", signup unchanged). Tokens are single-use: remount per attempt.
+  const [captcha, setCaptcha] = useState<CaptchaState>(initialCaptchaState);
+  const [attempt, setAttempt] = useState(0);
+  const captchaFailed = captcha.status === "error";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +50,9 @@ export default function SignupPage() {
       experienceLevel,
       consentRequired,
       consentMarketing,
+      ...(captcha.status === "off" ? {} : { captchaToken: captcha.token }),
     });
+    if (captcha.status !== "off") setAttempt((a) => a + 1);
 
     setLoading(false);
 
@@ -195,10 +203,14 @@ export default function SignupPage() {
               </label>
             </div>
             {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+            <Turnstile key={attempt} onState={setCaptcha} />
+            <CaptchaError id="captcha-error-signup" show={captchaFailed} />
             <Button
               type="submit"
-              disabled={loading || !consentRequired}
-              aria-describedby={!consentRequired ? "signup-disabled-reason" : undefined}
+              disabled={loading || !consentRequired || captchaBlocksSubmit(captcha)}
+              aria-describedby={
+                [!consentRequired && "signup-disabled-reason", captchaFailed && "captcha-error-signup"].filter(Boolean).join(" ") || undefined
+              }
               className="h-12 w-full text-base"
             >
               {loading ? "Creating account..." : "Sign up"}

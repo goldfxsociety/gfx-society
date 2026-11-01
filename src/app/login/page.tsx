@@ -5,6 +5,8 @@ import Link from "next/link";
 import { safeNextPath } from "@/lib/auth/safe-next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { CaptchaError, Turnstile } from "@/components/members/turnstile";
+import { captchaBlocksSubmit, initialCaptchaState, isCaptchaError, withCaptcha, type CaptchaState } from "@/lib/auth/captcha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +39,7 @@ function CallbackError() {
 function loginErrorMessage(raw: string): string {
   if (/invalid login credentials/i.test(raw)) return "Mali ang email o password (invalid login). Try ulit.";
   if (/email not confirmed/i.test(raw)) return "I-confirm muna ang email mo. I-check ang inbox (pati Spam), tapos try ulit.";
+  if (isCaptchaError(raw)) return "May problema sa pag-log in. Try ulit in a moment.";
   if (/rate limit|too many/i.test(raw)) return "Too many tries. Maghintay ng ilang minuto, tapos try ulit.";
   return "May problema sa pag-log in. Try ulit in a moment.";
 }
@@ -47,6 +50,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Turnstile (flag off: "off", login unchanged). Tokens are single-use: remount per attempt.
+  const [captcha, setCaptcha] = useState<CaptchaState>(initialCaptchaState);
+  const [attempt, setAttempt] = useState(0);
 
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,10 +61,13 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
+    const options = withCaptcha(undefined, captcha.token);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      ...(options ? { options } : {}),
     });
+    if (options) setAttempt((a) => a + 1);
 
     setLoading(false);
 
@@ -110,7 +119,14 @@ export default function LoginPage() {
               <CallbackError />
             </Suspense>
             {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-            <Button type="submit" disabled={loading} className="h-12 w-full text-base">
+            <Turnstile key={attempt} onState={setCaptcha} />
+            <CaptchaError id="captcha-error-login" show={captcha.status === "error"} />
+            <Button
+              type="submit"
+              disabled={loading || captchaBlocksSubmit(captcha)}
+              className="h-12 w-full text-base"
+              aria-describedby={captcha.status === "error" ? "captcha-error-login" : undefined}
+            >
               {loading ? "Logging in..." : "Log in"}
             </Button>
           </form>
