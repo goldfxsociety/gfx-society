@@ -4,7 +4,7 @@
 
 Last updated: 2 Nov 2026 · Version: 1.3
 
-**What changed in v1.3 (2 Nov 2026):** the broker-link line in section 7 now uses the short partner-broker line; the commission is explained in the IB Disclosure.
+**What changed in v1.3 (2 Nov 2026):** the broker-link line in section 7 now uses the short partner-broker line; the commission is explained in the IB Disclosure. Section 3 now lists "lessons, quizzes, and other educational content" instead of naming live sessions, which are not offered yet.
 
 **What changed in v1.2 (18 Oct 2026):** the Messenger community was replaced by the GFX Society Discord community (sections 1 and 6). Wording about trade calls was clarified (sections 3 and 6).
 
@@ -15,7 +15,7 @@ By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Soc
 You must be at least 18 years old and able to enter a binding agreement under Philippine law.
 
 ## 3. Education only — no advice, no brokerage
-- All content (lessons, tools, calculators, diagnostics, posts, live sessions, community messages) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
+- All content (lessons, quizzes, and other educational content) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
 - GFX is **not a broker, dealer, investment adviser, fund manager, or a provider of trade calls or trading recommendations**, does not hold or manage client money, and does not execute trades.
 - GFX makes **no promises of profit, income, or win rates**. Examples and demo or cents-account results are illustrative and not indicative of future results.
 
