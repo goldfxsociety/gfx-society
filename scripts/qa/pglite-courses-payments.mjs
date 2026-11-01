@@ -222,7 +222,7 @@ await expectOk('get_placement_quiz returns disclaimer','authenticated',M2,`selec
     return r;
   };
   const chk = (name, ok) => { if (ok) { pass++; console.log('PASS', name); } else { fail++; console.log('FAIL', name); } };
-  for (const bad of ['lifetime access + live sessions', 'Lifetime access', 'Join the LIVE room'])
+  for (const bad of ['lifetime access + live sessions', 'Lifetime access', 'Join the LIVE room', 'Access for lifetimes'])
     chk(`loader rejects "${bad}"`, runLoader(bad).status !== 0);
   chk('loader allows "Education lang, not financial advice. Max 1% risk per trade."', runLoader('Education lang, not financial advice. Max 1% risk per trade.').status === 0);
   chk('loader allows "delivery" (word boundary)', runLoader('Lesson delivery is self-paced.').status === 0);
