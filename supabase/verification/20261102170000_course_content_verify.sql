@@ -20,4 +20,7 @@ union all select 'no banned wording (income/profit/win-rate/guarantee/signals/VI
   not exists (select 1 from txt where t ~* '\m(income|profits?|win[- ]?rate|guarantee[ds]?|signals?|vip|pde|free bot)\M'),
   (select jsonb_agg(substring(t from '(?i)\m(income|profits?|win[- ]?rate|guarantee[ds]?|signals?|vip|pde|free bot)\M')) from txt where t ~* '\m(income|profits?|win[- ]?rate|guarantee[ds]?|signals?|vip|pde|free bot)\M')
 union all select 'no broker/commission wording (#54 rules)',
-  not exists (select 1 from txt where t ~* '(any broker you choose|kahit anong broker|commission|komisyon|rebate|introducing broker)'), null;
+  not exists (select 1 from txt where t ~* '(any broker you choose|kahit anong broker|commission|komisyon|rebate|introducing broker)'), null
+union all select 'all 55 lessons published', not exists (select 1 from l where status <> 'published'), (select jsonb_agg(slug) from l where status <> 'published')
+union all select 'all 3 courses open (placement + capstones reachable)', (select count(*) from public.training_courses t join c on c.id = t.id where t.status = 'open') = 3, null
+union all select 'course_content_ready true for all 3', (select bool_and(public.course_content_ready(id)) from c), null;

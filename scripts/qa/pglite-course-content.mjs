@@ -47,9 +47,15 @@ const snap = async () => JSON.stringify((await db.query(`select
   (select md5(string_agg(t::text, '|' order by t.course_id)) from private.placement_quizzes t) p,
   (select md5(string_agg(t::text, '|' order by t.course_id)) from public.training_capstones t) c,
   (select md5(string_agg(t::text, '|' order by t.id)) from public.lessons t) academy`)).rows[0]);
-const before = await snap();
+const xm = async () => JSON.stringify((await db.query(`select
+  (select string_agg(xmin::text, ',' order by id) from public.training_courses) a, (select string_agg(xmin::text, ',' order by id) from public.training_modules) b,
+  (select string_agg(xmin::text, ',' order by id) from public.training_lessons) c, (select string_agg(xmin::text, ',' order by lesson_id) from private.training_quizzes) d,
+  (select string_agg(xmin::text, ',' order by course_id) from private.placement_quizzes) e, (select string_agg(xmin::text, ',' order by course_id) from public.training_capstones) f,
+  (select string_agg(updated_at::text, ',' order by id) from public.training_courses) g`)).rows[0]);
+const before = await snap(); const xBefore = await xm();
 await x(fs.readFileSync(R + 'migrations/' + CONTENT, 'utf8'));
 check((await snap()) === before, 're-run of content migration changes nothing (incl. public.lessons from #54)');
+check((await xm()) === xBefore, 're-run writes 0 rows (xmin unchanged on all content tables; training_courses.updated_at unchanged)');
 if (process.env.EXTRA_MIGRATION) {
   await x(fs.readFileSync(process.env.EXTRA_MIGRATION, 'utf8'));
   check((await snap()) === before, '#54 migration re-run after content changes nothing (neither undoes the other)');
