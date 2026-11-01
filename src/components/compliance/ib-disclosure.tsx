@@ -1,4 +1,4 @@
-import { IB_DISCLOSURE_TEXT, NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
+import { IB_DISCLOSURE_TEXT, IB_LONGFORM_PAYMENT_TEXT, NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
 
 /** Short disclosure — place next to every broker link or button. */
 export function IbDisclosureShort() {
@@ -27,7 +27,7 @@ export function IbDisclosureFull() {
         accounts.
       </p>
       <p>
-        <strong>2. How we get paid.</strong> {IB_DISCLOSURE_TEXT} The amount usually depends on how much you trade, which is why we teach a maximum of 1% risk per trade, a stop loss on every trade, and never encourage over-trading.
+        <strong>2. How we get paid.</strong> {IB_LONGFORM_PAYMENT_TEXT} The amount usually depends on how much you trade, which is why we teach a maximum of 1% risk per trade, a stop loss on every trade, and never encourage over-trading.
       </p>
       <p>
         <strong>3. Costs.</strong> Spreads, commissions and fees are set by the
@@ -41,8 +41,7 @@ export function IbDisclosureFull() {
       </p>
       <p>
         <strong>5. Your choice.</strong> You never need a broker account or our
-        links to use GFX education. Our Discord community is for members who registered with ACCM through our link. You can use any broker you
-        choose, or not trade at all.
+        links to use GFX education. Our Discord community is for members who registered with ACCM through our link.
       </p>
       <p>
         <strong>6. Data.</strong> We do not give your personal data to brokers

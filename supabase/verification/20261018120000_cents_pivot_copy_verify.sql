@@ -77,9 +77,9 @@ select 'cents-account-your-first-real-money-practice' as slug, (slug = 'cents-ac
 union all
 select 'opening-your-accm-account' as slug, (slug = 'opening-your-accm-account'
    and title = $q$Opening Your ACCM Account$q$
-   and md5(content) = '240ec73827ca871f27d2a95275d13812'
+   and md5(content) = 'd69d93cae69106738e37531725a745c3' -- updated by 20261102160000 (PR #54)
    and learning_objective is not distinct from $q$Understand how to check a broker's licence for your country, open a cents account step by step, and where the optional MT5 demo fits.$q$
-   and key_takeaways = $q$["Check the broker's licence for your country before opening any account. The MT5 demo is optional, for learning the buttons.", "A cents account through the IB link is optional and uses real money: start small with money you can afford to lose, max 1% risk per trade, stop-loss on every trade.", "GFX's founder is an IB for ACCM. GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose."]$q$::jsonb
+   and key_takeaways = $q$["Check the broker's licence for your country before opening any account. The MT5 demo is optional, for learning the buttons.", "A cents account through the IB link is optional and uses real money: start small with money you can afford to lose, max 1% risk per trade, stop-loss on every trade.", "ACCM is GFX's partner broker."]$q$::jsonb
    and coalesce(examples,'null'::jsonb) = $q$[]$q$::jsonb
    and coalesce(interactive_config,'null'::jsonb) = $q$null$q$::jsonb) as ok from public.lessons where id = '0a66d41e-7255-4028-8640-caf4497a4adb'
 union all

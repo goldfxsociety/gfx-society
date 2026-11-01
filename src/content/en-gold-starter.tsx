@@ -190,7 +190,7 @@ export const BOX = {
 export const FAQ = [
   { q: "Is it really free?", a: "Yes. All the lessons and this checklist are free to read." },
   { q: "Do I need to sign up?", a: "No, not to read. Sign-up is optional if you want to save your progress (the sign-up pages are in Taglish for now)." },
-  { q: "Where should I trade?", a: "We don't recommend any broker. Lesson 3 explains how cents accounts work, and you'll learn how to check a broker yourself, including whether it is licensed where you live." },
+  { q: "Where should I trade?", a: "Start on a demo account first. Lesson 3 explains how cents accounts work, if you later want to try small real money you can afford to lose. ACCM is GFX's partner broker. Whatever you use, you'll learn how to check a broker's licence yourself." },
   { q: "Will I make money?", a: "There's no guarantee. Trading carries a real risk of loss. The goal here is to learn a good process and risk management." },
   { q: "How much do I need to start?", a: demo ? FAQ_HOW_MUCH_DEMO_FIRST : FAQ_HOW_MUCH_NO_DEMO },
   { q: "Is this available in my country?", a: "This page is education only and open to everyone. Trading rules are different in each country. Check your local law before you open any trading account." },

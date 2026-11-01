@@ -1,8 +1,10 @@
 # GFX Society Terms of Use
 
-**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner brokers (basahin ang IB Disclosure). Maging respectful sa community.
+**Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner broker namin, ang ACCM (basahin ang IB Disclosure). Maging respectful sa community.
 
-Last updated: 18 Oct 2026 · Version: 1.2
+Last updated: 2 Nov 2026 · Version: 1.3
+
+**What changed in v1.3 (2 Nov 2026):** the broker-link line in section 7 now uses the short partner-broker line; the commission is explained in the IB Disclosure. Section 3 no longer names live sessions, which are not offered yet.
 
 **What changed in v1.2 (18 Oct 2026):** the Messenger community was replaced by the GFX Society Discord community (sections 1 and 6). Wording about trade calls was clarified (sections 3 and 6).
 
@@ -13,7 +15,7 @@ By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Soc
 You must be at least 18 years old and able to enter a binding agreement under Philippine law.
 
 ## 3. Education only — no advice, no brokerage
-- All content (lessons, tools, calculators, diagnostics, posts, live sessions, community messages) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
+- All content (lessons, quizzes, tools, calculators, diagnostics, posts, community messages, and other educational content) is **general education only**. It is not investment, financial, tax or legal advice and is not a recommendation to buy or sell any instrument.
 - GFX is **not a broker, dealer, investment adviser, fund manager, or a provider of trade calls or trading recommendations**, does not hold or manage client money, and does not execute trades.
 - GFX makes **no promises of profit, income, or win rates**. Examples and demo or cents-account results are illustrative and not indicative of future results.
 
@@ -36,7 +38,7 @@ In the Academy, the Discord community and any GFX channel you must not:
 GFX will never ask for your trading password or OTP, or ask you to send money to a person. Moderators may remove content and members who break these rules. Discord's own Terms of Service and Community Guidelines also apply.
 
 ## 7. Broker links and affiliate relationship
-Some links lead to third-party brokers. **GFX may earn a commission from ACCM if you sign up through our link.** The founder of GFX is an Introducing Broker (IB) affiliate and may earn rebates or commissions — see the IB Disclosure. Third-party sites are governed by their own terms; GFX is not responsible for their services, execution, pricing, or solvency.
+Some links lead to third-party brokers. **Partner broker ng GFX ang ACCM.** The founder of GFX is an Introducing Broker (IB) affiliate and may earn rebates or commissions — see the IB Disclosure. Third-party sites are governed by their own terms; GFX is not responsible for their services, execution, pricing, or solvency.
 
 ## 8. Intellectual property
 GFX content, branding, lesson tools and materials belong to GFX or its licensors. You may use them for personal, non-commercial learning. Do not copy, resell or republish them without written permission. You keep ownership of content you post, and grant GFX a non-exclusive, royalty-free licence to display it within the Services.

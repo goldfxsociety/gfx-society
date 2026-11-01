@@ -21,9 +21,19 @@ export type Partner = {
   featured?: boolean;
 };
 
-/** Approved neutral disclosure wording (same as the /broker hotfix, PR #12). */
-export const IB_DISCLOSURE_TEXT =
-  "GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose.";
+/**
+ * Short partner-broker line for public pages with an ACCM link or sign-up
+ * (Ben-approved 2 Nov 2026, via Jarvis; Design Addendum D, D3).
+ */
+export const IB_DISCLOSURE_TEXT = "Partner broker ng GFX ang ACCM.";
+// EN variant ("ACCM is GFX's partner broker.") is added when an /en page links to ACCM.
+
+/**
+ * The single full explanation of the commission, used only in /broker
+ * "2. How we get paid" (Ben, 2 Nov 2026). Everywhere else uses IB_DISCLOSURE_TEXT.
+ */
+export const IB_LONGFORM_PAYMENT_TEXT =
+  "GFX may earn a commission from ACCM if you sign up through our link.";
 
 export const NEUTRAL_LICENSING_TEXT =
   "Check the broker's licensing for your country before opening an account.";
