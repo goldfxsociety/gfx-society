@@ -29,8 +29,22 @@ export function JoinForm() {
     : state.result === "error" ? C.error
     : null;
   const alert = msg && (
-    <p className="text-sm text-destructive" role="alert">
-      {msg}
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-destructive" role="alert">
+        {msg}
+      </p>
+      {state.result === "not_verified" && (
+        <Link href="/academy" className="text-sm underline">
+          {C.notVerifiedAcademyLink}
+        </Link>
+      )}
+    </div>
+  );
+  // a11y: the ticking countdown is visual only; this sr-only line announces twice (cooldown start, Resend available).
+  const announce = !state.sentAt ? "" : cooldown > 0 ? C.resendIn(COOLDOWN_S) : C.resendReady;
+  const liveRegion = (
+    <p className="sr-only" aria-live="polite">
+      {announce}
     </p>
   );
 
@@ -85,7 +99,7 @@ export function JoinForm() {
                 {C.resend}
               </Button>
             </form>
-            <p className="text-xs text-muted-foreground" aria-live="polite">
+            <p className="text-xs text-muted-foreground" aria-hidden="true">
               {cooldown > 0 ? C.resendIn(cooldown) : ""}
             </p>
             <form action={action}>
@@ -96,12 +110,14 @@ export function JoinForm() {
           </div>
         </details>
         {links}
+        {liveRegion}
       </div>
     );
   }
 
   return (
     <form action={action} className="flex flex-col gap-4">
+      {liveRegion}
       <p className="text-sm">{C.intro}</p>
       <label className="flex flex-col gap-2 text-sm">
         {C.emailLabel}

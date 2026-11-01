@@ -41,18 +41,21 @@ export const JOIN_COPY = {
   noCodeBody:
     "Siguraduhing ito ang email na ginamit mo sa ACCM registration. Monthly ina-update ang member list, kaya kung bago ka lang nag-register, subukan ulit mamaya o mag-email sa goldfx.society@gmail.com.", // Addendum C
   resend: "Resend code", // Addendum C
-  resendIn: (s: number) => `Puwede ulit mag-resend in ${s}s`, // [Builder]
+  resendIn: (s: number) => `Puwede ka ulit mag-resend in ${s}s`, // Design review 2 Nov
+  // Screen-reader only, announced once when Resend becomes available. [Builder]
+  resendReady: "Puwede ka nang mag-resend ng code.",
   codeLabel: "6-digit code", // [Builder]
   verify: "I-verify", // [Builder]
   wrongCode: "Mali ang code. Subukan ulit.", // Addendum C
   expiredCode: "Expired na ang code. Mag-request ng bago.", // Addendum C
-  otherEmail: "Ibang email", // [Builder]
+  otherEmail: "Gumamit ng ibang email", // Design review 2 Nov
   academyLink: "Ituloy ang free Academy lessons", // existing string
   accmLink: "Tungkol sa ACCM", // [Builder] (tertiary link, no disclosure line per D3)
   consentRequired: "I-tick muna ang consent box para ma-check namin ang email mo.", // existing
   invalidEmail: "Pakilagay ang tamang email address.", // [Builder]
   notVerified:
-    "Hindi pa namin ma-verify ang membership mo. Members-only ito para sa mga registered sa ACCM sa ilalim ng IB line ng GFX.", // [Builder] after a valid code but not listed / no OTP session
+    "Hindi pa namin ma-verify ang membership mo. Members-only ito para sa mga ACCM client na naka-register sa ilalim ng GFX. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov
+  notVerifiedAcademyLink: "Bumalik sa free Academy lessons", // Design review 2 Nov
   error: "May error sa pag-check. Try ulit mamaya, o mag-email sa goldfx.society@gmail.com.", // existing
 } as const;
 
@@ -60,5 +63,5 @@ export const MEMBERS_COPY = {
   title: "Members area",
   body: "Verified member ka na. Dito ilalagay ang courses, market breakdowns, at community kapag ready na.", // [Builder] adapted: dropped "trade ideas for education"
   grace:
-    "Hindi na namin ma-verify ang ACCM registration mo, contact us kung mali: goldfx.society@gmail.com",
+    "Hindi na namin ma-verify ang ACCM registration mo. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov
 } as const;
