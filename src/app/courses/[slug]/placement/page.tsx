@@ -1,3 +1,4 @@
+import { RISK_LINE } from "@/config/training";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,7 +20,7 @@ export default async function PlacementPage({ params }: { params: Promise<{ slug
   await requireMember(`/courses/${slug}/placement`);
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_placement_quiz", { p_course_slug: slug });
-  const quiz = data as { passed: boolean; next_attempt_at: string | null; questions: { q: string; options: string[] }[] | null } | null;
+  const quiz = data as { disclaimer?: string | null; passed: boolean; next_attempt_at: string | null; questions: { q: string; options: string[] }[] | null } | null;
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-5 px-4 pt-8 pb-24">
@@ -39,6 +40,7 @@ export default async function PlacementPage({ params }: { params: Promise<{ slug
       ) : (
         <PlacementForm slug={slug} questions={quiz.questions} />
       )}
+      <p className="text-xs text-muted-foreground">{quiz?.disclaimer || RISK_LINE}</p>
       <MembersFooter />
     </div>
   );

@@ -1,3 +1,4 @@
+import { RISK_LINE } from "@/config/training";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -22,7 +23,7 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
   if (!info.course_id) redirect(`/courses/${slug}`);
   const supabase = await createClient();
   const [{ data: cap }, { data: prog }] = await Promise.all([
-    supabase.from("training_capstones").select("title, rubric").eq("course_id", info.course_id).maybeSingle(),
+    supabase.from("training_capstones").select("title, rubric, disclaimer").eq("course_id", info.course_id).maybeSingle(),
     supabase.from("capstone_progress").select("ticked").eq("course_id", info.course_id).maybeSingle(),
   ]);
   return (
@@ -39,6 +40,7 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
       ) : (
         <p className="text-sm text-muted-foreground">Inihahanda pa ang capstone. Balikan mo ito mamaya.</p>
       )}
+      <p className="text-xs text-muted-foreground">{cap?.disclaimer || RISK_LINE}</p>
       <MembersFooter />
     </div>
   );

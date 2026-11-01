@@ -200,4 +200,10 @@ await as('authenticated',M2,`select public.set_practice_done(id,true) from publi
 await expectOk('QA: empty-quiz lesson stays incomplete after practice','authenticated',M2,`select (select completed_at is null from public.training_progress p join public.training_lessons l on l.id=p.lesson_id where l.slug='qbe' and p.user_id=auth.uid()) i, public.course_complete((select id from public.training_courses where slug='q-basics')) b`,r=>r[0].i===true&&r[0].b===false);
 await x(`update public.training_lessons set status='draft' where slug='qbe'; insert into public.training_lessons(module_id,sort,slug,title,status) select id,4,'qbd','QBD','draft' from public.training_modules where slug='qbm';`);
 await expectOk('QA: unpublished lessons do not block completion','authenticated',M2,`select public.course_complete(id) b from public.training_courses where slug='q-basics'`,r=>r[0].b===true);
+// ---- content 'disclaimer' (placement + capstone)
+await x(`update public.training_capstones set disclaimer='Education lang, not financial advice.' where course_id=(select id from public.training_courses where slug='test-paid')`);
+await expectOk('capstone disclaimer readable by owner','authenticated',AD,`select disclaimer d from public.training_capstones where course_id=(select id from public.training_courses where slug='test-paid')`,r=>r[0].d==='Education lang, not financial advice.');
+await expectErr('disclaimer must be trimmed','postgres','',`update public.training_capstones set disclaimer=' x ' where course_id=(select id from public.training_courses where slug='test-paid')`,/check constraint/);
+await x(`update private.placement_quizzes set disclaimer='Max 1% risk per trade.' where course_id=(select id from public.training_courses where slug='t-adv')`);
+await expectOk('get_placement_quiz returns disclaimer','authenticated',M2,`select public.get_placement_quiz('t-adv')->>'disclaimer' d`,r=>r[0].d==='Max 1% risk per trade.');
 console.log(`\n${pass} passed, ${fail} failed`);

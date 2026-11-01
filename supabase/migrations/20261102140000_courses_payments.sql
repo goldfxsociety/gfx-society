@@ -264,7 +264,8 @@ grant execute on function public.set_practice_done(uuid, boolean) to authenticat
 create table if not exists public.training_capstones (
   course_id uuid primary key references public.training_courses(id) on delete cascade,
   title text not null,
-  rubric jsonb not null default '[]'          -- ["item text", ...]
+  rubric jsonb not null default '[]',         -- ["item text", ...]
+  disclaimer text check (disclaimer is null or (disclaimer = btrim(disclaimer) and length(disclaimer) between 1 and 500))
 );
 alter table public.training_capstones enable row level security;
 revoke all on public.training_capstones from public, anon, authenticated;
@@ -326,6 +327,7 @@ create table if not exists private.placement_quizzes (
   course_id uuid primary key references public.training_courses(id) on delete cascade,
   questions jsonb not null,                   -- [{q, options[], answer_index, explain}]
   -- QA P3: a row here IS the published placement quiz, so it must have exactly 10 questions.
+  disclaimer text check (disclaimer is null or (disclaimer = btrim(disclaimer) and length(disclaimer) between 1 and 500)),
   constraint placement_quizzes_ten check (jsonb_typeof(questions) = 'array' and jsonb_array_length(questions) = 10)
 );
 revoke all on private.placement_quizzes from public, anon, authenticated;
@@ -406,6 +408,7 @@ begin
   return jsonb_build_object(
     'passed', exists (select 1 from public.placement_attempts where user_id = auth.uid() and course_id = c.id and passed),
     'next_attempt_at', case when v_next > now() then v_next end,
+    'disclaimer', (select t.disclaimer from private.placement_quizzes t where t.course_id = c.id),
     'questions', (select jsonb_agg(jsonb_build_object('q', e->'q', 'options', e->'options') order by i)
                   from private.placement_quizzes t, jsonb_array_elements(t.questions) with ordinality as x(e, i)
                   where t.course_id = c.id));
