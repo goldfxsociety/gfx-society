@@ -2,7 +2,9 @@
 
 **Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings. Kung sasali ka sa Discord community namin, ginagamit lang namin ang join application answers mo para i-verify na nag-register ka sa ACCM through our link. Kung mag-a-apply ka for deposit verification para sa members-only channels, ang deposit screenshot mo ay para lang sa verification, binubura ito ng bot, at isang decision log lang ang tinatago namin.
 
-Last updated: 18 Oct 2026 · Version: 1.2
+Last updated: 2 Nov 2026 · Version: 1.3
+
+**What changed in v1.3 (2 Nov 2026):** we added the members area verification for the GFX Trading System (section 2, "Members area verification"): passwordless login with a 6-digit email code, sent only to emails on our ACCM member list, plus its retention rules (section 7). It only applies if you choose to join the members area. Walang nagbago sa ibang paggamit namin ng data mo.
 
 **What changed in v1.2 (18 Oct 2026):** we added the optional Discord deposit verification for members-only channels (section 2), Cloudflare as a provider and the verification log in Supabase (section 5), and its retention rules (section 7). It only applies if you choose to apply for deposit verification. Walang nagbago sa ibang paggamit namin ng data mo.
 
@@ -51,6 +53,23 @@ Optional ito. Kung mag-a-apply ka for the **members-only role** sa Discord serve
 
 Questions or requests: **goldfx.society@gmail.com**, subject "Privacy Request".
 
+### Members area verification (GFX Trading System)
+Optional ito. Members-only ang GFX Trading System, para sa mga ACCM client na naka-register sa ilalim ng Introducing Broker (IB) line ng GFX Society. Partner broker ng GFX ang ACCM. Optional ang ACCM, at bukas pa rin sa lahat ang free Academy lessons.
+
+- **How login works:** walang password. Ilalagay mo ang email na ginamit mo sa ACCM at ti-tick ang consent box. Kung nasa private list namin ng ACCM accounts (naka-register sa IB line namin) ang email, magpapadala kami ng **6-digit code** sa email na iyon (ang nagpapadala ng code email ay Supabase at ang email provider na ginagamit nito); kung wala, walang ipapadala, pero pareho ang makikita mong message. Kapag tama ang code, naka-login ka na at verified member. The code proves you own the email, kaya sa may-ari lang ng inbox napupunta ang access. Every time you open the members area, chine-check ulit namin kung nasa list pa ang email ng account mo.
+- **What we check:** email mo lang, ikinukumpara sa list. Hindi namin hinihingi ang ACCM password, account number o balance mo.
+- **Purpose:** only to confirm na eligible ka sa members area. Hindi namin ito ginagamit for marketing, at hindi kami nagsha-share nito sa broker.
+- **Source of the list:** we export it from the ACCM partner (IB) portal. Bago i-load, tinatanggal namin lahat maliban sa email at kung IB o client ang account. We do **not** receive or store your name, balance, deposits, volume, account number or trades for this purpose.
+- **No raw email list:** hindi namin sine-save ang list as plain emails. Each email is stored only as a one-way hash (with a secret key kept in our database), plus the IB/client role. Our admin manually deletes the raw export file after each import, at bilang (counts) lang ng added/unchanged/removed ang nilo-log namin.
+- **Monthly refresh:** manually ina-update ng admin namin ang list buwan-buwan. Kung kaka-register mo lang sa ACCM, baka sa susunod na refresh ka pa ma-verify.
+- **Unmatched data:** emails na wala na sa ACCM list ay binubura sa list namin **within 30 days after the next monthly list refresh**. Kung walang match ang email mo, walang plain email na sine-save namin (hash lang sa 1-day code request log sa ibaba).
+- **Code request log (rate limit):** para sa bawat code request, nagse-save kami ng one-way hash ng email at ng IP address, plus timestamp (no plain email or IP), para ma-limit ang requests (3 per hour per email, 10 per hour per IP). Binubura ito after 1 day: may daily automatic cleanup, at nagbubura rin ng lumang entries tuwing may bagong request.
+- **After removal:** kung wala na sa list ang email ng isang member, may **14-day grace period** with a notice, tapos matatapos ang members access.
+- **What we keep about you:** a membership record linked to your account (status, IB/client role, verification date, and the date and version of the consent you gave). Deleted together with your account. Email-code login creates a GFX account for your email kung wala ka pa; you can delete it anytime (Section 9).
+- **Legal basis:** your consent when you tick the email-check box (Sec. 12(a), RA 10173). Pwede mong i-withdraw anytime by emailing us; matatapos ang members access mo.
+- **Your rights:** under the Data Privacy Act of 2012 (RA 10173), may karapatan kang ma-inform, mag-access, mag-correct, mag-object, ipa-erase o ipa-block, data portability, mag-withdraw ng consent, at mag-file ng complaint sa National Privacy Commission (see Sections 9 and 10).
+- **Operator:** GoldFX Society (GFX). Questions or requests: **goldfx.society@gmail.com**, subject "Privacy Request".
+
 ### Website analytics
 We use **Vercel Web Analytics** (provided by Vercel Inc., our hosting provider, acting as our processor). It is cookieless: it does not set cookies or use device fingerprinting to track you, and it does not track you across other websites. It gives us **aggregate** reports of page views and of custom events (for example, button clicks on the Gold Starter page). We do not send your name, email, account ID or other personal data in these events. When you arrive through a link with UTM campaign parameters (e.g. utm_source, utm_campaign), we read those parameters, and keep them in your browser's session storage for that visit, so we can measure which links bring visitors. Vercel may process this data outside the Philippines (see Sections 5 and 6). Purpose: to understand, in aggregate, which pages and links work so we can improve the site. Legal basis: our legitimate interests (Sec. 12(f), RA 10173).
 
@@ -77,7 +96,7 @@ We do not use your data for automated decisions that produce legal or similarly 
 We share personal data only with service providers that help us run GFX, under agreements requiring them to protect it:
 | Provider | Purpose | Location |
 |---|---|---|
-| Supabase | Database and authentication; Discord deposit verification log | Singapore (ap-southeast-1) |
+| Supabase | Database and authentication (including sending members area login codes, through the email provider Supabase uses); Discord deposit verification log | Singapore (ap-southeast-1) |
 | Vercel Inc. | Website hosting and cookieless analytics (Vercel Web Analytics) | United States and other regions |
 | Email service provider (when we start sending education emails) | Sending double opt-in and education emails | May be outside the Philippines; we will name it here before use |
 | Discord Inc. | Discord community and join application, only if you apply to join; deposit verification upload and messages, only if you apply for deposit verification | United States and other regions |
@@ -99,6 +118,10 @@ Some providers store or process data outside the Philippines (e.g. Singapore, US
 | Consent records | For the duration of the relationship plus 3 years as evidence of consent. If you delete your account, the consent record is kept for those 3 years, linked only by the email hash |
 | Discord deposit verification screenshot (ang copy sa review channel namin) | Usually deleted by the bot right after the admin's decision, or after 7 days if not reviewed. Kung i-block ng Discord ang delete, the bot retries every hour and our admins are alerted para i-delete ito manually. We never store it ourselves; ang original upload ay nasa Discord under its policy |
 | Discord deposit verification log and admin log channel copy | 12 months (Discord IDs, time, decision, reason code, flags and technical IDs), then automatically deleted, together with the line in the admin log channel |
+| Members area verification list | Hashed emails + IB/client role only, refreshed monthly; emails no longer on the ACCM list are deleted within 30 days after the next monthly list refresh. Raw export deleted after import |
+| Members area membership record (status, role, verification date, consent date + version) | While your account exists (members access ends 14 days after your email leaves the list); deleted with your account |
+| Members area code request log | Hashed email + hashed IP + timestamp (no plain email or IP); deleted after 1 day by a daily cleanup and on every new code request |
+| Members area raw ACCM export file | Deleted manually by our admin right after each monthly import |
 | Analytics | Vercel Web Analytics: aggregated reports, kept for the retention period of our Vercel plan. Learning activity events: as account and learning data |
 
 ## 8. How we protect it
