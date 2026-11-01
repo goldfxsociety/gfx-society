@@ -29,8 +29,11 @@ create table public.lessons(id serial primary key, content text, learning_object
 insert into public.lessons(content, learning_objective, key_takeaways, examples, interactive_config) values
   ('Disclosure: GFX''s founder is an Introducing Broker (IB) for ACCM. GFX may earn a commission from ACCM if you sign up through our link. You can use any broker you choose.',
    'Verify any broker''s licence', '["x"]', '[]', '{}');`);
-const files = fs.readdirSync(R + 'migrations').filter((f) => f.endsWith('.sql') && f >= '20261102120000').map((f) => [f, R + 'migrations/' + f]);
-if (process.env.EXTRA_MIGRATION) files.push([path.basename(process.env.EXTRA_MIGRATION), process.env.EXTRA_MIGRATION]);
+// Stop at the content migration: later ones (200000+) touch tables this harness doesn't stub (e.g. public.resources).
+const files = fs.readdirSync(R + 'migrations').filter((f) => f.endsWith('.sql') && f >= '20261102120000' && f <= CONTENT).map((f) => [f, R + 'migrations/' + f]);
+if (process.env.EXTRA_MIGRATION && !files.some((f) => f[0] === path.basename(process.env.EXTRA_MIGRATION))) files.push([path.basename(process.env.EXTRA_MIGRATION), process.env.EXTRA_MIGRATION]);
+// #54's lesson migration is in the repo chain since it merged; its checks run whenever it's in the chain.
+const m54 = files.find((f) => f[0].includes('lessons_partner_broker_line'));
 files.sort((a, b) => a[0].localeCompare(b[0]));
 const order = files.map((f) => f[0]);
 check(order[order.length - 1] === CONTENT, 'content migration is last in the chain', order.slice(-4).join(' -> '));
@@ -39,7 +42,7 @@ for (const [f, p] of files) {
 }
 console.log('chain applied:', order.join(' -> '));
 const ac = (await db.query('select content, learning_objective from public.lessons')).rows[0];
-if (process.env.EXTRA_MIGRATION) check(ac.content === "Disclosure: ACCM is GFX's partner broker." && ac.learning_objective === "Verify a broker's licence", '#54 rewrite survives the content migration', JSON.stringify(ac));
+if (m54) check(ac.content === "Disclosure: ACCM is GFX's partner broker." && ac.learning_objective === "Verify a broker's licence", '#54 rewrite survives the content migration', JSON.stringify(ac));
 const snap = async () => JSON.stringify((await db.query(`select
   (select md5(string_agg(t::text, '|' order by t.id)) from public.training_modules t) m,
   (select md5(string_agg(t::text, '|' order by t.id)) from public.training_lessons t) l,
@@ -56,8 +59,8 @@ const before = await snap(); const xBefore = await xm();
 await x(fs.readFileSync(R + 'migrations/' + CONTENT, 'utf8'));
 check((await snap()) === before, 're-run of content migration changes nothing (incl. public.lessons from #54)');
 check((await xm()) === xBefore, 're-run writes 0 rows (xmin unchanged on all content tables; training_courses.updated_at unchanged)');
-if (process.env.EXTRA_MIGRATION) {
-  await x(fs.readFileSync(process.env.EXTRA_MIGRATION, 'utf8'));
+if (m54) {
+  await x(fs.readFileSync(m54[1], 'utf8'));
   check((await snap()) === before, '#54 migration re-run after content changes nothing (neither undoes the other)');
 }
 const v = (await db.query(fs.readFileSync(R + 'verification/20261102170000_course_content_verify.sql', 'utf8'))).rows;
