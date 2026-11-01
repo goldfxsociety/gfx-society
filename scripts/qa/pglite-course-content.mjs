@@ -62,5 +62,24 @@ if (process.env.EXTRA_MIGRATION) {
 }
 const v = (await db.query(fs.readFileSync(R + 'verification/20261102170000_course_content_verify.sql', 'utf8'))).rows;
 for (const r of v) check(r.ok === true, 'verify: ' + r.check, JSON.stringify(r.detail));
+
+// Ops scripts (supabase/ops): prices, open sales, close sales. Each must be idempotent (0 rows on re-run).
+const ops = (f) => fs.readFileSync(R + 'ops/' + f, 'utf8');
+const verifyOf = (f) => ops(f).split('\n').filter((l) => l.startsWith('-- ') && /^-- (select|  |from|\s)/.test(l)).map((l) => l.slice(3)).join('\n').replace(/^.*?(select)/s, '$1');
+const courseX = async () => JSON.stringify((await db.query('select string_agg(xmin::text || updated_at::text, \',\' order by id) x from public.training_courses')).rows[0]);
+const runOp = async (f) => {
+  await x(ops(f)); const a = await courseX(); await x(ops(f));
+  check((await courseX()) === a, `${f}: re-run updates 0 rows`);
+  const rows = (await db.query(verifyOf(f))).rows;
+  check(rows.length > 0 && rows.every((r) => r.ok === true), `${f}: verify`, JSON.stringify(rows.map((r) => [r.slug, r.price_php, r.sales_open])));
+};
+await x("update public.training_courses set price_php = 999 where slug <> 'gold-reset'"); // force real work on first run
+await runOp('20261103_set_prices.sql');
+const fr = (await db.query("select price_php, sales_open from public.training_courses where slug = 'gold-reset'")).rows[0];
+check(fr.price_php === 0 && fr.sales_open === false, 'gold-reset free path: price 0, no sales');
+await runOp('20261103_open_sales.sql');
+try { await x("update public.training_courses set sales_open = true where slug = 'gold-reset'"); check(false, 'gold-reset cannot get sales_open'); }
+catch (e) { check(/check/i.test(e.message), 'gold-reset cannot get sales_open (table check)'); }
+await runOp('20261103_close_sales.sql');
 console.log(fail ? `${fail} FAILED` : 'ALL PASSED');
 process.exit(fail ? 1 : 0);
