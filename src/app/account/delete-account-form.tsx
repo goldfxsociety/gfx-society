@@ -13,7 +13,7 @@ export function DeleteAccountForm() {
 
   if (!open) {
     return (
-      <Button variant="destructive" className="h-11 w-full" onClick={() => setOpen(true)}>
+      <Button variant="destructive" className="h-11 w-full border border-destructive text-[#f07a7a] hover:bg-[#55203a] hover:text-[#f07a7a] dark:hover:bg-[#55203a]" onClick={() => setOpen(true)}>
         Delete my account…
       </Button>
     );
@@ -40,7 +40,7 @@ export function DeleteAccountForm() {
           {state.error}
         </p>
       )}
-      <Button type="submit" variant="destructive" className="h-11 w-full" disabled={pending || typed.trim() !== "DELETE"}>
+      <Button type="submit" variant="destructive" className="h-11 w-full border border-destructive text-[#f07a7a] hover:bg-[#55203a] hover:text-[#f07a7a] dark:hover:bg-[#55203a]" disabled={pending || typed.trim() !== "DELETE"}>
         {pending ? "Deleting..." : "Permanently delete my account"}
       </Button>
       <Button type="button" variant="outline" className="h-11 w-full" onClick={() => setOpen(false)} disabled={pending}>

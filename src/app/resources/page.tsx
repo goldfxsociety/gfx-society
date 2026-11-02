@@ -19,6 +19,14 @@ type Resource = {
   icon: string | null;
 };
 
+/**
+ * E8.6: WikiFX tip, in app code (the DB description was cleared by 20261102220000).
+ * The page is Taglish; EN copy for a future /en page: "Before depositing with a broker, check it on WikiFX."
+ */
+const CATEGORY_TIPS: Record<string, string> = {
+  broker_verification: "Bago mag-deposit sa broker, i-check muna ito sa WikiFX.",
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   platform: "Must-Have Apps",
   news: "Market News & Calendar",
@@ -58,6 +66,9 @@ export default async function ResourcesPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {CATEGORY_LABELS[category] ?? category}
           </p>
+          {CATEGORY_TIPS[category] ? (
+            <p className="text-xs text-muted-foreground" data-testid="resources-tip">{CATEGORY_TIPS[category]}</p>
+          ) : null}
           {items.map((r) => (
             <a
               key={r.id}
@@ -81,7 +92,8 @@ export default async function ResourcesPage() {
       {/* Always shown: the Broker Verification card links to ACCM's WikiFX page (post-launch fix 1). */}
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
 
-      <p className="text-xs text-muted-foreground">
+      {/* E6/E8.6: the page's only risk sentence (content-disclaimer flag); /resources has no footer risk line. */}
+      <p className="text-xs text-muted-foreground" data-testid="content-disclaimer">
         Education lang, not financial advice. Max 1% risk per trade.
       </p>
 

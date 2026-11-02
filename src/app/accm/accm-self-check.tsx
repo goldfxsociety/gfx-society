@@ -77,7 +77,7 @@ function saveTicks(t: boolean[]) {
   }
 }
 
-export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: string }) {
+export function AccmSelfCheck({ href }: { href: string }) {
   const raw = useSyncExternalStore(noop, readRaw, () => null);
   const stored = useMemo(() => parseStored(raw), [raw]);
   const [local, setLocal] = useState<boolean[] | null>(null);
@@ -122,7 +122,6 @@ export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: 
       <p className="text-xs text-muted-foreground">
         Min deposit $50 · GCash, Maya, other e-wallets. Hindi kailangang lampasan.
       </p>
-      <p className="text-xs text-muted-foreground">{disclosure}</p>
     </div>
   );
 }
