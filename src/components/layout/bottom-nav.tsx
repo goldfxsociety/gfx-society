@@ -18,7 +18,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+    <nav data-global-bottom-nav className="sticky bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-2xl items-stretch justify-between px-2">
         {ITEMS.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

@@ -164,3 +164,8 @@
   width: 22px;
   height: 22px;
 }
+
+/* Members ecosystem MVP (spec §4): the members nav replaces the Academy bottom nav on pages that render it. */
+body:has([data-members-nav]) [data-global-bottom-nav] {
+  display: none;
+}

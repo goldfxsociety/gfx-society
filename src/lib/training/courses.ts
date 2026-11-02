@@ -43,8 +43,17 @@ export type LessonRow = {
   sort: number;
   moduleSort: number;
   moduleTitle: string;
+  moduleSlug: string;
+  moduleGoal: string;
   completed: boolean;
+  /** Has a progress row (quiz submitted or practice ticked) but is not completed. */
+  started: boolean;
+  /** A quiz score is recorded. No pass mark is set yet (spec §6 A1), so this means "quiz done", not "passed". */
+  quizDone: boolean;
 };
+
+export type LessonState = "done" | "in_progress" | "not_started";
+export const lessonState = (l: LessonRow): LessonState => (l.completed ? "done" : l.started ? "in_progress" : "not_started");
 
 export type CourseView = {
   catalog: CatalogCourse;
@@ -69,19 +78,19 @@ export async function getLessons(courseId: string): Promise<{ lessons: LessonRow
   const supabase = await createClient();
   const { data: rows } = await supabase
     .from("training_lessons")
-    .select("id, slug, title, sort, training_modules!inner(sort, title, course_id)")
+    .select("id, slug, title, sort, training_modules!inner(sort, title, slug, learning_goal, course_id)")
     .eq("training_modules.course_id", courseId);
   const list = (rows ?? []) as unknown as {
     id: string;
     slug: string;
     title: string;
     sort: number;
-    training_modules: { sort: number; title: string };
+    training_modules: { sort: number; title: string; slug: string; learning_goal: string | null };
   }[];
   if (list.length === 0) return { lessons: [], lastActivity: null };
   const { data: prog } = await supabase
     .from("training_progress")
-    .select("lesson_id, completed_at, updated_at")
+    .select("lesson_id, completed_at, updated_at, quiz_score")
     .in(
       "lesson_id",
       list.map((l) => l.id),
@@ -95,7 +104,11 @@ export async function getLessons(courseId: string): Promise<{ lessons: LessonRow
       sort: l.sort,
       moduleSort: l.training_modules.sort,
       moduleTitle: l.training_modules.title,
+      moduleSlug: l.training_modules.slug,
+      moduleGoal: l.training_modules.learning_goal ?? "",
       completed: Boolean(byId.get(l.id)?.completed_at),
+      started: byId.has(l.id) && !byId.get(l.id)?.completed_at,
+      quizDone: byId.get(l.id)?.quiz_score != null,
     }))
     .sort((a, b) => a.moduleSort - b.moduleSort || a.sort - b.sort);
   const lastActivity =
@@ -157,4 +170,28 @@ export function findCatalog(slug: string): CatalogCourse | undefined {
 /** Next lesson to open: first not-completed, else first. */
 export function nextLesson(lessons: LessonRow[]): LessonRow | undefined {
   return lessons.find((l) => !l.completed) ?? lessons[0];
+}
+
+export type ModuleGroup = { sort: number; slug: string; title: string; goal: string; lessons: LessonRow[]; done: number };
+
+/** Lessons grouped by module, in course order. */
+export function groupByModule(lessons: LessonRow[]): ModuleGroup[] {
+  const out: ModuleGroup[] = [];
+  for (const l of lessons) {
+    let g = out.find((m) => m.sort === l.moduleSort);
+    if (!g) out.push((g = { sort: l.moduleSort, slug: l.moduleSlug, title: l.moduleTitle, goal: l.moduleGoal, lessons: [], done: 0 }));
+    g.lessons.push(l);
+    if (l.completed) g.done++;
+  }
+  return out;
+}
+
+/** Capstone presence + own completion for a course (existing tables, RLS: access / own row). */
+export async function getCapstoneStatus(courseId: string): Promise<{ exists: boolean; done: boolean }> {
+  const supabase = await createClient();
+  const [{ data: cap }, { data: prog }] = await Promise.all([
+    supabase.from("training_capstones").select("course_id").eq("course_id", courseId).maybeSingle(),
+    supabase.from("capstone_progress").select("completed_at").eq("course_id", courseId).maybeSingle(),
+  ]);
+  return { exists: Boolean(cap), done: Boolean(prog?.completed_at) };
 }
