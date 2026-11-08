@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { MembersNav } from "@/components/members-home/members-nav";
+import { MembersFooter } from "@/components/training/members-footer";
 import { getMembership } from "@/lib/members/membership";
 import { showMembersNav } from "@/lib/training/member-surface";
 import { DeleteAccountForm } from "./delete-account-form";
@@ -67,7 +68,12 @@ export default async function AccountPage() {
   return (
     <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
       <MembersNav active="account" />
-      <div className="flex min-w-0 flex-1 pb-24">{body}</div>
+      <div className="flex min-w-0 flex-1 flex-col pb-24">
+        {body}
+        <div className="mx-auto w-full max-w-2xl px-6">
+          <MembersFooter />
+        </div>
+      </div>
     </div>
   );
 }

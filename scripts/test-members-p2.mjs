@@ -78,6 +78,16 @@ for (const path of ["src/app/courses/page.tsx", "src/app/account/page.tsx"]) {
 }
 assert.match(read("src/app/courses/page.tsx"), /active="courses"/);
 assert.match(read("src/app/account/page.tsx"), /active="account"/);
+{
+  const account = read("src/app/account/page.tsx");
+  const footers = account.match(/<MembersFooter/g) ?? [];
+  assert.equal(footers.length, 1);
+  assert.equal(account.includes("hideRiskLine"), false);
+  const memberGate = account.indexOf("if (!showMembersNav(membership)) return body");
+  const footerAt = account.indexOf("<MembersFooter");
+  assert.equal(memberGate > 0 && footerAt > memberGate, true);
+  assert.equal((account.match(/variant: "default"/g) ?? []).length, 1);
+}
 assert.match(read("src/app/courses/page.tsx"), /case "sales_closed":/);
 assert.match(read("src/app/courses/[slug]/page.tsx"), /v\.state === "sales_closed"/);
 assert.match(read("src/app/courses/[slug]/page.tsx"), /ME\.lockedUnpaid/);
