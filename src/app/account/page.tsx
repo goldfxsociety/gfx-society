@@ -3,6 +3,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { MembersNav } from "@/components/members-home/members-nav";
+import { getMembership } from "@/lib/members/membership";
+import { showMembersNav } from "@/lib/training/member-surface";
 import { DeleteAccountForm } from "./delete-account-form";
 import { MyCourses } from "./my-courses";
 
@@ -16,6 +19,7 @@ export default async function AccountPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const { membership } = await getMembership();
 
   if (!user) {
     return (
@@ -29,7 +33,7 @@ export default async function AccountPage() {
     );
   }
 
-  return (
+  const body = (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
         <Link href="/dashboard" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">
@@ -57,6 +61,13 @@ export default async function AccountPage() {
         </p>
         <DeleteAccountForm />
       </section>
+    </div>
+  );
+  if (!showMembersNav(membership)) return body;
+  return (
+    <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
+      <MembersNav active="account" />
+      <div className="flex min-w-0 flex-1 pb-24">{body}</div>
     </div>
   );
 }

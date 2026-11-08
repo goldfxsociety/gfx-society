@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { ME } from "@/config/members-home";
 import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
+import { MembersNav } from "@/components/members-home/members-nav";
 import { getAllCourseViews, type CourseView } from "@/lib/training/courses";
+import { showMembersNav } from "@/lib/training/member-surface";
 import { CONTINUE_ACTION_CLASS, continueHref, continueLabel, resolveContinue } from "@/lib/training/continue";
 import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
@@ -86,6 +89,8 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
           )}
         </>
       );
+    case "sales_closed":
+      return <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>;
     case "coming_soon":
       return <p className="text-sm text-muted-foreground">Inihahanda pa ang lessons. Wala pang bayad na tinatanggap.</p>;
   }
@@ -102,14 +107,15 @@ const CHIP: Record<CourseView["state"], [string, "neutral" | "amber" | "green" |
   owned: ["Owned ✓", "green"],
   coming_soon: ["Coming soon", "neutral"],
   locked: ["Locked", "neutral"],
+  sales_closed: ["Locked", "neutral"],
 };
 
 export default async function CoursesPage() {
   const { membership, views } = await getAllCourseViews();
-  const member = membership !== "none";
+  const member = showMembersNav(membership);
   const gold = pickGold(views, member);
 
-  return (
+  const page = (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-6 px-4 pt-10 pb-24">
       <header className="flex flex-col gap-2">
         <p className="text-xs font-semibold tracking-widest text-primary uppercase">GFX Trading System · Courses</p>
@@ -157,6 +163,13 @@ export default async function CoursesPage() {
         })}
       </ul>
       <MembersFooter />
+    </div>
+  );
+  if (!member) return page;
+  return (
+    <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
+      <MembersNav active="courses" />
+      <div className="flex min-w-0 flex-1">{page}</div>
     </div>
   );
 }

@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { ME } from "@/config/members-home";
 import { APPROVAL_TIME, BUY_ENABLED, COMING_LATER_COURSE_NOTE, peso } from "@/config/training";
+import { showMembersNav } from "@/lib/training/member-surface";
 import { findCatalog, getCourseView, groupByModule } from "@/lib/training/courses";
 import { continueHref, continueLabel, resolveContinue, showCurriculumCapstone } from "@/lib/training/continue";
 import { getMembership } from "@/lib/training/gate";
@@ -31,7 +33,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const secondary = cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-center");
   const action = resolveContinue(v.lessons, v.capstone);
   const next = action.kind === "lesson" ? action.lesson : undefined;
-  const member = membership !== "none";
+  const member = showMembersNav(membership);
   const canLearn = v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done";
 
   const page = (
@@ -48,7 +50,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           {v.state === "pending" && <Chip tone="amber">Pending review</Chip>}
           {v.state === "rejected" && <Chip tone="red">Needs re-upload</Chip>}
           {v.state === "coming_soon" && <Chip>Coming soon</Chip>}
-          {v.state === "locked" && <Chip>Locked</Chip>}
+          {(v.state === "locked" || v.state === "sales_closed") && <Chip>Locked</Chip>}
         </div>
         {paid && <RefundLine />}
       </header>
@@ -147,6 +149,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             )}
           </>
         )}
+        {v.state === "sales_closed" && <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>}
         {v.state === "coming_soon" && (
           <p className="text-sm text-muted-foreground">Inihahanda pa ang lessons. Wala pang bayad na tinatanggap.</p>
         )}

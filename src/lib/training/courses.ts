@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CATALOG, type CatalogCourse } from "@/config/training";
 import { capstoneAvailability, unfinishedLesson, type CapstoneAvailability } from "./continue";
 import { getMembership, type Membership } from "./gate";
+import { memberCourseState } from "./member-surface";
 
 export type PayState =
   | "not_member"
@@ -35,7 +36,8 @@ export type CardState =
   | "rejected"
   | "owned"
   | "coming_soon"
-  | "locked";
+  | "locked"
+  | "sales_closed";
 
 export type LessonRow = {
   id: string;
@@ -120,25 +122,8 @@ export async function getLessons(courseId: string): Promise<{ lessons: LessonRow
 }
 
 function cardState(membership: Membership, pay: PaymentInfo, lessons: LessonRow[], done: number): CardState {
-  if (membership === "none") return pay.state === "approved" ? "owned" : "verify";
-  switch (pay.state) {
-    case "approved":
-      return "owned";
-    case "pending":
-      return "pending";
-    case "rejected":
-      return "rejected";
-    case "locked":
-      return "locked";
-    case "open":
-      return "not_owned";
-    case "free":
-      if (lessons.length === 0) return "coming_soon"; // B11: no published lessons yet
-      if (done === 0) return "free_new";
-      return done >= lessons.length ? "free_done" : "free_progress";
-    default:
-      return "coming_soon"; // not_found (draft), coming_soon, closed
-  }
+  // Lesson rows are loaded only for approved/free. `closed` still means content-ready sales shut.
+  return memberCourseState(membership, pay.state, lessons.length, done);
 }
 
 export async function getCourseView(catalog: CatalogCourse, membership: Membership): Promise<CourseView> {

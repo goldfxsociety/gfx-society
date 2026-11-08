@@ -22,6 +22,7 @@ export const dynamic = "force-dynamic";
 function courseStatus(v: CourseView) {
   switch (v.state) {
     case "not_owned":
+    case "sales_closed":
       return <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>;
     case "coming_soon":
       return <p className="text-sm text-muted-foreground">{ME.lockedNoContent}</p>;
