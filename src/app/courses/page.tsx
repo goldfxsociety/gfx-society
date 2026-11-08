@@ -3,7 +3,8 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
-import { getAllCourseViews, nextLesson, type CourseView } from "@/lib/training/courses";
+import { getAllCourseViews, type CourseView } from "@/lib/training/courses";
+import { CONTINUE_ACTION_CLASS, continueHref, continueLabel, resolveContinue } from "@/lib/training/continue";
 import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
 import { GraceBanner } from "@/components/training/grace-banner";
@@ -12,7 +13,7 @@ import { MembersFooter } from "@/components/training/members-footer";
 export const metadata: Metadata = { title: "Courses | GFX Trading System" };
 export const dynamic = "force-dynamic";
 
-const BTN = "min-h-11 w-full sm:w-auto";
+const BTN = CONTINUE_ACTION_CLASS;
 
 /** §1.4: owned/in-progress Continue (latest activity) > Gold Reset Start > Verify. */
 function pickGold(views: CourseView[], member: boolean): string | null {
@@ -28,7 +29,9 @@ function pickGold(views: CourseView[], member: boolean): string | null {
 function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
   const slug = v.catalog.slug;
   const style = (g: boolean) => cn(buttonVariants({ variant: g ? "default" : "outline" }), BTN);
-  const next = nextLesson(v.lessons);
+  const action = resolveContinue(v.lessons, v.capstone);
+  const learnHref = continueHref(slug, action) ?? `/courses/${slug}`;
+  const learnLabel = continueLabel(action, v.done, { start: "Start →", resume: "Continue →" }) ?? (v.done === 0 ? "Start →" : "Continue →");
   switch (v.state) {
     case "verify":
       return (
@@ -38,7 +41,7 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
         </>
       );
     case "free_new":
-      return <Link href={next ? `/courses/${slug}/${next.slug}` : `/courses/${slug}`} className={style(gold)}>Start →</Link>;
+      return <Link href={learnHref} className={style(gold)}>{learnLabel}</Link>;
     case "free_progress":
     case "owned":
       return (
@@ -46,13 +49,13 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
           {v.lessons.length > 0 && (
             <p className="text-sm text-muted-foreground">{v.done} of {v.lessons.length} lessons done</p>
           )}
-          <Link href={next ? `/courses/${slug}/${next.slug}` : `/courses/${slug}`} className={style(gold)}>
-            {v.done === 0 ? "Start →" : "Continue →"}
+          <Link href={learnHref} className={style(gold)}>
+            {learnLabel}
           </Link>
         </>
       );
     case "free_done":
-      return <Link href={`/courses/${slug}`} className={style(false)}>Review</Link>;
+      return <Link href={learnHref} className={style(false)}>{learnLabel}</Link>;
     case "not_owned":
       return <Link href={`/courses/${slug}`} className={style(false)}>View course</Link>;
     case "pending":

@@ -7,14 +7,8 @@ import { COMING_LATER_COURSE_NOTE } from "@/config/training";
 import { ME } from "@/config/members-home";
 import { createClient } from "@/lib/supabase/server";
 import { formatPhtDate } from "@/lib/training/time";
-import {
-  findCatalog,
-  getAllCourseViews,
-  getCapstoneStatus,
-  groupByModule,
-  nextLesson,
-  type CourseView,
-} from "@/lib/training/courses";
+import { findCatalog, getAllCourseViews, groupByModule, type CourseView } from "@/lib/training/courses";
+import { CONTINUE_ACTION_CLASS, continueHref, continueLabel, resolveContinue, showCurriculumCapstone } from "@/lib/training/continue";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
 import { Curriculum } from "@/components/members-home/curriculum";
@@ -72,8 +66,18 @@ export default async function TrainingPage() {
   // Hero: latest activity; with no activity anywhere, start at Gold Reset (hero empty copy).
   const current = started[0] ?? withLessons.find((v) => v.catalog.slug === "gold-reset") ?? withLessons[0];
   const fresh = !started[0];
-  const lesson = current ? nextLesson(current.lessons) : undefined;
-  const cap = current?.courseId ? await getCapstoneStatus(current.courseId) : { exists: false, done: false };
+  const action = current ? resolveContinue(current.lessons, current.capstone) : ({ kind: "empty" } as const);
+  const lesson = action.kind === "lesson" ? action.lesson : undefined;
+  const capVisible = current ? showCurriculumCapstone(current.lessons.length, current.capstone) : false;
+  const capDone = current?.capstone.state === "completed";
+  const finished =
+    current && (action.kind === "capstone" || action.kind === "review")
+      ? {
+          label: continueLabel(action, current.done, { start: ME.heroCta, resume: ME.heroCta }) ?? "",
+          href: continueHref(current.catalog.slug, action) ?? `/courses/${current.catalog.slug}`,
+          title: current.catalog.title,
+        }
+      : null;
   const modules = current ? groupByModule(current.lessons) : [];
   const mod = modules.find((m) => m.sort === lesson?.moduleSort);
   const checkpoints = mod && lesson ? mod.lessons.filter((l) => !l.completed && l.id !== lesson.id).slice(0, 3) : [];
@@ -105,15 +109,15 @@ export default async function TrainingPage() {
           </span>
         </section>
 
-        {/* 2. Continue card: the one gold CTA */}
+        {/* 2. Continue card: the one gold CTA. Finished courses use an explicit capstone or review action. */}
         {current && lesson ? (
-          <section aria-labelledby="hero-h" className="flex flex-col gap-3 rounded-lg border-2 border-primary p-4">
+          <section aria-labelledby="hero-h" className="flex min-w-0 flex-col gap-3 rounded-lg border-2 border-primary p-4">
             <div className="flex items-start justify-between gap-2">
               <p className="text-xs font-semibold tracking-widest text-primary uppercase">{ME.heroLabel}</p>
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">{lesson.moduleTitle}</span>
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs break-words text-muted-foreground">{lesson.moduleTitle}</span>
             </div>
             {fresh && <p className="text-sm">{ME.heroEmpty}</p>}
-            <h2 id="hero-h" className="text-lg font-bold">
+            <h2 id="hero-h" className="text-lg font-bold break-words">
               {lesson.title}
             </h2>
             <p className="text-xs text-muted-foreground">{current.catalog.title}</p>
@@ -128,9 +132,16 @@ export default async function TrainingPage() {
             )}
             <Link
               href={`/courses/${current.catalog.slug}/${lesson.slug}`}
-              className={cn(buttonVariants({ variant: "default" }), "min-h-11 w-full sm:w-auto sm:self-start")}
+              className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}
             >
               {ME.heroCta}
+            </Link>
+          </section>
+        ) : finished ? (
+          <section className="flex min-w-0 flex-col gap-3 rounded-lg border-2 border-primary p-4">
+            <p className="text-xs text-muted-foreground">{finished.title}</p>
+            <Link href={finished.href} className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}>
+              {finished.label}
             </Link>
           </section>
         ) : (
@@ -147,10 +158,10 @@ export default async function TrainingPage() {
                 {ME.chipLessons(current.done, current.lessons.length)}
               </li>
               <li className="rounded-md border border-border px-3 py-2 sm:rounded-none sm:border-0 sm:py-0">{ME.chipQuiz(quizDone)}</li>
-              {cap.exists && (
+              {capVisible && (
                 <li className="rounded-md border border-border px-3 py-2 sm:rounded-none sm:border-0 sm:py-0">
-                  {cap.done ? "✓ " : "○ "}
-                  {ME.chipCapstone(cap.done)}
+                  {capDone ? "✓ " : "○ "}
+                  {ME.chipCapstone(capDone)}
                 </li>
               )}
             </ul>
@@ -160,7 +171,14 @@ export default async function TrainingPage() {
         {/* 360px: curriculum accordion, collapsed. Desktop shows the right rail instead. */}
         {current && (
           <div className="lg:hidden">
-            <Curriculum slug={current.catalog.slug} lessons={current.lessons} hasCapstone={cap.exists} currentLessonId={lesson?.id} collapsed />
+            <Curriculum
+              slug={current.catalog.slug}
+              lessons={current.lessons}
+              hasCapstone={capVisible}
+              currentLessonId={lesson?.id}
+              capstoneCurrent={action.kind === "capstone"}
+              collapsed
+            />
           </div>
         )}
 
@@ -194,7 +212,13 @@ export default async function TrainingPage() {
           <h2 className="mb-3 font-semibold">
             {ME.railTitle} · {current.catalog.title}
           </h2>
-          <Curriculum slug={current.catalog.slug} lessons={current.lessons} hasCapstone={cap.exists} currentLessonId={lesson?.id} />
+          <Curriculum
+            slug={current.catalog.slug}
+            lessons={current.lessons}
+            hasCapstone={capVisible}
+            currentLessonId={lesson?.id}
+            capstoneCurrent={action.kind === "capstone"}
+          />
         </aside>
       )}
     </div>

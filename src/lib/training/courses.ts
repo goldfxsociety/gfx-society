@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CATALOG, type CatalogCourse } from "@/config/training";
+import { capstoneAvailability, unfinishedLesson, type CapstoneAvailability } from "./continue";
 import { getMembership, type Membership } from "./gate";
 
 export type PayState =
@@ -64,6 +65,8 @@ export type CourseView = {
   lessons: LessonRow[];
   done: number;
   lastActivity: string | null;
+  /** Visible capstone only. Absent when the member cannot read one, including no row. */
+  capstone: CapstoneAvailability;
 };
 
 export async function getPaymentInfo(slug: string): Promise<PaymentInfo> {
@@ -142,9 +145,14 @@ export async function getCourseView(catalog: CatalogCourse, membership: Membersh
   // S8 = A: a removed member still gets 'approved' for a bought course from my_payment_info; anything else is not_member.
   const pay: PaymentInfo = await getPaymentInfo(catalog.slug);
   const courseId = pay.course_id ?? null;
-  const { lessons, lastActivity } =
-    courseId && (pay.state === "approved" || pay.state === "free") ? await getLessons(courseId) : { lessons: [], lastActivity: null };
+  const readable = Boolean(courseId) && (pay.state === "approved" || pay.state === "free");
+  const [lessonResult, capstoneStatus] =
+    readable && courseId
+      ? await Promise.all([getLessons(courseId), getCapstoneStatus(courseId)])
+      : [{ lessons: [] as LessonRow[], lastActivity: null as string | null }, { exists: false, done: false }];
+  const { lessons, lastActivity } = lessonResult;
   const done = lessons.filter((l) => l.completed).length;
+  const capstone = capstoneAvailability(capstoneStatus);
   return {
     catalog,
     courseId,
@@ -154,6 +162,7 @@ export async function getCourseView(catalog: CatalogCourse, membership: Membersh
     lessons,
     done,
     lastActivity,
+    capstone,
   };
 }
 
@@ -167,9 +176,9 @@ export function findCatalog(slug: string): CatalogCourse | undefined {
   return CATALOG.find((c) => c.slug === slug);
 }
 
-/** Next lesson to open: first not-completed, else first. */
+/** First accessible lesson that is not completed. Undefined when all are complete — no lesson-one fallback. */
 export function nextLesson(lessons: LessonRow[]): LessonRow | undefined {
-  return lessons.find((l) => !l.completed) ?? lessons[0];
+  return unfinishedLesson(lessons);
 }
 
 export type ModuleGroup = { sort: number; slug: string; title: string; goal: string; lessons: LessonRow[]; done: number };

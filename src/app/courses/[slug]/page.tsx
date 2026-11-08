@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { APPROVAL_TIME, BUY_ENABLED, COMING_LATER_COURSE_NOTE, peso } from "@/config/training";
-import { findCatalog, getCourseView, groupByModule, nextLesson } from "@/lib/training/courses";
+import { findCatalog, getCourseView, groupByModule } from "@/lib/training/courses";
+import { continueHref, continueLabel, resolveContinue, showCurriculumCapstone } from "@/lib/training/continue";
 import { getMembership } from "@/lib/training/gate";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
@@ -26,10 +27,12 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const { membership } = await getMembership();
   const v = await getCourseView(catalog, membership);
   const paid = v.pricePhp > 0;
-  const gold = cn(buttonVariants({ variant: "default" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-center");
+  const gold = cn(buttonVariants({ variant: "default" }), "h-auto min-h-11 w-full max-w-full whitespace-normal break-words py-2 text-center");
   const secondary = cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-center");
-  const next = nextLesson(v.lessons);
+  const action = resolveContinue(v.lessons, v.capstone);
+  const next = action.kind === "lesson" ? action.lesson : undefined;
   const member = membership !== "none";
+  const canLearn = v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done";
 
   const page = (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-5 px-4 pt-8 pb-24">
@@ -70,7 +73,14 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
         <h2 className="text-lg font-semibold">Modules</h2>
         {v.lessons.length > 0 ? (
           // Spec §3.2: 3 states (✓ / ◐ / ○, icon + text) + X/Y bar; current module open with "Current".
-          <Curriculum slug={slug} lessons={v.lessons} hasCapstone={false} currentLessonId={next?.id} idPrefix="mod-" />
+          <Curriculum
+            slug={slug}
+            lessons={v.lessons}
+            hasCapstone={showCurriculumCapstone(v.lessons.length, v.capstone)}
+            currentLessonId={next?.id}
+            capstoneCurrent={action.kind === "capstone"}
+            idPrefix="mod-"
+          />
         ) : (
           <ol className="flex flex-col gap-1">
             {catalog.modules.map((m, i) => (
@@ -119,9 +129,14 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             <Link href={`/courses/${slug}/pay`} className={gold}>Re-upload receipt →</Link>
           </>
         )}
-        {(v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done") && next && (
-          <Link href={`/courses/${slug}/${next.slug}`} className={gold}>
-            {v.done === 0 ? "Start →" : `Continue: ${next.title} →`}
+        {canLearn && action.kind === "lesson" && next && (
+          <Link href={continueHref(slug, action) ?? `/courses/${slug}/${next.slug}`} className={gold}>
+            {continueLabel(action, v.done, { start: "Start →", resume: `Continue: ${next.title} →` })}
+          </Link>
+        )}
+        {canLearn && (action.kind === "capstone" || action.kind === "review") && (
+          <Link href={continueHref(slug, action) ?? `/courses/${slug}`} className={gold}>
+            {continueLabel(action, v.done, { start: "Start →", resume: "Continue →" })}
           </Link>
         )}
         {v.state === "locked" && (

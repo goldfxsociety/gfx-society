@@ -5,7 +5,7 @@ import { ProgressBar } from "./progress-bar";
 
 export function StateIcon({ state }: { state: keyof typeof STATE_ICON }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+    <span className="inline-flex max-w-[46%] shrink items-center justify-end gap-1 text-right text-xs text-muted-foreground">
       <span aria-hidden className={state === "done" ? "text-green-300" : state === "in_progress" ? "text-primary" : ""}>
         {STATE_ICON[state]}
       </span>
@@ -31,6 +31,7 @@ export function Curriculum({
   lessons,
   hasCapstone,
   currentLessonId,
+  capstoneCurrent = false,
   collapsed = false,
   idPrefix,
 }: {
@@ -38,6 +39,8 @@ export function Curriculum({
   lessons: LessonRow[];
   hasCapstone: boolean;
   currentLessonId?: string;
+  /** Open the last module and mark the capstone row as the current step. */
+  capstoneCurrent?: boolean;
   collapsed?: boolean;
   /** Set on the instance that owns the #mod-N anchors (only one per page). */
   idPrefix?: string;
@@ -51,7 +54,7 @@ export function Curriculum({
       <ProgressBar value={done} max={lessons.length} label={ME.railDone(done, lessons.length)} />
       <Legend />
       {groups.map((g) => {
-        const current = g.sort === currentSort;
+        const current = g.sort === currentSort || (capstoneCurrent && g === last);
         return (
           <details
             key={g.sort}
@@ -60,7 +63,7 @@ export function Curriculum({
             className={current ? "rounded-lg border border-primary p-3" : "rounded-lg border border-border p-3"}
           >
             <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 font-medium">
-              <span>{g.title}</span>
+              <span className="min-w-0 break-words">{g.title}</span>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 {current && <span className="rounded-full border border-primary/60 px-2 py-0.5 text-primary">{ME.current}</span>}
                 {g.done}/{g.lessons.length}
@@ -72,7 +75,7 @@ export function Curriculum({
                   <Link
                     href={`/courses/${slug}/${l.slug}`}
                     aria-current={l.id === currentLessonId ? "step" : undefined}
-                    className="flex min-h-11 items-center justify-between gap-2 text-sm"
+                    className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 text-sm"
                   >
                     <span className="flex min-w-0 flex-1 items-center gap-2">
                       <span className="w-5 shrink-0 text-xs text-muted-foreground">{i + 1}</span>
@@ -85,7 +88,11 @@ export function Curriculum({
               ))}
               {hasCapstone && g === last && (
                 <li>
-                  <Link href={`/courses/${slug}/capstone`} className="flex min-h-11 items-center text-sm underline">
+                  <Link
+                    href={`/courses/${slug}/capstone`}
+                    aria-current={capstoneCurrent ? "step" : undefined}
+                    className="flex min-h-11 items-center text-sm break-words underline"
+                  >
                     {ME.capstoneRow}
                   </Link>
                 </li>
