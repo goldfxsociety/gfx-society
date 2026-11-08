@@ -13,50 +13,9 @@
  */
 
 const MODERN_SERVER_SECRET_PREFIX = "sb_secret_";
-const RESERVE_PATH = "/rest/v1/rpc/member_code_reserve";
-const EXPECTED_PROJECT_HOST = "hprbztlbvctlxmmnoigb.supabase.co";
-const PLACEHOLDERS = new Set([
-  "undefined",
-  "null",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "process.env.SUPABASE_SERVICE_ROLE_KEY",
-]);
 
 export function isModernServerSecret(key: string): boolean {
   return key.startsWith(MODERN_SERVER_SECRET_PREFIX);
-}
-
-function quotedOrPlaceholder(key: string): boolean {
-  const quoted =
-    (key.startsWith('"') && key.endsWith('"') && key.length >= 2) ||
-    (key.startsWith("'") && key.endsWith("'") && key.length >= 2);
-  return quoted || key.startsWith("$file:") || PLACEHOLDERS.has(key);
-}
-
-/** Boolean shape of one reserve call. Values are never logged. */
-function reserveShape(request: Request, supabaseUrl: string, serverKey: string) {
-  let configuredUrlMatchesExpectedProject = false;
-  let originMatchesConfigured = false;
-  try {
-    const configured = new URL(supabaseUrl);
-    const target = new URL(request.url);
-    configuredUrlMatchesExpectedProject = configured.hostname === EXPECTED_PROJECT_HOST;
-    originMatchesConfigured = target.origin === configured.origin;
-  } catch {
-    configuredUrlMatchesExpectedProject = false;
-    originMatchesConfigured = false;
-  }
-  const authorization = request.headers.get("authorization");
-  return {
-    configuredUrlMatchesExpectedProject,
-    originMatchesConfigured,
-    modernServerFamily: isModernServerSecret(serverKey),
-    hasWhitespace: /\s/.test(serverKey),
-    quotedOrPlaceholder: quotedOrPlaceholder(serverKey),
-    outgoingApikeyEqualsConfigured: request.headers.get("apikey") === serverKey,
-    authorizationAbsent: authorization === null,
-    independentAuthorization: authorization !== null && authorization !== `Bearer ${serverKey}`,
-  };
 }
 
 function restPath(url: URL): boolean {
@@ -79,9 +38,6 @@ export function createAdminRestFetch(
       if (url.origin === origin && restPath(url) && request.headers.get("authorization") === fallbackBearer) {
         request.headers.delete("authorization");
       }
-    }
-    if (new URL(request.url).pathname === RESERVE_PATH) {
-      console.error("[system/join] reserve-shape", reserveShape(request, supabaseUrl, serverKey));
     }
     return baseFetch(request, { cache: "no-store" });
   };
