@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createAdminRestFetch } from "./admin-fetch";
 
 /**
  * Server-only service-role client. Used ONLY for public.member_code_reserve / member_code_finish (send gate) and
@@ -12,6 +13,6 @@ export function createAdminClient() {
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: (u, o) => fetch(u, { ...o, cache: "no-store" }) },
+    global: { fetch: createAdminRestFetch(url, key) },
   });
 }
