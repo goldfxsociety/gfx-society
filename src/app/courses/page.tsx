@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { ME } from "@/config/members-home";
 import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
-import { getAllCourseViews, nextLesson, type CourseView } from "@/lib/training/courses";
+import { MembersNav } from "@/components/members-home/members-nav";
+import { getAllCourseViews, type CourseView } from "@/lib/training/courses";
+import { showMembersNav } from "@/lib/training/member-surface";
+import { CONTINUE_ACTION_CLASS, continueHref, continueLabel, resolveContinue } from "@/lib/training/continue";
 import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
 import { GraceBanner } from "@/components/training/grace-banner";
@@ -12,7 +16,7 @@ import { MembersFooter } from "@/components/training/members-footer";
 export const metadata: Metadata = { title: "Courses | GFX Trading System" };
 export const dynamic = "force-dynamic";
 
-const BTN = "min-h-11 w-full sm:w-auto";
+const BTN = CONTINUE_ACTION_CLASS;
 
 /** §1.4: owned/in-progress Continue (latest activity) > Gold Reset Start > Verify. */
 function pickGold(views: CourseView[], member: boolean): string | null {
@@ -28,7 +32,9 @@ function pickGold(views: CourseView[], member: boolean): string | null {
 function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
   const slug = v.catalog.slug;
   const style = (g: boolean) => cn(buttonVariants({ variant: g ? "default" : "outline" }), BTN);
-  const next = nextLesson(v.lessons);
+  const action = resolveContinue(v.lessons, v.capstone);
+  const learnHref = continueHref(slug, action) ?? `/courses/${slug}`;
+  const learnLabel = continueLabel(action, v.done, { start: "Start →", resume: "Continue →" }) ?? (v.done === 0 ? "Start →" : "Continue →");
   switch (v.state) {
     case "verify":
       return (
@@ -38,7 +44,7 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
         </>
       );
     case "free_new":
-      return <Link href={next ? `/courses/${slug}/${next.slug}` : `/courses/${slug}`} className={style(gold)}>Start →</Link>;
+      return <Link href={learnHref} className={style(gold)}>{learnLabel}</Link>;
     case "free_progress":
     case "owned":
       return (
@@ -46,13 +52,13 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
           {v.lessons.length > 0 && (
             <p className="text-sm text-muted-foreground">{v.done} of {v.lessons.length} lessons done</p>
           )}
-          <Link href={next ? `/courses/${slug}/${next.slug}` : `/courses/${slug}`} className={style(gold)}>
-            {v.done === 0 ? "Start →" : "Continue →"}
+          <Link href={learnHref} className={style(gold)}>
+            {learnLabel}
           </Link>
         </>
       );
     case "free_done":
-      return <Link href={`/courses/${slug}`} className={style(false)}>Review</Link>;
+      return <Link href={learnHref} className={style(false)}>{learnLabel}</Link>;
     case "not_owned":
       return <Link href={`/courses/${slug}`} className={style(false)}>View course</Link>;
     case "pending":
@@ -83,6 +89,8 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
           )}
         </>
       );
+    case "sales_closed":
+      return <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>;
     case "coming_soon":
       return <p className="text-sm text-muted-foreground">Inihahanda pa ang lessons. Wala pang bayad na tinatanggap.</p>;
   }
@@ -99,14 +107,15 @@ const CHIP: Record<CourseView["state"], [string, "neutral" | "amber" | "green" |
   owned: ["Owned ✓", "green"],
   coming_soon: ["Coming soon", "neutral"],
   locked: ["Locked", "neutral"],
+  sales_closed: ["Locked", "neutral"],
 };
 
 export default async function CoursesPage() {
   const { membership, views } = await getAllCourseViews();
-  const member = membership !== "none";
+  const member = showMembersNav(membership);
   const gold = pickGold(views, member);
 
-  return (
+  const page = (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-6 px-4 pt-10 pb-24">
       <header className="flex flex-col gap-2">
         <p className="text-xs font-semibold tracking-widest text-primary uppercase">GFX Trading System · Courses</p>
@@ -154,6 +163,13 @@ export default async function CoursesPage() {
         })}
       </ul>
       <MembersFooter />
+    </div>
+  );
+  if (!member) return page;
+  return (
+    <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
+      <MembersNav active="courses" />
+      <div className="flex min-w-0 flex-1">{page}</div>
     </div>
   );
 }

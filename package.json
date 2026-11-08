@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "check:en-tl": "node scripts/check-en-tl-strings.mjs"
+    "check:en-tl": "node scripts/check-en-tl-strings.mjs",
+    "test:continue": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-continue-resolution.mjs",
+    "test:members-p2": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-p2.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -3,12 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { ME } from "@/config/members-home";
 import { APPROVAL_TIME, BUY_ENABLED, COMING_LATER_COURSE_NOTE, peso } from "@/config/training";
-import { findCatalog, getCourseView, nextLesson } from "@/lib/training/courses";
+import { showMembersNav } from "@/lib/training/member-surface";
+import { findCatalog, getCourseView, groupByModule } from "@/lib/training/courses";
+import { continueHref, continueLabel, resolveContinue, showCurriculumCapstone } from "@/lib/training/continue";
 import { getMembership } from "@/lib/training/gate";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
 import { RefundLine } from "@/components/training/refund-line";
+import { Curriculum } from "@/components/members-home/curriculum";
+import { MembersNav } from "@/components/members-home/members-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +29,14 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const { membership } = await getMembership();
   const v = await getCourseView(catalog, membership);
   const paid = v.pricePhp > 0;
-  const gold = cn(buttonVariants({ variant: "default" }), "min-h-11 w-full");
-  const secondary = cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full");
-  const next = nextLesson(v.lessons);
-  const byModule = new Map<string, typeof v.lessons>();
-  for (const l of v.lessons) byModule.set(l.moduleTitle, [...(byModule.get(l.moduleTitle) ?? []), l]);
+  const gold = cn(buttonVariants({ variant: "default" }), "h-auto min-h-11 w-full max-w-full whitespace-normal break-words py-2 text-center");
+  const secondary = cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-center");
+  const action = resolveContinue(v.lessons, v.capstone);
+  const next = action.kind === "lesson" ? action.lesson : undefined;
+  const member = showMembersNav(membership);
+  const canLearn = v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done";
 
-  return (
+  const page = (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-5 px-4 pt-8 pb-24">
       <Link href="/courses" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">
         ← All courses
@@ -44,7 +50,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           {v.state === "pending" && <Chip tone="amber">Pending review</Chip>}
           {v.state === "rejected" && <Chip tone="red">Needs re-upload</Chip>}
           {v.state === "coming_soon" && <Chip>Coming soon</Chip>}
-          {v.state === "locked" && <Chip>Locked</Chip>}
+          {(v.state === "locked" || v.state === "sales_closed") && <Chip>Locked</Chip>}
         </div>
         {paid && <RefundLine />}
       </header>
@@ -68,21 +74,15 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
       <section className="flex flex-col gap-2" id="modules">
         <h2 className="text-lg font-semibold">Modules</h2>
         {v.lessons.length > 0 ? (
-          [...byModule.entries()].map(([mod, lessons]) => (
-            <details key={mod} className="rounded-lg border border-border p-3" open>
-              <summary className="min-h-11 cursor-pointer content-center font-medium">{mod}</summary>
-              <ul className="mt-2 flex flex-col">
-                {lessons.map((l) => (
-                  <li key={l.id}>
-                    <Link href={`/courses/${slug}/${l.slug}`} className="flex min-h-11 items-center justify-between text-sm underline">
-                      <span>{l.title}</span>
-                      {l.completed && <span aria-label="done">✓</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ))
+          // Spec §3.2: 3 states (✓ / ◐ / ○, icon + text) + X/Y bar; current module open with "Current".
+          <Curriculum
+            slug={slug}
+            lessons={v.lessons}
+            hasCapstone={showCurriculumCapstone(v.lessons.length, v.capstone)}
+            currentLessonId={next?.id}
+            capstoneCurrent={action.kind === "capstone"}
+            idPrefix="mod-"
+          />
         ) : (
           <ol className="flex flex-col gap-1">
             {catalog.modules.map((m, i) => (
@@ -131,9 +131,14 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             <Link href={`/courses/${slug}/pay`} className={gold}>Re-upload receipt →</Link>
           </>
         )}
-        {(v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done") && next && (
-          <Link href={`/courses/${slug}/${next.slug}`} className={gold}>
-            {v.done === 0 ? "Start →" : `Continue: ${next.title} →`}
+        {canLearn && action.kind === "lesson" && next && (
+          <Link href={continueHref(slug, action) ?? `/courses/${slug}/${next.slug}`} className={gold}>
+            {continueLabel(action, v.done, { start: "Start →", resume: `Continue: ${next.title} →` })}
+          </Link>
+        )}
+        {canLearn && (action.kind === "capstone" || action.kind === "review") && (
+          <Link href={continueHref(slug, action) ?? `/courses/${slug}`} className={gold}>
+            {continueLabel(action, v.done, { start: "Start →", resume: "Continue →" })}
           </Link>
         )}
         {v.state === "locked" && (
@@ -144,11 +149,23 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             )}
           </>
         )}
+        {v.state === "sales_closed" && <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>}
         {v.state === "coming_soon" && (
           <p className="text-sm text-muted-foreground">Inihahanda pa ang lessons. Wala pang bayad na tinatanggap.</p>
         )}
       </section>
       <MembersFooter />
+    </div>
+  );
+  // Members only (spec §3.3): members get the Home · Courses · Account nav; everyone else keeps the Academy nav.
+  if (!member) return page;
+  return (
+    <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
+      <MembersNav
+        active="courses"
+        course={v.lessons.length > 0 ? { slug, title: catalog.title, modules: groupByModule(v.lessons) } : undefined}
+      />
+      <div className="flex min-w-0 flex-1">{page}</div>
     </div>
   );
 }
