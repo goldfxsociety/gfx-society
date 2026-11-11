@@ -71,7 +71,10 @@ await t("mail not live: ACCM email ignored (never sent to the RPC), IB name clea
   assert.deepEqual(m.log[1], ["rpc", null, "Team Ana"]);
 });
 await t("mail live: invalid / same ACCM email caught before the RPC", async () => {
-  for (const [v, want] of [["nope", "invalid_email"], ["a@b", "invalid_email"], ["x".repeat(250) + "@a.test", "invalid_email"], [" ME@example.test ", "same_email"]]) {
+  for (const [v, want] of [["nope", "invalid_email"], ["a@b", "invalid_email"], ["x".repeat(250) + "@a.test", "invalid_email"], [" ME@example.test ", "same_email"],
+                           // Q5: plain addr-spec only (no display names, <>, quotes, commas, spaces, CR/LF)
+                           ["Ana <a@example.test>", "invalid_email"], ["<a@example.test>", "invalid_email"], ['"a"@example.test', "invalid_email"],
+                           ["a,b@example.test", "invalid_email"], ["a b@example.test", "invalid_email"], ["a@example.test\r\nBcc: b@example.test", "invalid_email"]]) {
     const m = mk(); assert.equal(await AR.submitRequest(m.deps, IN({ accmEmail: v }), ME, true), want, v); assert.equal(m.log.length, 1);
   }
 });
@@ -108,18 +111,38 @@ await t("active-request copy uses the dates verbatim", async () => {
   assert.equal(REQUEST_COPY_EN.activeRequest("Nov 11, 2026", "Dec 1, 2026"),
     "You already have an active request (submitted Nov 11, 2026). It'll be checked on Dec 1, 2026, and at every monthly update until it matches.");
 });
-await t("confirm link: pinned to site URL, 64-hex token only", async () => {
+await t("confirm link: pinned to site URL, 64-hex token only, token in the fragment (never sent to a server)", async () => {
   const tok = "a".repeat(64);
-  assert.equal(AR.accmConfirmUrl("https://gfx-society.vercel.app/", tok), `https://gfx-society.vercel.app/system/join/confirm?token=${tok}`);
+  assert.equal(AR.accmConfirmUrl("https://gfx-society.vercel.app/", tok), `https://gfx-society.vercel.app/system/join/confirm#token=${tok}`);
   assert.throws(() => AR.accmConfirmUrl("https://gfx-society.vercel.app", "x"));
 });
-await t("confirm landing: no redirect target from the URL, no-referrer, noindex, RPC only for a 64-hex token", async () => {
+await t("confirm landing (QA N1): GET never confirms or reads a token; POST button; no redirect target; no-referrer, noindex", async () => {
   const p = read("src/app/system/join/confirm/page.tsx");
-  assert.ok(!/redirect\(|searchParams\.next|sp\.next/.test(p));
+  assert.ok(!/redirect\(|searchParams|rpc\(/.test(p), "GET render: no searchParams, no RPC, no redirect");
   assert.match(p, /referrer: "no-referrer"/);
   assert.match(p, /index: false/);
-  assert.match(p, /\/\^\[0-9a-f\]\{64\}\$\/\.test\(token\)/);
-  assert.match(p, /rpc\("confirm_accm_email", \{ p_token: token \}\)/);
+  assert.match(p, /ACCM_CONFIRM_MAIL_LIVE \? \(\s*<ConfirmForm/);
+  const a = read("src/app/system/join/confirm/actions.ts");
+  assert.match(a, /^"use server";/);
+  assert.match(a, /rpc\("confirm_accm_email", \{ p_token: t \}\)/);
+  assert.ok(!/console\.[a-z]+\([^)]*\b(t|token)\b[,)]/.test(a), "token never logged");
+  const f = read("src/app/system/join/confirm/confirm-form.tsx");
+  assert.match(f, /<form action=\{action\}/);
+  assert.match(f, /type="submit"/);
+  assert.match(f, /history\.replaceState\(null, "", window\.location\.pathname\)/);
+  assert.match(f, /LOGIN_HREF = "\/login\?next=%2Fsystem%2Fjoin%2Fconfirm"/);
+  assert.match(read("next.config.ts"), /source: "\/system\/join\/confirm", headers: \[\{ key: "Referrer-Policy", value: "no-referrer" \}\]/);
+});
+await t("confirmAccmEmail: flag off / bad token -> invalid with no call; login required; neutral invalid", async () => {
+  const calls = [];
+  const deps = (o = {}) => ({ loggedIn: async () => { calls.push("user"); return o.user ?? true; }, confirm: async () => { calls.push("rpc"); return "rpc" in o ? o.rpc : "confirmed"; } });
+  const tok = "b".repeat(64);
+  assert.equal(await AR.confirmAccmEmail(deps(), tok, false), "invalid"); assert.deepEqual(calls, []);
+  assert.equal(await AR.confirmAccmEmail(deps(), "x", true), "invalid"); assert.deepEqual(calls, []);
+  assert.equal(await AR.confirmAccmEmail(deps({ user: false }), tok, true), "login_required");
+  assert.equal(await AR.confirmAccmEmail(deps(), tok, true), "confirmed");
+  for (const rpc of ["invalid", null, "weird"]) assert.equal(await AR.confirmAccmEmail(deps({ rpc }), tok, true), "invalid");
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, false, "flag default stays false");
 });
 
 // ---- J4 template ----
@@ -168,7 +191,7 @@ await t("spec copy verbatim (spot checks)", async () => {
   assert.equal(REQUEST_COPY.rateLimited, "Medyo marami nang tries. Maghintay muna nang kaunti, tapos subukan ulit.");
   assert.equal(TRANSFER_COPY.link, "Naka-register ka na sa ACCM pero sa ibang IB?");
   assert.equal(TRANSFER_COPY.caption, "Template mula sa GFX team. I-copy o i-open as is.");
-  assert.ok(!JSON.stringify(TRANSFER_COPY).includes("Jarvis"), "no internal bot names in public J4 copy");
+  assert.ok(!JSON.stringify([TRANSFER_COPY, TRANSFER_COPY_EN]).includes("Jarvis"), "no internal bot names in public J4 copy (TL + EN)");
   assert.equal(JOIN_SYSTEM_CTA, "Join the Trading System");
 });
 

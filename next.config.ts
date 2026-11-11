@@ -70,7 +70,11 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // QA N1: the ACCM confirm page never sends a Referer (overrides the global policy; listed last so it wins).
+      { source: "/system/join/confirm", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+    ];
   },
 };
 

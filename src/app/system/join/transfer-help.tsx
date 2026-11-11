@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { TRANSFER_COPY as T, TRANSFER_TEMPLATE as TPL, TRANSFER_TEMPLATE_TEXT } from "@/content/access-request";
 import { cn } from "@/lib/utils";
@@ -12,10 +12,18 @@ import { cn } from "@/lib/utils";
 export function TransferHelp() {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // QA Q9: never leave the "Copied" timer running after unmount.
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
   const copy = async () => {
+    // QA N9: clear first so a second Copy changes the live region again and is re-announced.
+    setCopied(false);
+    if (timer.current) clearTimeout(timer.current);
     try {
       await navigator.clipboard.writeText(TRANSFER_TEMPLATE_TEXT);
-      setCopied(true);
+      timer.current = setTimeout(() => setCopied(true), 50);
     } catch {
       setCopied(false);
     }

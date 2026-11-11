@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Syne, Inter } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Suspense } from "react";
 import { ReconsentGate } from "@/components/consent/reconsent-gate";
+import { SiteAnalytics } from "@/components/analytics/site-analytics";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ReconsentGate />
         </Suspense>
         <BottomNav />
-        <Analytics />
+        <SiteAnalytics />
       </body>
     </html>
   );

@@ -26,6 +26,12 @@ export const REQUEST_COPY = {
   submittedAwaiting:
     "Halos tapos na. I-click ang confirmation link na pinadala namin sa ACCM email mo (check din ang Spam o Promotions). Iche-check lang namin ang request pag na-confirm na ito.",
   confirmedLanding: "Na-confirm na ang ACCM email mo. Iche-check namin ito sa susunod na monthly update.",
+  // Confirm step (QA N1: POST button + signed-in requester). GFX Design approved 11 Nov.
+  confirmPrompt: "Isang click na lang: pindutin ang button para i-confirm ang ACCM email sa request mo.",
+  confirmButton: "I-confirm ang ACCM email",
+  confirmLoginBody: "Mag-log in muna gamit ang Academy account na nag-request, tapos babalik ka rito para i-confirm.",
+  confirmInvalid:
+    "Hindi gumana ang link na ito. Baka nagamit na, expired na, o ibang account ang naka-log in. Mag-log in gamit ang account na nag-request, o i-update ang request mo para makakuha ng bagong link.",
   activeRequest: (submitted: string, nextFirst: string) =>
     `May active request ka na, submitted ${submitted}. Iche-check ito sa ${nextFirst}, at sa bawat monthly update hanggang ma-match.`,
   updateLink: "I-update ang request",
@@ -54,6 +60,11 @@ export const REQUEST_COPY_EN = {
   submittedAwaiting:
     "Almost done. Click the confirmation link we sent to your ACCM email (check Spam or Promotions too). We'll check your request once it's confirmed.",
   confirmedLanding: "Your ACCM email is confirmed. We'll check it at the next monthly update.",
+  confirmPrompt: "One last click: press the button to confirm the ACCM email on your request.",
+  confirmButton: "Confirm ACCM email",
+  confirmLoginBody: "Log in first with the Academy account that made the request, then you'll come back here to confirm.",
+  confirmInvalid:
+    "This link didn't work. It may have been used already, expired, or a different account is logged in. Log in with the account that made the request, or update your request to get a new link.",
   activeRequest: (submitted: string, nextFirst: string) =>
     `You already have an active request (submitted ${submitted}). It'll be checked on ${nextFirst}, and at every monthly update until it matches.`,
   updateLink: "Update request",
