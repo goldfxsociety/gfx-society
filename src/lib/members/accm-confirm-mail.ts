@@ -53,16 +53,16 @@ export const ACCM_CONFIRM_MAIL_COPY = {
   subject: "I-confirm ang ACCM email mo / Confirm your ACCM email (GFX Society)",
   tl: [
     "May nag-request ng access sa GFX Trading System at nilagay ang email na ito bilang ACCM email.",
-    "Para i-confirm: buksan ang link sa ibaba, mag-log in gamit ang Academy account na nag-request, tapos pindutin ang \"I-confirm ang ACCM email\". Isang beses lang gumagana ang link, at mag-e-expire ito after 24 hours.",
+    "Para i-confirm: buksan ang link sa ibaba, mag-log in gamit ang Academy account na nag-request, tapos pindutin ang confirm button. Isang beses lang gumagana ang link, at mag-e-expire ito after 24 hours.",
     "Kung hindi ikaw ang nag-request, i-ignore lang ang email na ito. Walang mangyayari kung hindi mo gagamitin ang link.",
   ],
   en: [
     "Someone requested access to the GFX Trading System and entered this address as their ACCM email.",
-    "To confirm: open the link, log in with the Academy account that made the request, then press \"I-confirm ang ACCM email\". The link works once and expires after 24 hours.",
+    "To confirm: open the link, log in with the Academy account that made the request, then press the confirm button. The link works once and expires after 24 hours.",
     "If this wasn't you, just ignore this email. Nothing happens unless the link is used.",
   ],
   button: "I-confirm ang ACCM email",
-  footer: "GFX Society · goldfx.society@gmail.com · Education only. Trading involves risk.",
+  footer: "GFX Society · goldfx.society@gmail.com · Education lang, not financial advice.",
 } as const;
 
 /** Plain text + simple HTML. The only variable part is the pinned link (hex token, escaped anyway). */

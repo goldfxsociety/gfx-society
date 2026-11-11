@@ -111,6 +111,15 @@ await t("email copy: Taglish + EN, ignore-if-not-you, 24 h single use, no VIP/PD
   for (const bad of [/\bVIP\b/i, /\bPDE\b/i, /profit|kita ka|guarantee|win rate|libreng bot|free bot/i]) assert.ok(!bad.test(text + html), String(bad));
   assert.ok(!/accm-user@example\.test/.test(text + html), "body never names the address");
 });
+await t("Design-approved email copy (11 Nov): confirm button described, not quoted; standard education footer", async () => {
+  const C = M.ACCM_CONFIRM_MAIL_COPY;
+  assert.ok(C.tl[1].includes("pindutin ang confirm button."));
+  assert.ok(C.en[1].includes("press the confirm button."));
+  assert.ok(![...C.tl, ...C.en].some((l) => l.includes('"')), "no quoted button labels");
+  assert.equal(C.footer, "GFX Society \u00b7 goldfx.society@gmail.com \u00b7 Education lang, not financial advice.");
+  assert.ok(!JSON.stringify(C).includes("Jarvis") && !JSON.stringify(C).includes("Ben"), "no internal or founder names");
+});
+
 await t("mock nodemailer transport: Gmail 465 TLS options + sendMail gets exactly the built message", async () => {
   // Same transport options the wiring uses, with nodemailer's offline JSON transport standing in for SMTP.
   assert.deepEqual(M.GMAIL_SMTP, { host: "smtp.gmail.com", port: 465, secure: true });

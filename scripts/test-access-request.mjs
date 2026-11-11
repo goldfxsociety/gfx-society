@@ -188,7 +188,7 @@ await t("spec copy verbatim (spot checks)", async () => {
   assert.equal(REQUEST_COPY.rateLimited, "Medyo marami nang tries. Maghintay muna nang kaunti, tapos subukan ulit.");
   assert.equal(TRANSFER_COPY.link, "Naka-register ka na sa ACCM pero sa ibang IB?");
   assert.equal(TRANSFER_COPY.caption, "Template mula sa GFX team. I-copy o i-open as is.");
-  assert.ok(!JSON.stringify(TRANSFER_COPY).includes("Jarvis"), "no internal bot names in public J4 copy");
+  assert.ok(!JSON.stringify([TRANSFER_COPY, TRANSFER_COPY_EN]).includes("Jarvis"), "no internal bot names in public J4 copy (TL + EN)");
   assert.equal(JOIN_SYSTEM_CTA, "Join the Trading System");
 });
 
