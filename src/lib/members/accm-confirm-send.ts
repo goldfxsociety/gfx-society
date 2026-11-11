@@ -11,7 +11,7 @@ import { GMAIL_SMTP, SMTP_TIMEOUTS, readMailConfig, sendAccmConfirm, type SendRe
  * Service-role dependency (PR note): the token is issued by public.issue_accm_confirm_token, which is service_role
  * only on purpose (a user must never be able to read or set their own token, or they could confirm without inbox
  * access). So this path uses createAdminClient() (SUPABASE_SERVICE_ROLE_KEY on Vercel), like the purge cron.
- * Needs a hosted check of that key before go-live.
+ * Go-live step (b): a hosted check that this key works for the issue RPC, before the go-live deploy.
  */
 export async function sendAccmConfirmForUser(userId: string): Promise<SendResult> {
   if (!ACCM_CONFIRM_MAIL_LIVE) return "error"; // flag off: no env read, no token, no mail

@@ -183,5 +183,19 @@ await expectVal('Q2: after purge the user can update the request with an ACCM em
   (await x(`delete from private.access_request_attempts`), sub(`${Q.p1.slice(0, 8)}-accm@example.test`)), 'awaiting_email_confirm');
 check((await rawCount(Q.p1)) === 1, 'Q2: re-entered address stored again for a fresh confirmation');
 
+// ---- R3: the purge path inside issue_accm_confirm_token (service role, no submit, no cron) ----
+for (const id of [Q.p3, Q.p4]) { await x(`delete from private.access_request_attempts`); await as('authenticated', id, sub(`${id.slice(0, 8)}-accm@example.test`)); }
+await x(`delete from private.accm_confirm_sends`);
+await age(Q.p3, 8); await age(Q.p4, 8);   // both stale: > 7 days, never had a token
+check((await rawCount(Q.p3)) === 1 && (await rawCount(Q.p4)) === 1, 'R3 setup: two stale raw ACCM emails present before issue');
+const r3own = await issueJ(Q.p3);         // issue for a stale request purges it first, so nothing is issued or returned
+check(JSON.stringify(r3own) === '{"error":"none"}' && (await rawCount(Q.p3)) === 0, 'R3 issue for a stale request: purged first -> {"error":"none"}, no address returned', JSON.stringify(r3own));
+check((await rawCount(Q.p4)) === 0, 'R3 the same issue call purges other stale requests too');
+check((await sval(`select count(*)::int from private.accm_confirm_sends`)) === 0, 'R3 no send counted for the purged requests');
+check((await sval(`select count(*)::int from private.access_request_accm s join public.access_requests r on r.id=s.request_id where r.user_id in ('${Q.p3}','${Q.p4}') and s.token_hash is not null`)) === 0, 'R3 no token created for the purged requests');
+await expectVal('R3 purged by issue -> pending, hash kept', 'authenticated', Q.p3, `select (public.my_join_state()->'request'->>'status') || ':' || (public.my_join_state()->'request'->>'has_accm_email')`, 'pending:true');
+const r3live = await issueJ(Q.p1);        // a fresh awaiting request (re-entered above) still gets its link from the same path
+check(typeof r3live?.token === 'string' && r3live.token.length === 64 && (await rawCount(Q.p1)) === 1, 'R3 issue still works for a fresh request after purging others');
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

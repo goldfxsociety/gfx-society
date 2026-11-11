@@ -1,7 +1,7 @@
 /**
  * Different-ACCM-email confirmation mail (Gmail SMTP via nodemailer, Ben's pick 11 Nov). Pure logic with injected
  * calls so it is unit-tested offline (scripts/test-accm-confirm-mail.mjs). Server wiring with the real transport and
- * the service-role RPC: src/lib/members/accm-confirm-send.ts. Only runs when ACCM_CONFIRM_MAIL_LIVE is true.
+ * the service-role RPC: src/lib/members/accm-confirm-send.ts. Only runs when ACCM_CONFIRM_MAIL_LIVE is true (live since the go-live PR).
  *
  * Rules: SMTP env is read only when the flag is on and only on the server; missing env fails closed BEFORE a token is
  * issued; the link is pinned to the site URL (never a request host); the token travels only in the URL fragment

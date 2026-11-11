@@ -72,8 +72,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
-      // QA N1: the ACCM confirm page never sends a Referer (overrides the global policy; listed last so it wins).
-      { source: "/system/join/confirm", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      // QA N1: the ACCM confirm page never sends a Referer (overrides the global policy; listed last so it wins),
+      // and is never indexed (header + the page's metadata robots).
+      {
+        source: "/system/join/confirm",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
     ];
   },
 };

@@ -7,8 +7,9 @@ import fs from "node:fs";
 import puppeteer from "puppeteer-core";
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3071";
-// FLAG_ON=1: run against a LOCAL build with ACCM_CONFIRM_MAIL_LIVE flipped to true (never committed).
-const FLAG_ON = process.env.FLAG_ON === "1";
+// Live by default since the go-live PR (ACCM_CONFIRM_MAIL_LIVE = true). FLAG_OFF=1: run against a LOCAL build with the
+// constant flipped back to false, i.e. the rollback state (never committed).
+const FLAG_ON = process.env.FLAG_OFF !== "1";
 const OUT = process.argv.includes("--out") ? process.argv[process.argv.indexOf("--out") + 1] : null;
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 let pass = 0, fail = 0;
@@ -209,6 +210,22 @@ try {
   await p.waitForSelector("#access-request-form");
   check((await p.$eval("#ar-ib", (i) => i.value)) === "Team Ana", "update: same request prefilled");
   await p.close();
+
+  // ---- confirm route never indexed (header + meta), both modes; /privacy version follows the flag ----
+  {
+    const r = await fetch(`${BASE}/system/join/confirm`, { redirect: "manual" });
+    check(r.headers.get("x-robots-tag") === "noindex, nofollow", "confirm: X-Robots-Tag noindex, nofollow header", String(r.headers.get("x-robots-tag")));
+    check(r.headers.get("referrer-policy") === "no-referrer", "confirm: Referrer-Policy no-referrer header", String(r.headers.get("referrer-policy")));
+    p = await open("/system/join/confirm", null);
+    const rb = await p.$eval('meta[name="robots"]', (m) => m.content).catch(() => "");
+    check(/noindex/.test(rb) && /nofollow/.test(rb), "confirm: robots meta noindex, nofollow", rb);
+    await p.close();
+    p = await open("/privacy", null);
+    const pv = await text(p);
+    check(FLAG_ON ? pv.includes("Version: 1.5") && pv.includes("Different ACCM email") : pv.includes("Version: 1.4") && !pv.includes("Different ACCM email"),
+      FLAG_ON ? "/privacy serves v1.5 (live)" : "/privacy serves v1.4 (rollback)");
+    await p.close();
+  }
 
   // ---- page titles: the layout template adds the site name once ----
   for (const [path, want] of [["/privacy", "Privacy Notice | GFX Society"], ["/terms", "Terms of Use | GFX Society"], ["/risk", "Risk Disclaimer | GFX Society"], ["/disclosure", "IB Disclosure | GFX Society"]]) {

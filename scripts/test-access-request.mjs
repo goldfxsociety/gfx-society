@@ -64,11 +64,17 @@ const IN = (o = {}) => ({ accmEmail: "", ibName: "", consent: true, ...o });
 const ME = "me@example.test";
 await t("logged out -> login_required, no RPC", async () => { const m = mk({ loggedIn: false }); assert.equal(await AR.submitRequest(m.deps, IN(), null), "login_required"); assert.deepEqual(m.log, ["user"]); });
 await t("consent not ticked -> consent_required, no RPC", async () => { const m = mk(); assert.equal(await AR.submitRequest(m.deps, IN({ consent: false }), ME), "consent_required"); assert.equal(m.log.length, 1); });
-await t("mail not live: ACCM email ignored (never sent to the RPC), IB name cleaned", async () => {
+await t("mail not live (injected false = rollback state): ACCM email ignored (never sent to the RPC), IB name cleaned", async () => {
   const m = mk();
-  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, false);
-  assert.equal(await AR.submitRequest(m.deps, IN({ accmEmail: "other@example.test", ibName: " Team  https://x.test/a Ana " }), ME), "pending");
+  assert.equal(await AR.submitRequest(m.deps, IN({ accmEmail: "other@example.test", ibName: " Team  https://x.test/a Ana " }), ME, false), "pending");
   assert.deepEqual(m.log[1], ["rpc", null, "Team Ana"]);
+});
+await t("live by default (go-live): the flag is true and the default call passes the ACCM email to the RPC", async () => {
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
+  const m = mk({ rpc: "pending" });
+  assert.equal(await AR.submitRequest(m.deps, IN({ accmEmail: " Other@Example.test ", ibName: "Team Ana" }), ME), "pending");
+  assert.deepEqual(m.log[1], ["rpc", "other@example.test", "Team Ana"]);
+  assert.equal(AR.validateRequest(IN({ accmEmail: "Ana <a@example.test>" }), ME), "invalid_email", "default validation is the live one");
 });
 await t("mail live: invalid / same ACCM email caught before the RPC", async () => {
   for (const [v, want] of [["nope", "invalid_email"], ["a@b", "invalid_email"], ["x".repeat(250) + "@a.test", "invalid_email"], [" ME@example.test ", "same_email"],
@@ -131,7 +137,10 @@ await t("confirm landing (QA N1): GET never confirms or reads a token; POST butt
   assert.match(f, /type="submit"/);
   assert.match(f, /history\.replaceState\(null, "", window\.location\.pathname\)/);
   assert.match(f, /LOGIN_HREF = "\/login\?next=%2Fsystem%2Fjoin%2Fconfirm"/);
-  assert.match(read("next.config.ts"), /source: "\/system\/join\/confirm", headers: \[\{ key: "Referrer-Policy", value: "no-referrer" \}\]/);
+  const cfg = read("next.config.ts");
+  const route = cfg.slice(cfg.indexOf('source: "/system/join/confirm"'), cfg.indexOf("],", cfg.indexOf('source: "/system/join/confirm"')));
+  assert.ok(route.includes('{ key: "Referrer-Policy", value: "no-referrer" }') && route.includes('{ key: "X-Robots-Tag", value: "noindex, nofollow" }'), "confirm route: no-referrer + X-Robots-Tag noindex, nofollow");
+  assert.match(p, /robots: \{ index: false, follow: false \}/);
 });
 await t("confirmAccmEmail: flag off / bad token -> invalid with no call; login required; neutral invalid", async () => {
   const calls = [];
@@ -142,7 +151,7 @@ await t("confirmAccmEmail: flag off / bad token -> invalid with no call; login r
   assert.equal(await AR.confirmAccmEmail(deps({ user: false }), tok, true), "login_required");
   assert.equal(await AR.confirmAccmEmail(deps(), tok, true), "confirmed");
   for (const rpc of ["invalid", null, "weird"]) assert.equal(await AR.confirmAccmEmail(deps({ rpc }), tok, true), "invalid");
-  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, false, "flag default stays false");
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true, "go-live: the default is the live path (flag-off path above stays covered by injection)");
 });
 
 // ---- J4 template ----
@@ -243,8 +252,13 @@ await t("privacy: request-data line (TL + EN), no deletion promise for requests,
   assert.ok(!/6-digit|walang password|passwordless|code request log|Email-code login/i.test(sec), "members section describes Academy login");
   assert.match(sec, /normal Academy account mo \(email \+ password\)/);
   assert.match(p, /Version: 1\.4/);
-  // Mailer off (ACCM_CONFIRM_MAIL_LIVE=false): no ACCM-email promise until Privacy v1.5.
+  // v1.4 is kept as history and is what /privacy serves again on rollback (flag false): no ACCM-email promise in it.
   assert.ok(!/ACCM email|Different ACCM email|confirmation link we send/i.test(p), "no ACCM-email confirm copy while mailer is off");
+});
+await t("privacy page: live flag serves v1.5; v1.4 stays only as the rollback fallback", async () => {
+  assert.match(read("src/app/privacy/page.tsx"), /const PRIVACY_FILE = ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.5\.md" : "privacy-notice\.md";/);
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
+  assert.match(read("src/content/legal/privacy-notice-v1.5.md"), /^Last updated: 11 Nov 2026 · Version: 1\.5$/m);
 });
 await t("F2: no stale member_code_reserve comment in admin.ts", async () => {
   assert.ok(!read("src/lib/supabase/admin.ts").includes("member_code_reserve"));

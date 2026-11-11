@@ -6,20 +6,24 @@
  */
 
 /**
- * Different-ACCM-email confirmation mailer switch (app side). Default false. While false: the ACCM email field is not
- * shown, any value is ignored server-side, no SMTP env is read, no token is issued and no mail is sent, the
- * /system/join/confirm page offers no confirm button, and /privacy shows Privacy v1.4 (privacy-notice.md).
- * When true: the field shows, the request action mails the link (Gmail SMTP, src/lib/members/accm-confirm-send.ts),
- * and /privacy shows Privacy v1.5 (privacy-notice-v1.5.md, the two ACCM-email passages restored with a change note).
+ * Different-ACCM-email confirmation mailer switch (app side). LIVE (true) since the go-live PR (11 Nov 2026).
+ * While true: the ACCM email field shows, the request action mails the link only through the server path
+ * (src/lib/members/accm-confirm-send.ts, Gmail SMTP, token issued by the service-role RPC), the
+ * /system/join/confirm page offers the POST confirm button, and /privacy shows Privacy v1.5 (privacy-notice-v1.5.md).
+ * Missing GFX_SMTP_* env still fails closed with the neutral error, before any token is issued.
+ * If false (rollback): the field is hidden, any value is ignored server-side, no SMTP env is read, no token is issued
+ * and no mail is sent, the confirm page shows the neutral error, and /privacy falls back to Privacy v1.4
+ * (privacy-notice.md, kept as history for exactly this).
  *
- * Go-live needs ALL of these (Jarvis's go; order and rollback in docs/accm-confirm-mailer.md: DB switch on BEFORE
- * this constant; rollback turns this constant off first): this constant set to true; the DB switch
- * private.app_settings 'accm_confirm_mail_live' = 'true' (migration 20261111130000; while it is off the DB refuses
- * ACCM emails and issues no tokens); GFX_SMTP_USER / GFX_SMTP_APP_PASSWORD / GFX_SMTP_FROM set on Vercel; a hosted
- * check that SUPABASE_SERVICE_ROLE_KEY works for issue_accm_confirm_token; and the v1.5 "Last updated" date set.
+ * Live also needs the DB switch private.app_settings 'accm_confirm_mail_live' = 'true' (migration
+ * 20261111130000, prod version 20261111073716; while it is off the DB refuses ACCM emails and issues no tokens),
+ * GFX_SMTP_USER / GFX_SMTP_APP_PASSWORD / GFX_SMTP_FROM on Vercel Production, and a hosted check that
+ * SUPABASE_SERVICE_ROLE_KEY works for issue_accm_confirm_token. Order (docs/accm-confirm-mailer.md): env, key check,
+ * DB switch on, THEN deploy this constant. Rollback: a revert PR setting this back to false (deploy) FIRST, then the
+ * DB switch off, then the scrub SQL.
  * Keep the two privacy files in step (scripts/test-accm-confirm-mail.mjs checks they differ only in the v1.5 parts).
  */
-export const ACCM_CONFIRM_MAIL_LIVE = false;
+export const ACCM_CONFIRM_MAIL_LIVE = true;
 
 export type RequestResult =
   | "pending"

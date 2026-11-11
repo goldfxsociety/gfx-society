@@ -6,7 +6,8 @@ import { ACCM_CONFIRM_MAIL_LIVE } from "@/lib/members/access-request";
 import { createClient } from "@/lib/supabase/server";
 import { ConfirmForm } from "./confirm-form";
 
-// Never index; never send a Referer (also a route-level Referrer-Policy: no-referrer header in next.config.ts).
+// Never index; never send a Referer (also route-level X-Robots-Tag: noindex, nofollow and Referrer-Policy:
+// no-referrer headers in next.config.ts).
 export const metadata: Metadata = {
   title: "Confirm ACCM email | GFX Trading System",
   robots: { index: false, follow: false },
