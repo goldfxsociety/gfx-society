@@ -4,6 +4,11 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SIGNUP_CONSENT_VERSION } from "@/config/legal";
 import { isCaptchaError, withCaptcha } from "@/lib/auth/captcha";
+import { emailConfirmRedirect } from "@/lib/auth/safe-next";
+import { signupOutcome, type SignupResult } from "@/lib/auth/signup-outcome";
+import { SITE_URL } from "@/lib/site";
+
+export type { SignupResult };
 
 export type SignupInput = {
   displayName: string;
@@ -14,11 +19,9 @@ export type SignupInput = {
   consentMarketing: boolean;
   /** Turnstile token (only sent when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set). */
   captchaToken?: string;
+  /** Where to land after the email confirmation link (relative path; sanitized server-side). */
+  next?: string;
 };
-
-export type SignupResult =
-  | { ok: true; needsEmailConfirmation: boolean }
-  | { ok: false; error: string };
 
 const EXPERIENCE_LEVELS = new Set(["", "never_traded", "demo_only", "trading_live"]);
 
@@ -43,9 +46,11 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
   const experienceLevel = EXPERIENCE_LEVELS.has(input.experienceLevel) ? input.experienceLevel : "";
 
   const h = await headers();
-  const origin =
+  const candidateOrigin =
     h.get("origin") ??
-    (h.get("host") ? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` : "");
+    (h.get("host") ? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` : null);
+  // Confirm-email link -> this site's own /auth/callback -> safe relative `next` (no open redirect).
+  const emailRedirectTo = emailConfirmRedirect(candidateOrigin, input.next, SITE_URL);
 
   try {
     const supabase = await createClient();
@@ -61,13 +66,10 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
           consent_marketing: input.consentMarketing === true,
           consented_at: new Date().toISOString(),
         },
-        ...(origin ? { emailRedirectTo: `${origin}/auth/callback` } : {}),
+        emailRedirectTo,
       }, input.captchaToken),
     });
-    if (error) {
-      return { ok: false, error: friendlyAuthError(error.message) };
-    }
-    return { ok: true, needsEmailConfirmation: !data.session };
+    return signupOutcome({ hasSession: Boolean(data?.session), errorMessage: error ? error.message : null }, friendlyAuthError);
   } catch {
     return { ok: false, error: "We couldn't create your account just now. Please try again in a minute." };
   }
@@ -77,9 +79,6 @@ function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
   // Supabase CAPTCHA rejection: same generic message as other temporary failures.
   if (isCaptchaError(message)) return "We couldn't create your account just now. Please try again in a minute.";
-  if (m.includes("already registered") || m.includes("already exists")) {
-    return "An account with this email already exists. Try logging in instead.";
-  }
   if (m.includes("password")) return message;
   if (m.includes("rate limit")) return "Too many attempts. Please wait a few minutes and try again.";
   if (m.includes("consent")) return message; // from the optional before-user-created hook

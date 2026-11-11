@@ -12,7 +12,7 @@ await x(`create role anon nologin; create role authenticated nologin; create rol
 create schema auth; create schema extensions; create schema storage;
 create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
-create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true), 'amr', '[{"method":"otp"}]'::jsonb) $$;
+create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true), 'amr', '[{"method":"password"}]'::jsonb) $$;
 create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
 create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;
@@ -27,6 +27,9 @@ await x(fs.readFileSync(R+'migrations/20261102130000_members_gate_email_otp.sql'
 const mig=fs.readFileSync(R+'migrations/20261102140000_courses_payments.sql','utf8');
 await x(mig); await x(mig); console.log('applied twice OK');
 for (const f of fs.readdirSync(R+'migrations').filter(f=>f>'20261102140000'&&f.includes('seed'))) {const s=fs.readFileSync(R+'migrations/'+f,'utf8'); await x(s); await x(s); console.log('seed applied twice',f);}
+// Academy password login membership (20261111000000): drops the OTP AMR requirement. Sessions here are password
+// sessions (auth.jwt amr = password); fixtures are confirmed + listed + consented. Applied twice (re-runnable).
+const ALM=fs.readFileSync(R+'migrations/20261111000000_academy_login_membership.sql','utf8'); await x(ALM); await x(ALM); console.log('academy login membership applied twice OK');
 const vf=R+'verification/20261102140000_courses_payments_verify.sql';
 if (fs.existsSync(vf)) console.log('VERIFY', JSON.stringify((await db.query(fs.readFileSync(vf,'utf8'))).rows));
 const M='11111111-1111-1111-1111-111111111111',N='22222222-2222-2222-2222-222222222222',AD='33333333-3333-3333-3333-333333333333',M2='44444444-4444-4444-4444-444444444444';

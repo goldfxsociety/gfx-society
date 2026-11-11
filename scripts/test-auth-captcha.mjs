@@ -10,12 +10,10 @@ const off = () => { delete process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY; };
 
 // Each auth path, exactly as the call site builds its options.
 const PATHS = {
-  "members signInWithOtp (system/join/actions.ts)": (tok) => ({ email: "a@b.c", options: withCaptcha({ shouldCreateUser: true }, tok) }),
   "Academy signUp (signup/actions.ts)": (tok) => ({ email: "a@b.c", password: "pw", options: withCaptcha({ data: { consent_required: true }, emailRedirectTo: "https://x/auth/callback" }, tok) }),
   "signInWithPassword (login/page.tsx)": (tok) => { const options = withCaptcha(undefined, tok); return { email: "a@b.c", password: "pw", ...(options ? { options } : {}) }; },
 };
 const BEFORE = {
-  "members signInWithOtp (system/join/actions.ts)": { email: "a@b.c", options: { shouldCreateUser: true } },
   "Academy signUp (signup/actions.ts)": { email: "a@b.c", password: "pw", options: { data: { consent_required: true }, emailRedirectTo: "https://x/auth/callback" } },
   "signInWithPassword (login/page.tsx)": { email: "a@b.c", password: "pw" },
 };
@@ -72,12 +70,13 @@ t("guard scanner catches direct, optional, bracket, destructured, aliased, compu
   for (const [code, want] of Object.entries(cases)) assert.deepEqual(findAuthCalls(code).sort(), want.sort(), code);
 });
 t("every Supabase Auth call that CAPTCHA checks goes through withCaptcha", () => {
-  const files = { "src/app/system/join/actions.ts": /signInWithOtp\(\{[^}]*options: withCaptcha\(/s, "src/app/signup/actions.ts": /auth\.signUp\(\{[\s\S]*?options: withCaptcha\(/, "src/app/login/page.tsx": /withCaptcha\(undefined, captcha\.token\)[\s\S]*?signInWithPassword\(\{[\s\S]*?\.\.\.\(options \? \{ options \} : \{\}\)/ };
+  // /system/join no longer calls Supabase Auth at all (Academy /login + consent RPC, 11 Nov).
+  const files = { "src/app/signup/actions.ts": /auth\.signUp\(\{[\s\S]*?options: withCaptcha\(/, "src/app/login/page.tsx": /withCaptcha\(undefined, captcha\.token\)[\s\S]*?signInWithPassword\(\{[\s\S]*?\.\.\.\(options \? \{ options \} : \{\}\)/ };
   for (const [f, re] of Object.entries(files)) assert.match(fs.readFileSync(f, "utf8"), re, f);
   // No other CAPTCHA-checked auth call exists (would need withCaptcha too).
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   const hits = walk("src").filter((f) => /\.tsx?$/.test(f)).flatMap((f) => findAuthCalls(fs.readFileSync(f, "utf8")).map((m) => `${f}:${m}`));
-  assert.deepEqual(hits.sort(), ["src/app/login/page.tsx:signInWithPassword", "src/app/signup/actions.ts:signUp", "src/app/system/join/actions.ts:signInWithOtp"]);
+  assert.deepEqual(hits.sort(), ["src/app/login/page.tsx:signInWithPassword", "src/app/signup/actions.ts:signUp"]);
 });
 // Browser state (Design spec): load failure -> error + disabled; late token -> recovers.
 t("flag OFF: state 'off', submit never blocked", () => { off(); const s = initialCaptchaState(); assert.equal(s.status, "off"); assert.equal(captchaBlocksSubmit(s), false); assert.equal(captchaReducer(s, { type: "load-failed" }), s); });

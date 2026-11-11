@@ -28,34 +28,30 @@ export const MEMBERS_CONSENT_VERSION = "join-v2";
 export const JOIN_COPY = {
   title: "Join the GFX Trading System", // existing
   intro: "Mag-verify para ma-access ang courses, market breakdowns, at community.", // Addendum A
-  emailLabel: "Email na ginamit mo sa ACCM registration", // [Builder]
-  // Consent text unchanged from the reviewed version.
+  // Logged out (Academy login reuse, 11 Nov). No email field, no allowlist check before login.
+  loggedOutBody:
+    "Log in muna gamit ang Academy account mo. Pagka-log in, i-tick ang email check para ma-verify ang membership mo.", // Design approved 11 Nov
+  loginCta: "Log in with your Academy account", // Design approved 11 Nov
+  signupPrompt: "Wala ka pang Academy account?", // Design approved 11 Nov
+  signupLink: "Create a free account", // Design approved 11 Nov
+  // Logged in, not yet a member.
+  loggedInBody: "Isang step na lang: i-tick ang email check sa ibaba para ma-verify ang membership mo.", // Design approved 11 Nov
+  // Consent text unchanged from the reviewed version (MEMBERS_CONSENT_VERSION stays "join-v2").
   consentLead: "Members-only ang GFX Trading System.",
   consentBody:
     "Para ma-verify ka, iche-check namin kung ang email mo ay naka-register sa ACCM sa ilalim ng IB line ng GFX Society. Email lang ang gagamitin namin para dito; hindi namin nakikita o sine-save ang balance, deposit, o trades mo. Walang minimum deposit para maging member.",
   consentCheckbox: "Pumapayag ako sa email check na ito.",
   privacyLink: "Privacy Policy",
-  sendCode: "Send code", // Addendum C
-  sent: "Kung naka-register ang email na ito bilang GFX member, may darating na 6-digit code sa inbox mo within a few minutes. Check din ang Spam/Promotions.", // Addendum C
-  noCodeToggle: "Walang dumating na code?", // Addendum C
-  noCodeBody:
-    "Siguraduhing ito ang email na ginamit mo sa ACCM registration. Monthly ina-update ang member list, kaya kung bago ka lang nag-register, subukan ulit mamaya o mag-email sa goldfx.society@gmail.com.", // Addendum C
-  resend: "Resend code", // Addendum C
-  resendIn: (s: number) => `Puwede ka ulit mag-resend in ${s}s`, // Design review 2 Nov
-  // Screen-reader only, announced once when Resend becomes available. [Builder]
-  resendReady: "Puwede ka nang mag-resend ng code.",
-  codeLabel: "6-digit code", // [Builder]
-  verify: "I-verify", // [Builder]
-  wrongCode: "Mali ang code. Subukan ulit.", // Addendum C
-  expiredCode: "Expired na ang code. Mag-request ng bago.", // Addendum C
-  otherEmail: "Gumamit ng ibang email", // Design review 2 Nov
+  submit: "Verify membership", // Design approved 11 Nov
   academyLink: "Ituloy ang free Academy lessons", // existing string
   accmLink: "Tungkol sa ACCM", // [Builder] (tertiary link, no disclosure line per D3)
   consentRequired: "I-tick muna ang consent box para ma-check namin ang email mo.", // existing
-  invalidEmail: "Pakilagay ang tamang email address.", // [Builder]
   notVerified:
-    "Hindi pa namin ma-verify ang membership mo. Members-only ito para sa mga ACCM client na naka-register sa ilalim ng GFX. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov
+    "Hindi pa namin ma-verify ang membership mo. Members-only ito para sa mga ACCM client na naka-register sa ilalim ng GFX. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov (no_match)
   notVerifiedAcademyLink: "Bumalik sa free Academy lessons", // Design review 2 Nov
+  unverifiedEmail:
+    "I-confirm muna ang email ng Academy account mo. Check your inbox (pati Spam o Promotions) para sa confirmation link, tapos subukan ulit.", // Design approved 11 Nov
+  rateLimited: "Medyo marami nang tries. Please wait about an hour, tapos subukan ulit.", // Design approved 11 Nov (claim limit 5 per rolling hour)
   error: "May error sa pag-check. Try ulit mamaya, o mag-email sa goldfx.society@gmail.com.", // existing
 } as const;
 

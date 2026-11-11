@@ -15,7 +15,7 @@ create schema if not exists auth; create schema if not exists extensions; create
 create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, raw_user_meta_data jsonb, created_at timestamptz default now());
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
 create function auth.role() returns text language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.role', true),''),'anon') $$;
-create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true), 'amr', '[{"method":"otp"}]'::jsonb) $$;
+create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true), 'amr', '[{"method":"password"}]'::jsonb) $$;
 create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
 create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;
@@ -41,6 +41,11 @@ for (const [f, p] of files) {
   try { await x(fs.readFileSync(p, 'utf8')); } catch (e) { check(false, 'apply ' + f, e.message); process.exit(1); }
 }
 console.log('chain applied:', order.join(' -> '));
+// Academy password login membership (20261111000000) on top of the chain; its own checks live in
+// scripts/qa/pglite-academy-login-membership.mjs. Here: applies cleanly after the content chain, re-runnable.
+{ const ALM = fs.readFileSync(R + 'migrations/20261111000000_academy_login_membership.sql', 'utf8');
+  try { await x(ALM); await x(ALM); check(true, 'academy login membership migration applies twice after the chain'); }
+  catch (e) { check(false, 'academy login membership migration applies twice after the chain', e.message); } }
 const ac = (await db.query('select content, learning_objective from public.lessons')).rows[0];
 if (m54) check(ac.content === "Disclosure: ACCM is GFX's partner broker." && ac.learning_objective === "Verify a broker's licence", '#54 rewrite survives the content migration', JSON.stringify(ac));
 const snap = async () => JSON.stringify((await db.query(`select
