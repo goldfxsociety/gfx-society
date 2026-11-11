@@ -6,13 +6,18 @@
  */
 
 /**
- * Different-ACCM-email confirmation needs an outbound mailer (new provider + secret), which this build does not add
- * (stop rule, 11 Nov). While false: the ACCM email field is not shown and any value is ignored server-side, so nobody
- * is told "we sent a link" when nothing was sent. The DB token flow (issue_accm_confirm_token / confirm_accm_email)
- * and the /system/join/confirm landing are built and tested; flip this only once a mailer is wired and approved.
+ * Different-ACCM-email confirmation mailer switch (app side). Default false. While false: the ACCM email field is not
+ * shown, any value is ignored server-side, no SMTP env is read, no token is issued and no mail is sent, the
+ * /system/join/confirm page offers no confirm button, and /privacy shows Privacy v1.4 (privacy-notice.md).
+ * When true: the field shows, the request action mails the link (Gmail SMTP, src/lib/members/accm-confirm-send.ts),
+ * and /privacy shows Privacy v1.5 (privacy-notice-v1.5.md, the two ACCM-email passages restored with a change note).
+ *
+ * Go-live needs ALL of these together (Jarvis's go): this constant set to true; the DB switch
+ * private.app_settings 'accm_confirm_mail_live' = 'true' (migration 20261111130000; while it is off the DB refuses
+ * ACCM emails and issues no tokens); GFX_SMTP_USER / GFX_SMTP_APP_PASSWORD / GFX_SMTP_FROM set on Vercel; a hosted
+ * check that SUPABASE_SERVICE_ROLE_KEY works for issue_accm_confirm_token; and the v1.5 "Last updated" date set.
+ * Keep the two privacy files in step (scripts/test-accm-confirm-mail.mjs checks they differ only in the v1.5 parts).
  */
-// When this goes true, restore both ACCM-email passages in src/content/legal/privacy-notice.md
-// (section 2 "Access request" bullet and the section 7 retention rows) as Privacy v1.5 with a change note (GFX Design, 11 Nov).
 export const ACCM_CONFIRM_MAIL_LIVE = false;
 
 export type RequestResult =
@@ -93,8 +98,28 @@ export function nextFirstManila(now: Date = new Date()): string {
   return fmt.format(new Date(Date.UTC(m === 12 ? y + 1 : y, m === 12 ? 0 : m, 1, 12)));
 }
 
-/** Confirmation link for the different-ACCM-email mail (pinned to the site URL, token in the query only). */
+/**
+ * Confirmation link for the different-ACCM-email mail: pinned to the site URL. The token rides in the URL FRAGMENT
+ * (#token=...), which browsers never send to a server, so it stays out of request logs, analytics and Referer headers.
+ * The page reads it client-side and confirms only on a POST from a button, for the signed-in requester (QA N1).
+ */
 export function accmConfirmUrl(siteUrl: string, token: string): string {
   if (!/^[0-9a-f]{64}$/.test(token)) throw new Error("bad token");
-  return `${siteUrl.replace(/\/+$/, "")}/system/join/confirm?token=${token}`;
+  return `${siteUrl.replace(/\/+$/, "")}/system/join/confirm#token=${token}`;
+}
+
+export type ConfirmResult = "confirmed" | "invalid" | "login_required";
+
+export type ConfirmDeps = {
+  /** True when the server-side session has a verified user (supabase.auth.getUser()). */
+  loggedIn: () => Promise<boolean>;
+  /** public.confirm_accm_email with the USER's server client (bound to auth.uid() in SQL); null on RPC error. */
+  confirm: (token: string) => Promise<string | null>;
+};
+
+/** POST confirm (QA N1). Flag off or a malformed token: 'invalid' without any call. One neutral 'invalid' otherwise. */
+export async function confirmAccmEmail(deps: ConfirmDeps, token: string, mailLive = ACCM_CONFIRM_MAIL_LIVE): Promise<ConfirmResult> {
+  if (!mailLive || !/^[0-9a-f]{64}$/.test(token)) return "invalid";
+  if (!(await deps.loggedIn())) return "login_required";
+  return (await deps.confirm(token)) === "confirmed" ? "confirmed" : "invalid";
 }

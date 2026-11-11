@@ -7,6 +7,8 @@ import fs from "node:fs";
 import puppeteer from "puppeteer-core";
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3071";
+// FLAG_ON=1: run against a LOCAL build with ACCM_CONFIRM_MAIL_LIVE flipped to true (never committed).
+const FLAG_ON = process.env.FLAG_ON === "1";
 const OUT = process.argv.includes("--out") ? process.argv[process.argv.indexOf("--out") + 1] : null;
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 let pass = 0, fail = 0;
@@ -102,7 +104,6 @@ const clickText = async (page, sel, t) => {
   if (!h.asElement()) throw new Error("not found: " + t);
   await h.asElement().click();
 };
-const settle = (page) => page.waitForNetworkIdle({ idleTime: 300 }).catch(() => {});
 
 try {
   // ---- logged out ----
@@ -148,7 +149,8 @@ try {
   check((await p.$eval('button[aria-controls="access-request-form"]', (b) => b.getAttribute("aria-expanded"))) === "true", "form toggle aria-expanded=true");
   const fz = await p.$eval('#ar-ib', (i) => [getComputedStyle(i).fontSize, i.getBoundingClientRect().height, Math.round(i.getBoundingClientRect().width), Math.round(i.parentElement.getBoundingClientRect().width)]);
   check(fz[0] === "16px" && fz[1] >= 44 && fz[2] === fz[3], "IB input: 16px, >= 44px tall, full width of the form", JSON.stringify(fz));
-  check(!(await p.$('input[name="accm_email"]')), "ACCM email field hidden while the confirmation mailer is not live");
+  if (FLAG_ON) check(Boolean(await p.$('input[name="accm_email"]')), "flag on: ACCM email field shown");
+  else check(!(await p.$('input[name="accm_email"]')), "ACCM email field hidden while the confirmation mailer is not live");
   tx = await text(p);
   check(tx.includes("learner@example.test") && !(await p.$('input[value="learner@example.test"]')), "Academy email shown as read-only text, not an input");
   // J4
@@ -162,6 +164,12 @@ try {
   await clickText(p, "#j4-transfer-help button", "Copy");
   await p.waitForFunction(() => [...document.querySelectorAll('[aria-live="polite"]')].some((e) => e.textContent.trim() === "Copied"), { timeout: 5000 });
   check(true, 'J4: aria-live announces "Copied"');
+  // N9: a second Copy clears the live region first, then says "Copied" again (re-announced).
+  await p.evaluate(() => { const el = document.querySelector('#j4-transfer-help [aria-live="polite"]'); window.__seq = []; new MutationObserver(() => window.__seq.push(el.textContent.trim())).observe(el, { childList: true, characterData: true, subtree: true }); });
+  await clickText(p, "#j4-transfer-help button", "Copy");
+  await p.waitForFunction(() => window.__seq.join("|").includes("|Copied") || (window.__seq[0] === "" && window.__seq.includes("Copied")), { timeout: 5000 }).catch(() => {});
+  const seq = await p.evaluate(() => window.__seq);
+  check(seq.indexOf("") > -1 && seq.lastIndexOf("Copied") > seq.indexOf(""), 'N9: second Copy is re-announced ("" then "Copied")', JSON.stringify(seq));
   const clip = await p.evaluate(() => navigator.clipboard.readText());
   check(clip === "To: csse@accmfx.com, roselle@accmfx.com\nSubject: For Transfer IB\n\nHi, please transfer my account to IB goldfx.society@gmail.com\n\nThank you.", "J4: clipboard has the labelled template");
   // submit without consent -> error + focus
@@ -198,16 +206,48 @@ try {
   check((await p.$eval("#ar-ib", (i) => i.value)) === "Team Ana", "update: same request prefilled");
   await p.close();
 
-  // ---- confirm landing ----
-  p = await open("/system/join/confirm?token=" + "a".repeat(64));
-  await layout(p, "confirm landing ok", { gold: 0 });
-  check((await text(p)).includes("Na-confirm na ang ACCM email mo."), "confirm: valid token -> landing copy");
-  check((await p.$eval('meta[name="referrer"]', (m) => m.content).catch(() => "")) === "no-referrer", "confirm: referrer no-referrer");
-  await p.close();
-  const before = rpcLog.filter((x) => x === "confirm_accm_email").length;
-  p = await open("/system/join/confirm?token=../../x");
-  check((await text(p)).includes("May error sa pag-check.") && rpcLog.filter((x) => x === "confirm_accm_email").length === before, "confirm: malformed token -> neutral error, no RPC");
-  await p.close();
+  // ---- confirm landing (QA N1: GET never confirms; POST button for the signed-in requester; token in #fragment) ----
+  const TOK = "a".repeat(64);
+  const confirms = () => rpcLog.filter((x) => x === "confirm_accm_email").length;
+  let before = confirms();
+  if (!FLAG_ON) {
+    for (const path of [`/system/join/confirm#token=${TOK}`, `/system/join/confirm?token=${TOK}`]) {
+      p = await open(path, "consented");
+      tx = await text(p);
+      check(tx.includes("May error sa pag-check.") && !(await p.$('button[type="submit"]')) && confirms() === before, `flag off: ${path.includes("#") ? "#" : "?"}token -> neutral error, no button, no RPC`);
+      await p.close();
+    }
+  } else {
+    p = await open(`/system/join/confirm#token=${TOK}`, "consented");
+    await p.waitForSelector('button[type="submit"]');
+    await layout(p, "confirm signed-in button", { gold: 1 });
+    check(confirms() === before, "flag on: GET render does not confirm (no RPC before the click)");
+    check(!(await p.evaluate(() => location.hash)), "flag on: #token stripped from the address bar");
+    check((await p.$eval('meta[name="referrer"]', (m) => m.content).catch(() => "")) === "no-referrer", "confirm: referrer meta no-referrer");
+    await clickText(p, "button", "I-confirm ang ACCM email");
+    await p.waitForFunction(() => document.body.innerText.includes("Na-confirm na ang ACCM email mo."), { timeout: 10000 }).catch(() => {});
+    check((await text(p)).includes("Na-confirm na ang ACCM email mo.") && confirms() === before + 1, "flag on: POST button -> one RPC -> confirmed copy");
+    check(await p.evaluate(() => sessionStorage.getItem("gfx_accm_confirm") === null), "flag on: token cleared from sessionStorage after confirm");
+    await p.close();
+    // logged out: login prompt, token kept in this tab only, no RPC
+    before = confirms();
+    p = await open(`/system/join/confirm#token=${TOK}`);
+    await p.waitForSelector('a[href="/login?next=%2Fsystem%2Fjoin%2Fconfirm"]');
+    await layout(p, "confirm logged out", { gold: 1 });
+    check((await text(p)).includes("Mag-log in muna gamit ang Academy account na nag-request") && confirms() === before, "flag on: logged out -> login prompt, no RPC, token not in login URL");
+    await p.close();
+    // other account / bad token -> one neutral answer
+    p = await open(`/system/join/confirm#token=${"b".repeat(64)}`, "consented");
+    await p.waitForSelector('button[type="submit"]');
+    await clickText(p, "button", "I-confirm ang ACCM email");
+    await p.waitForFunction(() => document.body.innerText.includes("Hindi gumana ang link na ito."), { timeout: 10000 }).catch(() => {});
+    check((await text(p)).includes("Hindi gumana ang link na ito."), "flag on: RPC 'invalid' -> neutral invalid copy");
+    await p.close();
+    p = await open(`/system/join/confirm`, "consented");
+    await p.waitForFunction(() => document.body.innerText.includes("Hindi gumana ang link na ito."), { timeout: 10000 }).catch(() => {});
+    check((await text(p)).includes("Hindi gumana ang link na ito.") && !(await p.$('button[type="submit"]')), "flag on: no token -> neutral invalid, no button");
+    await p.close();
+  }
 } catch (e) {
   check(false, "unexpected", e.message);
 } finally {

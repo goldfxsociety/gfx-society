@@ -13,9 +13,11 @@ export function TransferHelp() {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copy = async () => {
+    // QA N9: clear first so a second Copy changes the live region again and is re-announced.
+    setCopied(false);
     try {
       await navigator.clipboard.writeText(TRANSFER_TEMPLATE_TEXT);
-      setCopied(true);
+      setTimeout(() => setCopied(true), 50);
     } catch {
       setCopied(false);
     }

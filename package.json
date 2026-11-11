@@ -13,7 +13,8 @@
     "test:admin-rest-fetch": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-admin-rest-fetch.mjs",
     "test:members-consent": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-consent.mjs",
     "test:signup-confirm": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-signup-confirm.mjs",
-    "test:access-request": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-access-request.mjs"
+    "test:access-request": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-access-request.mjs",
+    "test:accm-confirm-mail": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-accm-confirm-mail.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -24,6 +25,7 @@
     "cn": "^0.4.0",
     "lucide-react": "^1.49.0",
     "next": "16.3.8",
+    "nodemailer": "^10.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.21.0",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

@@ -2,8 +2,9 @@ import { createClient } from "@supabase/supabase-js";
 import { createAdminRestFetch } from "./admin-fetch";
 
 /**
- * Server-only service-role client. Used ONLY for public.purge_member_gate_logs (cron). Never import from a client
- * component.
+ * Server-only service-role client. Used ONLY for public.purge_member_gate_logs (cron) and, when
+ * ACCM_CONFIRM_MAIL_LIVE is on, public.issue_accm_confirm_token (src/lib/members/accm-confirm-send.ts). Never import
+ * from a client component.
  * Returns null when SUPABASE_SERVICE_ROLE_KEY isn't configured.
  */
 export function createAdminClient() {

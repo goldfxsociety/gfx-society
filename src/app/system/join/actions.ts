@@ -4,7 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { REQUEST_CONSENT_VERSION } from "@/content/access-request";
 import { MEMBERS_CONSENT_VERSION } from "@/content/members-gate";
-import { submitRequest, type RequestDeps, type RequestResult } from "@/lib/members/access-request";
+import { ACCM_CONFIRM_MAIL_LIVE, submitRequest, type RequestDeps, type RequestResult } from "@/lib/members/access-request";
+import { sendAccmConfirmForUser } from "@/lib/members/accm-confirm-send";
 import { submitConsent, type ConsentDeps, type ConsentResult } from "@/lib/members/consent-flow";
 import { joinLoginPath, memberNext } from "@/lib/members/routes";
 import { createClient } from "@/lib/supabase/server";
@@ -75,7 +76,10 @@ export async function submitAccessRequest(_prev: RequestState, formData: FormDat
       }
       return typeof data === "string" ? data : null;
     },
-    // No sendConfirm: ACCM_CONFIRM_MAIL_LIVE is false (no mailer in this build).
+    // Mailer only when the flag is on. The user id comes from the server-verified session above, never the form.
+    ...(ACCM_CONFIRM_MAIL_LIVE && user
+      ? { sendConfirm: async () => (await sendAccmConfirmForUser(user.id)) === "sent" }
+      : {}),
   };
   const r = await submitRequest(
     deps,
