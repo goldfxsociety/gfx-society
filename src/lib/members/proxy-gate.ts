@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { sessionIsOtp } from "./otp-amr";
 
 /**
  * Real 307 for members-only paths (QA #52 P3-5: the page-level redirect streamed a 200 because of
@@ -15,7 +14,7 @@ export async function membersRedirect(request: NextRequest, response: NextRespon
   });
   const { data } = await supabase.auth.getClaims();
   let ok = false;
-  if (data?.claims && sessionIsOtp(data.claims.amr)) {
+  if (data?.claims?.sub) {
     const { data: m, error } = await supabase.rpc("my_membership");
     ok = !error && (m === "active" || m === "grace");
   }

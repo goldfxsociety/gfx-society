@@ -16,6 +16,8 @@ import {
 import { signUpWithConsent } from "./actions";
 import { CaptchaError, Turnstile } from "@/components/members/turnstile";
 import { captchaBlocksSubmit, initialCaptchaState, type CaptchaState } from "@/lib/auth/captcha";
+import { safeNextPath } from "@/lib/auth/safe-next";
+import { SIGNUP_CONFIRM_COPY as CC } from "@/content/signup-confirm";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -25,6 +27,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
+  // Safe relative `next` from the URL (e.g. /signup?next=/system/join); "" when absent or unsafe.
+  const [next, setNext] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
   // Both consent boxes are unticked by default (RA 10173). Never pre-tick.
   const [consentRequired, setConsentRequired] = useState(false);
@@ -42,6 +46,8 @@ export default function SignupPage() {
     }
     setLoading(true);
     setError(null);
+    const nextParam = safeNextPath(new URLSearchParams(window.location.search).get("next"), "");
+    setNext(nextParam);
 
     const result = await signUpWithConsent({
       displayName,
@@ -51,6 +57,7 @@ export default function SignupPage() {
       consentRequired,
       consentMarketing,
       ...(captcha.status === "off" ? {} : { captchaToken: captcha.token }),
+      ...(nextParam ? { next: nextParam } : {}),
     });
     if (captcha.status !== "off") setAttempt((a) => a + 1);
 
@@ -73,19 +80,21 @@ export default function SignupPage() {
   }
 
   if (checkEmail) {
+    // Neutral (no account-existence leak): same screen for a new account and an existing email.
     return (
       <div className="flex flex-1 items-center justify-center px-6">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle><h1 className="text-lg font-semibold">Check your email</h1></CardTitle>
-            <CardDescription>
-              We sent a confirmation link to {email}. Click it to activate
-              your account, then come back and log in.
-            </CardDescription>
+            <CardTitle><h1 className="text-lg font-semibold">{CC.title}</h1></CardTitle>
+            <CardDescription role="status">{CC.body}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/login" className="inline-flex min-h-11 items-center text-sm underline">
-              Go to login
+            <p className="text-sm text-muted-foreground">{CC.existing}</p>
+            <Link
+              href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+              className="inline-flex min-h-11 items-center text-sm underline"
+            >
+              {CC.loginLink}
             </Link>
           </CardContent>
         </Card>

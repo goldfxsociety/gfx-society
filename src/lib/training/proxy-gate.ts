@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { sessionIsOtp } from "@/lib/members/otp-amr";
 import { MEMBERS_HOME } from "@/lib/members/routes";
 
 /**
@@ -24,7 +23,6 @@ export async function trainingGate(request: NextRequest, response: NextResponse)
   });
   const { data } = await supabase.auth.getClaims();
   const loggedIn = Boolean(data?.claims?.sub);
-  const otp = loggedIn && sessionIsOtp(data?.claims?.amr);
 
   const go = (to: string, status: 307 | 404 = 307) => {
     const res = status === 404 ? NextResponse.rewrite(new URL("/_gfx-not-found", request.url)) : NextResponse.redirect(new URL(to, request.url), 307);
@@ -38,12 +36,10 @@ export async function trainingGate(request: NextRequest, response: NextResponse)
     return !error && isAdmin === true ? null : go("", 404);
   }
   if (!loggedIn) return go(`/login?next=${encodeURIComponent(legacyHome ? MEMBERS_HOME : path)}`);
-  let member = false;
-  if (otp) {
-    const { data: m, error } = await supabase.rpc("my_membership");
-    member = !error && (m === "active" || m === "grace");
-  }
-  if (!member && otp && !legacyHome) {
+  // Any logged-in session (Academy password /login included); the DB decides membership.
+  const { data: ms, error } = await supabase.rpc("my_membership");
+  const member = !error && (ms === "active" || ms === "grace");
+  if (!member && !legacyHome) {
     // S8 = A: a removed member keeps lessons + capstone of a bought course (not /pay or /placement).
     const m = path.match(/^\/courses\/([^/]+)\/([^/]+)\/?$/);
     if (m && m[2] !== "pay" && m[2] !== "placement") {

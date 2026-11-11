@@ -10,7 +10,9 @@
     "check:en-tl": "node scripts/check-en-tl-strings.mjs",
     "test:continue": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-continue-resolution.mjs",
     "test:members-p2": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-p2.mjs",
-    "test:admin-rest-fetch": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-admin-rest-fetch.mjs"
+    "test:admin-rest-fetch": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-admin-rest-fetch.mjs",
+    "test:members-consent": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-consent.mjs",
+    "test:signup-confirm": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-signup-confirm.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
