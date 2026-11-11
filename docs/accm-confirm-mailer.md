@@ -77,6 +77,10 @@ c. Turn the DB switch on (SQL editor). Harmless while the deployed app flag is s
 d. Merge the go-live PR (sets `ACCM_CONFIRM_MAIL_LIVE = true`; Vercel deploys it). The v1.5 "Last updated" date must
    match the go-live day; bump it in the PR before merging if the merge slips. (The other order, flag before DB
    switch, would leave a window where the ACCM field shows but every ACCM submit gets the generic error.)
+   **Storage note (QA G5):** fail-closed protects the mail, not storage. With the DB switch on and the SMTP env
+   missing, an ACCM submit still stores the raw address (it's purged within about 8 days, see below) but no mail goes
+   out. So keep the a → b → c → d order, and never remove the SMTP env while the DB switch is on. To stop the mailer,
+   use the rollback below (app flag off, then DB switch off, then the scrub SQL).
 e. Post-deploy smoke checks: `/privacy` shows Version 1.5; `/system/join` shows the ACCM email field to a signed-in
    user with no membership; `/system/join/confirm` answers with `X-Robots-Tag: noindex, nofollow` and
    `Referrer-Policy: no-referrer`; Ben submits once with his own second address, gets the mail (both buttons), confirms
@@ -97,11 +101,16 @@ remote versions and two "pending" local files (it would refuse, or try to re-app
 linked prod project:
 
 ```sh
-supabase migration list                                            # confirm the mismatch (and nothing else differs)
-supabase migration repair --status reverted 20261111071025 20261111073716   # drop the two MCP rows (runs no SQL)
-supabase migration repair --status applied  20261111120000 20261111130000   # record the repo versions (runs no SQL)
+supabase migration list                                            # STOP if anything other than these 4 versions differs
+supabase migration repair --status applied  20261111120000 20261111130000   # FIRST: record the repo versions (runs no SQL)
+supabase migration repair --status reverted 20261111071025 20261111073716   # THEN: drop the two MCP rows (runs no SQL)
 supabase migration list                                            # local and remote now line up
 ```
+
+Order matters (QA G1): mark the repo versions **applied first**, then mark the MCP versions reverted. In the other order
+there is a window where the two repo files look pending, and a `db push` in that window would re-apply PR #67's
+migration, which re-grants anon access to `confirm_accm_email`. Rules: stop if `migration list` shows any mismatch other
+than these four versions; never use `db push --include-all`; don't run `db push` until the final `migration list` lines up.
 
 `migration repair` only edits the history table; it never runs or reverts migration SQL. Any future migration applied
 through MCP has the same issue: either repair it the same way, or apply it with `supabase db push` instead. Nothing
