@@ -91,7 +91,8 @@ export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: 
 
   const n = ticks.filter(Boolean).length;
   const ready = n === SELF_CHECK.length;
-  const btn = cn(buttonVariants({ variant: "default" }), "h-12 flex-1 text-base");
+  // Outline, not gold: /accm's one gold CTA is "Join the Trading System" (access journey v2 §6).
+  const btn = cn(buttonVariants({ variant: "outline" }), "h-12 flex-1 text-base");
 
   return (
     <div className="flex flex-col gap-3">

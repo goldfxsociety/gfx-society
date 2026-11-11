@@ -12,37 +12,16 @@ export function safeNextPath(next: string | null | undefined, fallback = "/dashb
 }
 
 /**
- * The site's own origin for auth email links, e.g. "https://gfx-society.vercel.app". Accepts a candidate
- * (the request's Origin header) only when it is a bare http(s) origin (no path, query, credentials);
- * plain http only for localhost. Anything else -> `fallbackOrigin` (SITE_URL). Supabase Auth still checks
- * the final URL against its Redirect URLs allow list.
- */
-export function siteOrigin(candidate: string | null | undefined, fallbackOrigin: string): string {
-  if (candidate) {
-    try {
-      const u = new URL(candidate);
-      const localHttp = u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1");
-      if ((u.protocol === "https:" || localHttp) && !u.username && !u.password && u.origin === candidate.replace(/\/$/, "")) {
-        return u.origin;
-      }
-    } catch {
-      /* fall through */
-    }
-  }
-  return fallbackOrigin.replace(/\/$/, "");
-}
-
-/**
- * emailRedirectTo for signUp: always the site's own /auth/callback, carrying a safe relative `next`
- * (unsafe or missing -> `fallbackNext`). The callback re-checks `next` with safeNextPath.
+ * emailRedirectTo for signUp (QA F1): always NEXT_PUBLIC_SITE_URL's own /auth/callback (never the request
+ * Origin/Host), carrying a safe relative `next` (unsafe or missing -> `fallbackNext`). The callback re-checks
+ * `next` with safeNextPath. Supabase Auth still checks the final URL against its Redirect URLs allow list.
  */
 export function emailConfirmRedirect(
-  candidateOrigin: string | null | undefined,
   next: string | null | undefined,
-  fallbackOrigin: string,
+  siteUrl: string,
   fallbackNext = "/?welcome=new",
 ): string {
-  return `${siteOrigin(candidateOrigin, fallbackOrigin)}/auth/callback?next=${encodeURIComponent(safeNextPath(next, fallbackNext))}`;
+  return `${siteUrl.replace(/\/+$/, "")}/auth/callback?next=${encodeURIComponent(safeNextPath(next, fallbackNext))}`;
 }
 
 /**

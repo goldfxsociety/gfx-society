@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { MEMBERS_HOME } from "@/lib/members/routes";
+import { MEMBERS_HOME, joinPath } from "@/lib/members/routes";
 
 /**
  * HTTP-level gate for slice 2 (QA #55 P3): real 307s for members-only paths and a real 404 for
@@ -47,6 +47,7 @@ export async function trainingGate(request: NextRequest, response: NextResponse)
       if ((info as { state?: string } | null)?.state === "approved") return null;
     }
   }
-  if (!member) return go("/system/join");
+  // Journey 1 (spec §4.1): keep the deep link through /system/join so verify lands back here.
+  if (!member) return go(joinPath(legacyHome ? null : path));
   return legacyHome ? go(MEMBERS_HOME) : null;
 }

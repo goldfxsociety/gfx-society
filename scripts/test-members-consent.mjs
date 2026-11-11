@@ -82,15 +82,16 @@ await t("training: logged out -> /login?next=/training", async () => assert.equa
 await t("training: logged out lesson -> /login?next=<lesson>", async () => assert.equal(await gate("/courses/gold-strategy-basics/l1", {}), "307 /login?next=%2Fcourses%2Fgold-strategy-basics%2Fl1"));
 await t("training: password session + active -> allowed (no OTP needed)", async () => assert.equal(await gate("/training", { sub: U, membership: "active" }), "pass"));
 await t("training: password session + grace -> allowed", async () => assert.equal(await gate("/training", { sub: U, membership: "grace" }), "pass"));
-await t("training: password session non-member -> /system/join", async () => assert.equal(await gate("/training", { sub: U }), "307 /system/join"));
+await t("training: password session non-member -> /system/join (next=/training is the default, so omitted)", async () => assert.equal(await gate("/training", { sub: U }), "307 /system/join"));
+await t("journey 1: non-member lesson deep link kept through /system/join?next=", async () => assert.equal(await gate("/courses/gold-strategy-basics/l1", { sub: U }), "307 /system/join?next=%2Fcourses%2Fgold-strategy-basics%2Fl1"));
 await t("S8: delisted owner (password session) keeps bought lesson + capstone", async () => {
   assert.equal(await gate("/courses/gold-strategy-basics/l1", { sub: U, owned: ["gold-strategy-basics"] }), "pass");
   assert.equal(await gate("/courses/gold-strategy-basics/capstone", { sub: U, owned: ["gold-strategy-basics"] }), "pass");
 });
 await t("S8: owner path never opens /pay or /placement; unbought course -> /system/join", async () => {
-  assert.equal(await gate("/courses/gold-strategy-basics/pay", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join");
-  assert.equal(await gate("/courses/gold-strategy-basics/placement", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join");
-  assert.equal(await gate("/courses/gold-advanced-setups/l1", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join");
+  assert.equal(await gate("/courses/gold-strategy-basics/pay", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join?next=%2Fcourses%2Fgold-strategy-basics%2Fpay");
+  assert.equal(await gate("/courses/gold-strategy-basics/placement", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join?next=%2Fcourses%2Fgold-strategy-basics%2Fplacement");
+  assert.equal(await gate("/courses/gold-advanced-setups/l1", { sub: U, owned: ["gold-strategy-basics"] }), "307 /system/join?next=%2Fcourses%2Fgold-advanced-setups%2Fl1");
 });
 await t("legacy /system/members: member -> /training, non-member -> /system/join", async () => {
   assert.equal(await gate("/system/members", { sub: U, membership: "active" }), "307 /training");
@@ -116,13 +117,17 @@ await t("join action: user server client + record_member_consent only (no servic
   const a = read("src/app/system/join/actions.ts");
   assert.match(a, /from "@\/lib\/supabase\/server"/);
   assert.match(a, /rpc\("record_member_consent", \{ p_version: MEMBERS_CONSENT_VERSION \}\)/);
-  for (const bad of ["createAdminClient", "lib/supabase/admin", "member_code_", "SERVICE_ROLE", "signInWithOtp", "headers()"]) assert.ok(!a.includes(bad), bad);
+  for (const bad of ["createAdminClient", "lib/supabase/admin", "member_code_", "SERVICE_ROLE", "signInWithOtp", "issue_accm_confirm_token"]) assert.ok(!a.includes(bad), bad);
+  // headers() is used only to pass the client IP to submit_access_request (hashed in SQL for the 10/IP/24 h limit).
+  assert.equal(a.match(/headers\(\)/g)?.length ?? 0, 1);
 });
 await t("join UI: no email field / code input; logged-out CTA to /login?next=/system/join", async () => {
   const ui = read("src/app/system/join/page.tsx") + read("src/app/system/join/join-form.tsx");
-  assert.ok(!/name="email"|type="email"|name="code"|one-time-code/.test(ui));
+  // Only the optional ACCM email (request form, behind ACCM_CONFIRM_MAIL_LIVE) is an email input; never on the logged-out screen.
+  assert.ok(!/name="email"|name="code"|one-time-code/.test(ui));
+  assert.ok(!read("src/app/system/join/page.tsx").includes('type="email"'));
   assert.match(read("src/lib/members/routes.ts"), /JOIN_LOGIN_PATH = "\/login\?next=%2Fsystem%2Fjoin"/);
-  assert.match(read("src/app/system/join/page.tsx"), /href=\{JOIN_LOGIN_PATH\}/);
+  assert.match(read("src/app/system/join/page.tsx"), /href=\{joinLoginPath\(next\)\}/);
 });
 await t("consent version unchanged and matches SQL", async () => {
   assert.match(read("src/content/members-gate.ts"), /MEMBERS_CONSENT_VERSION = "join-v2"/);
