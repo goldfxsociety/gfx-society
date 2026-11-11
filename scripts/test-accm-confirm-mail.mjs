@@ -202,8 +202,8 @@ await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; th
   assert.match(v14, /Version: 1\.4/); assert.ok(!/ACCM email \(kung binigay\)|Different ACCM email/.test(v14));
   assert.match(v15, /Version: 1\.5/); assert.match(v15, /\*\*What changed in v1\.5 \(11 Nov 2026\):\*\*/);
   assert.ok(v15.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo, ACCM email (kung binigay), at IB name (kung binigay)"));
-  assert.ok(v15.includes("| Different ACCM email waiting for confirmation (plain email, private table) | Only until you click the confirmation link, or 7 days if you don't confirm it, then removed (the hash stays with the request). The link itself works once and expires after 24 hours. |"));
-  assert.ok(v15.includes("and we remove it once it is confirmed, or after 7 days if it isn't."), "Q2 Design wording (EN, section 2)");
+  assert.ok(v15.includes("| Different ACCM email waiting for confirmation (plain email, private table) | Only until you click the confirmation link, or up to 8 days if you don't confirm it, then removed (the hash stays with the request). The link itself works once and expires after 24 hours. |"));
+  assert.ok(v15.includes("and we remove it once it is confirmed, or within 8 days if it isn't."), "Q2 Design wording (EN, section 2)");
   assert.ok(v15.includes("hashed Academy email, hashed ACCM email if given, IB name if given"));
   assert.match(v15, /\| Google LLC \(Gmail\) \|/);
   // Drift guard: removing the v1.5-only lines from v1.5 and the replaced lines from v1.4 leaves identical text.
