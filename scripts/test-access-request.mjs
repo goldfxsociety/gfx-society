@@ -213,12 +213,14 @@ await t("/broker: Step 2 heading; account CTA outline with IbDisclosureShort", a
 // ---- privacy + F2 ----
 await t("privacy: request-data line (TL + EN), no deletion promise for requests, no stale email-code login", async () => {
   const p = read("src/content/legal/privacy-notice.md");
-  assert.ok(p.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo, ACCM email (kung binigay), at IB name (kung binigay) para i-check sa ACCM member data sa bawat monthly update. Hindi namin ito auto-dine-delete. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com."));
+  assert.ok(p.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo at IB name (kung binigay) para i-check sa ACCM member data sa bawat monthly update. Hindi namin ito auto-dine-delete. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com."));
   assert.ok(p.includes("We don't delete this data automatically. To ask us to delete it, email goldfx.society@gmail.com."));
   const sec = p.slice(p.indexOf("### Members area verification"), p.indexOf("### Website analytics"));
   assert.ok(!/6-digit|walang password|passwordless|code request log|Email-code login/i.test(sec), "members section describes Academy login");
   assert.match(sec, /normal Academy account mo \(email \+ password\)/);
   assert.match(p, /Version: 1\.4/);
+  // Mailer off (ACCM_CONFIRM_MAIL_LIVE=false): no ACCM-email promise until Privacy v1.5.
+  assert.ok(!/ACCM email|Different ACCM email|confirmation link we send/i.test(p), "no ACCM-email confirm copy while mailer is off");
 });
 await t("F2: no stale member_code_reserve comment in admin.ts", async () => {
   assert.ok(!read("src/lib/supabase/admin.ts").includes("member_code_reserve"));

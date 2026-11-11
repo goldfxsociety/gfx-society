@@ -11,6 +11,8 @@
  * is told "we sent a link" when nothing was sent. The DB token flow (issue_accm_confirm_token / confirm_accm_email)
  * and the /system/join/confirm landing are built and tested; flip this only once a mailer is wired and approved.
  */
+// When this goes true, restore both ACCM-email passages in src/content/legal/privacy-notice.md
+// (section 2 "Access request" bullet and the section 7 retention rows) as Privacy v1.5 with a change note (GFX Design, 11 Nov).
 export const ACCM_CONFIRM_MAIL_LIVE = false;
 
 export type RequestResult =
