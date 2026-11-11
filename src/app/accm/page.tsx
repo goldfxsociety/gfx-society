@@ -7,6 +7,8 @@ import { DiscordApplyLink } from "@/components/funnel/discord-apply-link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { AccmSelfCheck, CodeChip } from "./accm-self-check";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { JOIN_COPY, SYSTEM_COPY } from "@/content/members-gate";
 
 export const revalidate = 3600;
 
@@ -85,16 +87,22 @@ export default function AccmPage() {
       </section>
 
       <section aria-labelledby="accm-s3" className="flex flex-col gap-2">
-        <h2 id="accm-s3" className="text-lg font-semibold">3. Pagka-register: apply to Discord</h2>
+        <h2 id="accm-s3" className="text-lg font-semibold">3. Pagka-register: join the Trading System</h2>
+        <p className="text-sm text-muted-foreground">{JOIN_COPY.intro}</p>
+        <p className="text-sm text-muted-foreground">{SYSTEM_COPY.underCta}</p>
+        {/* The page's only gold CTA (spec §6). */}
+        <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
+          {JOIN_SYSTEM_CTA}
+        </Link>
         {DISCORD_INVITE_URL ? (
           <>
+            <DiscordApplyLink page="accm" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
+              Apply to join our Discord →
+            </DiscordApplyLink>
             <p className="text-sm text-muted-foreground">
               Ihanda ang ACCM User ID mo. Hihingin sa join application: sino ang nag-invite sa&apos;yo, kung registered ka
               na, ang ACCM User ID mo, at pag-agree sa rules. Hindi namin hihingin ang password, OTP o ID documents mo.
             </p>
-            <DiscordApplyLink page="accm" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
-              Apply to join our Discord →
-            </DiscordApplyLink>
             <p className="text-xs text-muted-foreground">
               Sa Discord: guided training para sa beginners. Mag-deposit lang pagkatapos ng training, small: min $50, pera
               na kaya mong mawala.

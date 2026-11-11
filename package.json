@@ -12,7 +12,8 @@
     "test:members-p2": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-p2.mjs",
     "test:admin-rest-fetch": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-admin-rest-fetch.mjs",
     "test:members-consent": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-consent.mjs",
-    "test:signup-confirm": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-signup-confirm.mjs"
+    "test:signup-confirm": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-signup-confirm.mjs",
+    "test:access-request": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-access-request.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

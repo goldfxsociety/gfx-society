@@ -3,7 +3,7 @@
 // Run: node --experimental-strip-types scripts/test-signup-confirm.mjs
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { callbackRedirect, emailConfirmRedirect, siteOrigin } from "../src/lib/auth/safe-next.ts";
+import { callbackRedirect, emailConfirmRedirect } from "../src/lib/auth/safe-next.ts";
 import { signupOutcome } from "../src/lib/auth/signup-outcome.ts";
 import { SIGNUP_CONFIRM_COPY } from "../src/content/signup-confirm.ts";
 
@@ -33,24 +33,21 @@ await t("check-email copy is neutral (no 'we sent to <email>', no 'already exist
 });
 
 // ---- emailRedirectTo ----
-await t("own origin kept; path is /auth/callback with encoded safe next", async () => {
-  assert.equal(emailConfirmRedirect(SITE, "/system/join", SITE), `${SITE}/auth/callback?next=%2Fsystem%2Fjoin`);
-  assert.equal(emailConfirmRedirect("https://gfx-society-git-x-goldfx.vercel.app", "/system/join", SITE), "https://gfx-society-git-x-goldfx.vercel.app/auth/callback?next=%2Fsystem%2Fjoin");
-  assert.equal(emailConfirmRedirect("http://localhost:3000", null, SITE), "http://localhost:3000/auth/callback?next=%2F%3Fwelcome%3Dnew");
+await t("F1: always NEXT_PUBLIC_SITE_URL's /auth/callback with encoded safe next", async () => {
+  assert.equal(emailConfirmRedirect("/system/join", SITE), `${SITE}/auth/callback?next=%2Fsystem%2Fjoin`);
+  assert.equal(emailConfirmRedirect("/system/join?next=%2Ftraining", SITE + "/"), `${SITE}/auth/callback?next=%2Fsystem%2Fjoin%3Fnext%3D%252Ftraining`);
+  assert.equal(emailConfirmRedirect(null, SITE), `${SITE}/auth/callback?next=%2F%3Fwelcome%3Dnew`);
 });
 await t("missing / unsafe next -> default /?welcome=new", async () => {
   for (const bad of [null, undefined, "", "https://evil.test", "//evil.test", "/\\evil.test", "javascript:alert(1)", "/\u0000x", "evil", "/https:x"])
-    assert.equal(emailConfirmRedirect(SITE, bad, SITE), `${SITE}/auth/callback?next=%2F%3Fwelcome%3Dnew`, String(bad));
+    assert.equal(emailConfirmRedirect(bad, SITE), `${SITE}/auth/callback?next=%2F%3Fwelcome%3Dnew`, String(bad));
 });
-await t("bad origin candidates -> SITE_URL fallback", async () => {
-  for (const bad of [null, "", "null", "http://gfx-society.vercel.app", "https://u:p@evil.test", "https://evil.test/path", "https://evil.test?x=1", "ftp://x.test", "javascript:alert(1)", "not a url"])
-    assert.equal(siteOrigin(bad, SITE), SITE, String(bad));
-  assert.equal(siteOrigin("https://gfx-society.vercel.app/", SITE + "/"), SITE);
-});
-await t("signup action always passes emailRedirectTo built by emailConfirmRedirect (SITE_URL fallback)", async () => {
+await t("F1: signup action pins emailRedirectTo to SITE_URL (no request Origin/Host)", async () => {
   const a = fs.readFileSync("src/app/signup/actions.ts", "utf8");
-  assert.match(a, /emailConfirmRedirect\(candidateOrigin, input\.next, SITE_URL\)/);
+  assert.match(a, /emailConfirmRedirect\(input\.next, SITE_URL\)/);
   assert.match(a, /options: withCaptcha\(\{[\s\S]*?emailRedirectTo,/);
+  for (const bad of ["headers()", 'get("origin")', 'get("host")', "x-forwarded"]) assert.ok(!a.includes(bad), bad);
+  assert.ok(!fs.readFileSync("src/lib/auth/safe-next.ts", "utf8").includes("siteOrigin"), "no request-origin helper left");
 });
 
 // ---- /auth/callback ----

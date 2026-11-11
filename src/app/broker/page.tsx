@@ -7,6 +7,8 @@ import { NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
 import { IbDisclosureFull, IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 import { DISCORD_INVITE_URL } from "@/config/journey";
 import { DiscordApplyLink } from "@/components/funnel/discord-apply-link";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { JOIN_COPY, SYSTEM_COPY } from "@/content/members-gate";
 
 export const metadata: Metadata = {
   title: "Choosing a Broker",
@@ -57,7 +59,7 @@ export default function BrokerPage() {
         <div className="flex flex-col gap-2">
           <AccmLink
             href={featured.liveUrl!}
-            className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}
+            className={cn(buttonVariants({ variant: "outline" }), "h-12 w-full text-base")}
           >
             Open ACCM Cents Account →
           </AccmLink>
@@ -66,19 +68,27 @@ export default function BrokerPage() {
           <p className="text-sm text-muted-foreground">
             Optional: may free demo sa loob ng MT5 app kung gusto mo lang matutunan ang buttons (Buy, Sell, SL/TP, Close). Hindi ito required, at hindi nito tine-train ang emotions mo.
           </p>
-          {DISCORD_INVITE_URL && (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm font-semibold">Step 2: Apply to join our Discord</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Pagka-register mo sa ACCM, mag-apply sa Discord community namin. Ihanda ang ACCM User ID mo. Hihingin sa
-                join application kung sino ang nag-invite sa&apos;yo, kung registered ka na, ang ACCM User ID mo, at
-                pag-agree sa rules. Hindi namin hihingin ang password, OTP o ID documents mo.
-              </p>
-              <DiscordApplyLink page="broker" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
-                Apply to join our Discord →
-              </DiscordApplyLink>
-            </div>
-          )}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-semibold">Step 2: Join the Trading System</p>
+            <p className="mt-1 text-sm text-muted-foreground">{JOIN_COPY.intro}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{SYSTEM_COPY.underCta}</p>
+            {/* The page's only gold CTA (spec §6). */}
+            <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "mt-3 h-11 w-full")}>
+              {JOIN_SYSTEM_CTA}
+            </Link>
+            {DISCORD_INVITE_URL && (
+              <>
+                <DiscordApplyLink page="broker" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
+                  Apply to join our Discord →
+                </DiscordApplyLink>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Pagka-register mo sa ACCM, mag-apply sa Discord community namin. Ihanda ang ACCM User ID mo. Hihingin sa
+                  join application kung sino ang nag-invite sa&apos;yo, kung registered ka na, ang ACCM User ID mo, at
+                  pag-agree sa rules. Hindi namin hihingin ang password, OTP o ID documents mo.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
 

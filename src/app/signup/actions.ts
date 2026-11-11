@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SIGNUP_CONSENT_VERSION } from "@/config/legal";
 import { isCaptchaError, withCaptcha } from "@/lib/auth/captcha";
@@ -45,12 +44,9 @@ export async function signUpWithConsent(input: SignupInput): Promise<SignupResul
   }
   const experienceLevel = EXPERIENCE_LEVELS.has(input.experienceLevel) ? input.experienceLevel : "";
 
-  const h = await headers();
-  const candidateOrigin =
-    h.get("origin") ??
-    (h.get("host") ? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` : null);
-  // Confirm-email link -> this site's own /auth/callback -> safe relative `next` (no open redirect).
-  const emailRedirectTo = emailConfirmRedirect(candidateOrigin, input.next, SITE_URL);
+  // Confirm-email link -> NEXT_PUBLIC_SITE_URL's /auth/callback -> safe relative `next` (QA F1: pinned to the
+  // site URL, never the request Origin/Host; no open redirect).
+  const emailRedirectTo = emailConfirmRedirect(input.next, SITE_URL);
 
   try {
     const supabase = await createClient();

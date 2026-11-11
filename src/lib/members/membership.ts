@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { joinPath } from "@/lib/members/routes";
 
 export type Membership = "active" | "grace" | "none";
 
@@ -24,10 +25,10 @@ export async function getMembership(): Promise<{ loggedIn: boolean; membership: 
   return { loggedIn: true, membership: m };
 }
 
-/** Server-side gate for members-only pages. Not a member (or logged out) -> /system/join. */
+/** Server-side gate for members-only pages. Not a member (or logged out) -> /system/join?next=<path>. */
 export async function requireMember(path: string): Promise<Exclude<Membership, "none">> {
   const { loggedIn, membership } = await getMembership();
-  void path; // /system/join sends logged-out visitors to /login?next=/system/join
-  if (!loggedIn || membership === "none") redirect("/system/join");
+  // /system/join sends logged-out visitors to /login and keeps `next` (spec §4.1).
+  if (!loggedIn || membership === "none") redirect(joinPath(path));
   return membership;
 }
