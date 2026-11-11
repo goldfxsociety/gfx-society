@@ -10,7 +10,8 @@ const SRC = pathToFileURL(`${process.cwd()}/src/`).href;
 registerHooks({
   resolve(specifier, context, next) {
     if (specifier.startsWith("@/")) return { url: new URL(`${specifier.slice(2)}.ts`, SRC).href, shortCircuit: true };
-    if (specifier === "./access-request" && context.parentURL?.startsWith(SRC)) return { url: new URL("lib/members/access-request.ts", SRC).href, shortCircuit: true };
+    // Extensionless relative imports inside src/ (e.g. "./access-request", "./admin-fetch") resolve to the .ts file.
+    if (/^\.\.?\//.test(specifier) && !/\.[a-z]+$/.test(specifier) && context.parentURL?.startsWith(SRC)) return { url: new URL(`${specifier}.ts`, context.parentURL).href, shortCircuit: true };
     return next(specifier, context);
   },
 });
@@ -133,14 +134,44 @@ await t("mock nodemailer transport: Gmail 465 TLS options + sendMail gets exactl
   assert.deepEqual(j.to, [{ address: "accm-user@example.test", name: "" }]); assert.equal(j.from.address, "sender@example.test");
   assert.ok(j.text.includes(`#token=${TOKEN}`) && j.html.includes(`#token=${TOKEN}`));
 });
-await t("flag off (default): wiring returns before any env read / token / send; request action passes no sendConfirm", async () => {
-  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, false);
+await t("go-live: flag is true; rollback guard (flag false) still returns before any env read / token / send", async () => {
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   const src = read("src/lib/members/accm-confirm-send.ts");
   const body = src.slice(src.indexOf("export async function sendAccmConfirmForUser"));
   assert.ok(body.indexOf("if (!ACCM_CONFIRM_MAIL_LIVE) return") < body.indexOf("process.env"), "flag check before env read");
   const a = read("src/app/system/join/actions.ts");
   assert.match(a, /\.\.\.\(ACCM_CONFIRM_MAIL_LIVE && user\s*\? \{ sendConfirm: async \(\) => \(await sendAccmConfirmForUser\(user\.id\)\) === "sent" \}\s*: \{\}\)/);
   assert.ok(!/formData\.get\("(user_id|uid|email)"\)/.test(a), "no client-supplied user id or email");
+});
+await t("live wiring (real server path, env scrubbed in this process): missing SMTP env fails closed + neutral, no token, no client, no SMTP", async () => {
+  const KEYS = ["GFX_SMTP_USER", "GFX_SMTP_APP_PASSWORD", "GFX_SMTP_FROM", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL"];
+  const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+  for (const k of KEYS) delete process.env[k];
+  const origFetch = globalThis.fetch, origCT = nodemailer.createTransport;
+  let fetches = 0, transports = 0;
+  globalThis.fetch = async () => { fetches++; throw new Error("no network in tests"); };
+  nodemailer.createTransport = (...a) => { transports++; return origCT.apply(nodemailer, a); };
+  const before = consoleOut.length;
+  try {
+    const S = await import("../src/lib/members/accm-confirm-send.ts");
+    const uid = "11111111-1111-1111-1111-111111111111";
+    assert.equal(await S.sendAccmConfirmForUser(uid), "error", "no SMTP env -> neutral error");
+    // SMTP env present (placeholders, this process only) but no service-role key -> still neutral, nothing issued.
+    Object.assign(process.env, { GFX_SMTP_USER: "u@example.test", GFX_SMTP_APP_PASSWORD: "placeholder", GFX_SMTP_FROM: "GFX Society <u@example.test>" });
+    assert.equal(await S.sendAccmConfirmForUser(uid), "error", "no admin client -> neutral error");
+    assert.equal(fetches, 0, "no RPC / network call"); assert.equal(transports, 0, "no SMTP transport created");
+    const out = consoleOut.slice(before).join("\n");
+    assert.ok(!out.includes("placeholder") && !out.includes("u@example.test") && !out.includes(uid), "no env value, address or user id logged");
+    // The request action only mails through this server function, with the server-verified user id.
+    const a = read("src/app/system/join/actions.ts");
+    assert.match(a, /\.\.\.\(ACCM_CONFIRM_MAIL_LIVE && user\s*\? \{ sendConfirm: async \(\) => \(await sendAccmConfirmForUser\(user\.id\)\) === "sent" \}\s*: \{\}\)/);
+    const callers = fs.readdirSync("src", { recursive: true }).filter((f) => /\.tsx?$/.test(f)).filter((f) => read(`src/${f}`).includes("sendAccmConfirmForUser("));
+    assert.deepEqual(callers.sort(), ["app/system/join/actions.ts", "lib/members/accm-confirm-send.ts"], "only the server action calls the mailer");
+    assert.ok(!read("src/app/system/join/join-form.tsx").includes("accm-confirm"), "client form never imports the mailer");
+  } finally {
+    globalThis.fetch = origFetch; nodemailer.createTransport = origCT;
+    for (const k of KEYS) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+  }
 });
 await t("request flow: flag off ignores ACCM email + never mails; flag on mails once on awaiting", async () => {
   const mk = (rpc, send = "ok") => { const log = []; return { log, deps: { loggedIn: async () => true, submit: async (accm) => { log.push(["rpc", accm]); return rpc; }, sendConfirm: async () => { log.push("send"); return send === "ok"; } } }; };
@@ -156,14 +187,15 @@ await t("request flow: flag off ignores ACCM email + never mails; flag on mails 
   h = mk("accm_email_disabled");
   assert.equal(await AR.submitRequest(h.deps, input, "me@example.test", true), "error", "DB switch off -> neutral error");
 });
-await t("join form shows the ACCM field and helper only behind the flag; spec pending-confirmation copy present", async () => {
+await t("join form shows the ACCM field and helper behind the (now live) flag; spec pending-confirmation copy present", async () => {
   const f = read("src/app/system/join/join-form.tsx");
   assert.match(f, /\{ACCM_CONFIRM_MAIL_LIVE && \(/);
   const { REQUEST_COPY } = await import("../src/content/access-request.ts");
   assert.equal(REQUEST_COPY.submittedAwaiting, "Halos tapos na. I-click ang confirmation link na pinadala namin sa ACCM email mo (check din ang Spam o Promotions). Iche-check lang namin ang request pag na-confirm na ito.");
   assert.equal(REQUEST_COPY.accmEmailHelper, "Kailangan naming i-confirm ang email na ito, kaya may ipapadala kaming link.");
 });
-await t("privacy: v1.4 live while flag off; v1.5 only behind the flag and differs only in the v1.5 parts", async () => {
+await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; they differ only in the v1.5 parts", async () => {
+  assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   const page = read("src/app/privacy/page.tsx");
   assert.match(page, /ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.5\.md" : "privacy-notice\.md"/);
   const v14 = read("src/content/legal/privacy-notice.md"), v15 = read("src/content/legal/privacy-notice-v1.5.md");
@@ -260,6 +292,20 @@ await t("page titles: no page title repeats the site name the layout template al
   for (const [f, tt] of [["src/app/privacy/page.tsx", "Privacy Notice"], ["src/app/terms/page.tsx", "Terms of Use"], ["src/app/risk/page.tsx", "Risk Disclaimer"], ["src/app/disclosure/page.tsx", "IB Disclosure"]])
     assert.ok(read(f).includes(`title: "${tt}"`), f);
   assert.ok(read("src/app/go/[code]/page.tsx").includes('title: { absolute: "GFX Society" }'));
+});
+
+await t("docs (R1/R2 + go-live): migration-history repair mapping, purge latency, go-live order with exact SQL, rollback", async () => {
+  const d = read("docs/accm-confirm-mailer.md");
+  for (const v of ["20261111071025", "20261111073716", "20261111120000_access_requests.sql", "20261111130000_accm_confirm_mailer.sql"]) assert.ok(d.includes(v), v);
+  assert.ok(d.includes("supabase migration repair --status reverted 20261111071025 20261111073716"));
+  assert.ok(d.includes("supabase migration repair --status applied  20261111120000 20261111130000"));
+  assert.match(d, /before any future `supabase db push`/i);
+  assert.match(d, /Latency \(QA R2\): up to about 7 days \+ 1 day/);
+  assert.ok(d.includes("update private.app_settings set value = 'true' where key = 'accm_confirm_mail_live';"));
+  const order = ["a. Set `GFX_SMTP_USER`", "b. Hosted check", "c. Turn the DB switch on", "d. Merge the go-live PR", "e. Post-deploy smoke checks"].map((x) => d.indexOf(x));
+  assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), "go-live steps a-e in order");
+  const rb = d.slice(d.indexOf("## Rollback"));
+  assert.ok(rb.indexOf("`ACCM_CONFIRM_MAIL_LIVE` back to `false`") < rb.indexOf("Turn the DB switch off") && rb.indexOf("Turn the DB switch off") < rb.indexOf("delete from private.access_request_accm"), "rollback: flag, switch, scrub");
 });
 
 console.log(`ALL PASS accm confirm mail (${n})`);

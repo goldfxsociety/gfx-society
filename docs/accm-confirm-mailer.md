@@ -4,7 +4,8 @@ If someone requests Trading System access with an ACCM email that is different f
 address only counts after they confirm it from its inbox. This page covers how the confirmation mail is sent and
 what has to be in place before it is switched on.
 
-**Status: OFF.** Nothing is sent until every go-live step below is done with Jarvis's go.
+**Status: going live.** Both migrations are applied in prod (flags off since #68). The go-live PR sets the app flag
+`ACCM_CONFIRM_MAIL_LIVE = true` in code; it is merged only after go-live steps (a) to (c) below, with Jarvis's go.
 
 ## How it works
 
@@ -30,14 +31,14 @@ Logs only ever carry fixed codes: `smtp_env_missing`, `issue_failed`, `issue_bad
 `admin_env_missing`, plus Supabase error codes. The address, the token and the SMTP password are never logged or
 returned.
 
-## The two switches (both default off)
+## The two switches
 
 | Switch | Where | Off means |
 |---|---|---|
-| `ACCM_CONFIRM_MAIL_LIVE` | `src/lib/members/access-request.ts` (constant) | No ACCM field, no SMTP env read, no mail, the confirm page has no button, `/privacy` shows v1.4 |
-| `accm_confirm_mail_live` | `private.app_settings` (migration `20261111130000`) | The DB refuses ACCM emails (`accm_email_disabled`), issues no tokens, and confirm answers `invalid` |
+| `ACCM_CONFIRM_MAIL_LIVE` | `src/lib/members/access-request.ts` (constant; `true` from the go-live PR, rollback = revert PR) | No ACCM field, no SMTP env read, no mail, the confirm page has no button, `/privacy` shows v1.4 |
+| `accm_confirm_mail_live` | `private.app_settings` (migration `20261111130000`, prod version `20261111073716`; seeded `'false'`) | The DB refuses ACCM emails (`accm_email_disabled`), issues no tokens, and confirm answers `invalid` |
 
-## Vercel env vars (Production). Set them only with Jarvis's go; this PR changes no env.
+## Vercel env vars (Production). Set them only with Jarvis's go (go-live step a); no PR changes env.
 
 | Name | Value |
 |---|---|
@@ -57,27 +58,54 @@ the neutral error copy, before a token is issued. `SUPABASE_SERVICE_ROLE_KEY` (a
   If the account hits the limit, both stop until Google resets it.
 - Revoking the app password stops the mailer. Rotating it means updating `GFX_SMTP_APP_PASSWORD` and redeploying.
 
-## Go-live checklist (each step needs Jarvis's go)
-1. PR #67 is merged and its migration is applied (done 11 Nov). Prod recorded it as version **20261111071025**
-   (applied via the Supabase MCP tool), not the repo filename `20261111120000_access_requests.sql`; it is the same
-   migration. Existing files are not renamed.
-2. Apply `supabase/migrations/20261111130000_accm_confirm_mailer.sql` AFTER 20261111071025 / 20261111120000 (it
-   replaces functions that migration created). The version prod records is assigned at apply time, so it may not be
-   `20261111130000` either. Then run
-   `supabase/verification/20261111130000_accm_confirm_mailer_verify.sql`: every row must be true.
-   Note: in PR #67's verify, the row `confirm_accm_email: anon + authenticated` turns false after this migration.
-   That is intended (QA N1 removes anon access). Every other row stays true.
-3. Hosted check that the service-role key works for this RPC. The production key had 401 problems before, and the
-   purge cron also depends on it.
-4. Set the three `GFX_SMTP_*` env vars on Vercel.
-5. Turn the DB switch on FIRST (SQL editor). This is harmless while the app flag is still off, because the app sends
-   no ACCM email then:
-   `update private.app_settings set value = 'true' where key = 'accm_confirm_mail_live';`
-   The verify row "Q6 switch seeded with its default 'false'" then reads false by design.
-6. Then set the v1.5 "Last updated" date in `src/content/legal/privacy-notice-v1.5.md`, flip `ACCM_CONFIRM_MAIL_LIVE`
-   to `true` in a reviewed PR, and deploy. (The other order would leave a window where the ACCM field shows but every
-   ACCM submit gets the generic error.)
-7. Ben runs one end-to-end test with his own second address.
+## Go-live checklist (owned by Jarvis; each step needs his go)
+Done: PR #67's migration (prod version `20261111071025`) and PR #68's migration (prod version `20261111073716`) are
+applied, and both verify files were run. PR #68 deployed with both switches off.
+
+a. Set `GFX_SMTP_USER`, `GFX_SMTP_APP_PASSWORD` and `GFX_SMTP_FROM` in Vercel **Production** (values above).
+b. Hosted check that `SUPABASE_SERVICE_ROLE_KEY` works for `public.issue_accm_confirm_token`. The production key had
+   401 problems before, and the purge cron also depends on it.
+c. Turn the DB switch on (SQL editor). Harmless while the deployed app flag is still `false`, because the app sends no
+   ACCM email then:
+
+   ```sql
+   update private.app_settings set value = 'true' where key = 'accm_confirm_mail_live';
+   select value from private.app_settings where key = 'accm_confirm_mail_live';  -- expect 'true'
+   ```
+   The verify row "Q6 switch seeded with its default 'false'" (and the two "N3 guard holds now" rows, once real ACCM
+   emails arrive) then read false by design.
+d. Merge the go-live PR (sets `ACCM_CONFIRM_MAIL_LIVE = true`; Vercel deploys it). The v1.5 "Last updated" date must
+   match the go-live day; bump it in the PR before merging if the merge slips. (The other order, flag before DB
+   switch, would leave a window where the ACCM field shows but every ACCM submit gets the generic error.)
+e. Post-deploy smoke checks: `/privacy` shows Version 1.5; `/system/join` shows the ACCM email field to a signed-in
+   user with no membership; `/system/join/confirm` answers with `X-Robots-Tag: noindex, nofollow` and
+   `Referrer-Policy: no-referrer`; Ben submits once with his own second address, gets the mail (both buttons), confirms
+   while signed in, and sees the confirmed copy; the Vercel logs show no `smtp_env_missing`, `admin_env_missing` or
+   `issue_failed` codes.
+
+## Migration history: prod versions differ from repo filenames (QA R1)
+Both access-request migrations were applied with the Supabase MCP tool, which records the version at apply time:
+
+| Repo file | Prod `supabase_migrations.schema_migrations` version |
+|---|---|
+| `20261111120000_access_requests.sql` | `20261111071025` |
+| `20261111130000_accm_confirm_mailer.sql` | `20261111073716` |
+
+Same SQL, different version keys. The files are not renamed. Before any future `supabase db push` (or anything else
+that compares local files to the remote history), repair the remote history so the CLI does not see two unknown
+remote versions and two "pending" local files (it would refuse, or try to re-apply them). With Jarvis's go, against the
+linked prod project:
+
+```sh
+supabase migration list                                            # confirm the mismatch (and nothing else differs)
+supabase migration repair --status reverted 20261111071025 20261111073716   # drop the two MCP rows (runs no SQL)
+supabase migration repair --status applied  20261111120000 20261111130000   # record the repo versions (runs no SQL)
+supabase migration list                                            # local and remote now line up
+```
+
+`migration repair` only edits the history table; it never runs or reverts migration SQL. Any future migration applied
+through MCP has the same issue: either repair it the same way, or apply it with `supabase db push` instead. Nothing
+here was run as part of the PRs.
 
 ## Unconfirmed addresses are purged after 7 days
 A raw ACCM email that is never confirmed is deleted once no unexpired link remains and the request was last submitted
@@ -86,9 +114,14 @@ is checked on the Academy email only, and the user can update the request to ent
 every submit and token issue, in the daily cron (`/api/cron/members-cleanup` → `public.purge_member_gate_logs`), and in
 the monthly refresh.
 
+**Latency (QA R2): up to about 7 days + 1 day.** The 7 days count from the last submit (`updated_at`). The read path
+(`my_join_state`) is read-only and doesn't purge, so if nobody submits, the row goes when the next daily cron runs
+(`30 19 * * *` UTC = 03:30 Asia/Manila, and Vercel may start it later within that hour). Until then the join page keeps
+showing the "check your inbox" copy. The privacy notice's "after 7 days" means this bound.
+
 ## Rollback (reverse order, each step with Jarvis's go)
-1. Flip `ACCM_CONFIRM_MAIL_LIVE` back to `false` and deploy (the ACCM field disappears, no more mail, `/privacy` back
-   to v1.4).
+1. Merge a revert PR that sets `ACCM_CONFIRM_MAIL_LIVE` back to `false`, and let it deploy (the ACCM field disappears,
+   no more mail, `/privacy` back to v1.4, which is kept for this).
 2. Turn the DB switch off: `update private.app_settings set value = 'false' where key = 'accm_confirm_mail_live';`
    (the DB refuses ACCM emails, issues no tokens, and confirm answers `invalid`).
 3. Scrub the raw addresses that are still stored (same as the migration's one-time cleanup; returns nothing, keeps
@@ -103,6 +136,7 @@ the monthly refresh.
    ```
 4. Re-run `supabase/verification/20261111130000_accm_confirm_mailer_verify.sql`: every row must be true again,
    including both "N3 guard holds now" rows and "Q6 switch seeded with its default 'false'".
+5. Optional: remove the three `GFX_SMTP_*` env vars (not needed; they're unread while the flag is false).
 
 No Supabase Auth URL, redirect or CORS settings are needed. The link is a plain site page, and the mail doesn't go
 through Supabase Auth.
