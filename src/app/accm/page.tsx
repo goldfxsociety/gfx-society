@@ -27,8 +27,7 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "Bakit ACCM para sa Discord community?",
     a: (
       <>
-        Ang Discord community namin ay para sa mga nag-register sa ACCM through our link.{" "}
-        <span className="text-xs">{IB_DISCLOSURE_TEXT}</span>
+        Ang Discord community namin ay para sa mga nag-register sa ACCM through our link.
       </>
     ),
   },
@@ -65,7 +64,7 @@ export default function AccmPage() {
 
       <section aria-labelledby="accm-s1" className="flex flex-col gap-2">
         <h2 id="accm-s1" className="text-lg font-semibold">1. Quick self-check</h2>
-        <AccmSelfCheck href={accmHref("accm_page")} disclosure={IB_DISCLOSURE_TEXT} />
+        <AccmSelfCheck href={accmHref("accm_page")} />
         <Link href="/academy" className="inline-flex min-h-11 items-center self-start text-sm underline">
           Hindi pa ready? Balik sa lessons →
         </Link>
