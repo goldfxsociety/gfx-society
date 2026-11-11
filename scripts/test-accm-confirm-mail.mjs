@@ -73,7 +73,7 @@ await t("payload shape: from env, to = issued ACCM address, subject, text + html
   assert.equal(h.sent.length, 1);
   const m = h.sent[0];
   assert.deepEqual(Object.keys(m).sort(), ["from", "html", "subject", "text", "to"]);
-  assert.equal(m.from, CFG.from); assert.equal(m.to, "accm-user@example.test");
+  assert.equal(m.from, CFG.from); assert.deepEqual(m.to, { name: "", address: "accm-user@example.test" }, "Q5: to is an object with an empty name");
   assert.equal(m.subject, M.ACCM_CONFIRM_MAIL_COPY.subject);
   const link = `${SITE}/system/join/confirm#token=${TOKEN}`;
   assert.ok(m.text.includes(link) && m.html.includes(`href="${link}"`));
@@ -124,13 +124,13 @@ await t("mock nodemailer transport: Gmail 465 TLS options + sendMail gets exactl
   // Same transport options the wiring uses, with nodemailer's offline JSON transport standing in for SMTP.
   assert.deepEqual(M.GMAIL_SMTP, { host: "smtp.gmail.com", port: 465, secure: true });
   const src = read("src/lib/members/accm-confirm-send.ts");
-  assert.match(src, /nodemailer\.createTransport\(\{ \.\.\.GMAIL_SMTP, auth: \{ user: config!\.user, pass: config!\.pass \} \}\)/);
-  const transport = nodemailer.createTransport({ jsonTransport: true });
+  assert.match(src, /nodemailer\.createTransport\(\{ \.\.\.GMAIL_SMTP, \.\.\.SMTP_TIMEOUTS, auth: \{ user: config!\.user, pass: config!\.pass \} \}\)/);
+  const transport = nodemailer.createTransport({ jsonTransport: true, ...M.SMTP_TIMEOUTS });
   const h = harness();
   h.deps.send = async (msg) => { const info = await transport.sendMail(msg); h.sent.push(JSON.parse(info.message)); };
   assert.equal(await M.sendAccmConfirm(h.deps), "sent");
   const j = h.sent[0];
-  assert.equal(j.to[0].address, "accm-user@example.test"); assert.equal(j.from.address, "sender@example.test");
+  assert.deepEqual(j.to, [{ address: "accm-user@example.test", name: "" }]); assert.equal(j.from.address, "sender@example.test");
   assert.ok(j.text.includes(`#token=${TOKEN}`) && j.html.includes(`#token=${TOKEN}`));
 });
 await t("flag off (default): wiring returns before any env read / token / send; request action passes no sendConfirm", async () => {
@@ -170,7 +170,8 @@ await t("privacy: v1.4 live while flag off; v1.5 only behind the flag and differ
   assert.match(v14, /Version: 1\.4/); assert.ok(!/ACCM email \(kung binigay\)|Different ACCM email/.test(v14));
   assert.match(v15, /Version: 1\.5/); assert.match(v15, /\*\*What changed in v1\.5 \(11 Nov 2026\):\*\*/);
   assert.ok(v15.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo, ACCM email (kung binigay), at IB name (kung binigay)"));
-  assert.ok(v15.includes("| Different ACCM email waiting for confirmation (plain email, private table) | Only until you click the confirmation link, then removed"));
+  assert.ok(v15.includes("| Different ACCM email waiting for confirmation (plain email, private table) | Only until you click the confirmation link, or 7 days if you don't confirm it, then removed (the hash stays with the request). The link itself works once and expires after 24 hours. |"));
+  assert.ok(v15.includes("and we remove it once it is confirmed, or after 7 days if it isn't."), "Q2 Design wording (EN, section 2)");
   assert.ok(v15.includes("hashed Academy email, hashed ACCM email if given, IB name if given"));
   assert.match(v15, /\| Google LLC \(Gmail\) \|/);
   // Drift guard: removing the v1.5-only lines from v1.5 and the replaced lines from v1.4 leaves identical text.
@@ -186,6 +187,79 @@ await t("admin client comment names the new service-role use; issue RPC called o
   walk("src");
   assert.deepEqual(hits, ["src/lib/members/accm-confirm-send.ts"]);
   assert.ok(!/^"use client"/.test(read("src/lib/members/accm-confirm-send.ts")));
+});
+
+await t("Q1: analytics beforeSend strips the URL fragment from every event; layout uses it; confirm page strips #token", async () => {
+  const { stripUrlFragment } = await import("../src/lib/analytics-scrub.ts");
+  assert.deepEqual(stripUrlFragment({ type: "pageview", url: `${SITE}/system/join/confirm#token=${TOKEN}` }), { type: "pageview", url: `${SITE}/system/join/confirm` });
+  assert.deepEqual(stripUrlFragment({ type: "event", url: `${SITE}/x?y=1#a#b` }), { type: "event", url: `${SITE}/x?y=1` });
+  const e = { type: "pageview", url: `${SITE}/training` };
+  assert.equal(stripUrlFragment(e), e, "no fragment: same event object");
+  const layout = read("src/app/layout.tsx");
+  assert.match(layout, /<SiteAnalytics \/>/); assert.ok(!/<Analytics\b/.test(layout), "no bare <Analytics /> left");
+  assert.match(read("src/components/analytics/site-analytics.tsx"), /<Analytics beforeSend=\{stripUrlFragment\} \/>/);
+  const f = read("src/app/system/join/confirm/confirm-form.tsx");
+  const take = f.slice(f.indexOf("function takeToken"), f.indexOf("export function ConfirmForm"));
+  assert.ok(take.indexOf("window.location.hash") < take.indexOf('window.history.replaceState(null, "", window.location.pathname)'), "reads #token, then replaceState strips it");
+});
+await t("Q4: SMTP connection/greeting/socket timeouts ~10 s each, used by the real transport", async () => {
+  assert.deepEqual(M.SMTP_TIMEOUTS, { connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 10000 });
+  const opts = nodemailer.createTransport({ ...M.GMAIL_SMTP, ...M.SMTP_TIMEOUTS, auth: { user: "u@example.test", pass: "placeholder" } }).options;
+  for (const k of ["connectionTimeout", "greetingTimeout", "socketTimeout"]) assert.equal(opts[k], 10000, k);
+  assert.match(read("src/lib/members/accm-confirm-send.ts"), /\.\.\.SMTP_TIMEOUTS/);
+});
+await t("Q5: app + mailer accept only a plain addr-spec ACCM email", async () => {
+  const bad = ["Name<a@example.test>", "<a@example.test>", '"a"@example.test', "a'b@example.test", "a,b@example.test", "a b@example.test",
+               "a@example.test\r\nbcc@example.test", "a@example.test\n", "a;b@example.test", "a@localhost", "a@-x.test", "a@@example.test", "Name a@example.test"];
+  for (const e of bad) {
+    assert.ok(!AR.ACCM_EMAIL_RE.test(e), `regex rejects ${JSON.stringify(e)}`);
+    // Outer whitespace is trimmed before validation (and before the RPC), so only inner bad characters reach the regex.
+    if (e.trim() === e) assert.equal(AR.validateRequest({ accmEmail: e, ibName: "", consent: true }, "me@example.test", true), "invalid_email", JSON.stringify(e));
+    const h = harness({ issue: { email: e, token: TOKEN } });
+    assert.equal(await M.sendAccmConfirm(h.deps), "error"); assert.equal(h.sent.length, 0); assert.deepEqual(h.logs, ["issue_bad_shape"]);
+  }
+  for (const ok of ["first.last+tag@mail.example-co.test", "A_B%c@x.io"]) {
+    assert.ok(AR.ACCM_EMAIL_RE.test(ok), ok);
+    assert.equal(AR.validateRequest({ accmEmail: ok, ibName: "", consent: true }, "me@example.test", true), null, ok);
+  }
+  const sql = read("supabase/migrations/20261111130000_accm_confirm_mailer.sql");
+  assert.ok(sql.includes("v_accm !~ '^[a-z0-9._%+-]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'"), "same rule in SQL");
+});
+await t("Q8: HTML mail has one button per language block (TL + EN), same pinned href, full width on mobile, >= 44px", async () => {
+  const link = `${SITE}/system/join/confirm#token=${TOKEN}`;
+  const { html, text } = M.buildAccmConfirmEmail(link);
+  const [tl, en] = html.split("<hr");
+  const btn = (block, label) => [...block.matchAll(/<a href="([^"]+)" style="([^"]+)">([^<]+)<\/a>/g)].filter((m) => m[3] === label);
+  const a = btn(tl, "I-confirm ang ACCM email"), b = btn(en, "Confirm ACCM email");
+  assert.equal(a.length, 1, "TL button in the TL block"); assert.equal(b.length, 1, "EN button in the EN block");
+  assert.equal(a[0][1], link); assert.equal(b[0][1], link); assert.equal(a[0][2], b[0][2], "same style");
+  for (const k of ["display:block", "width:100%", "max-width:320px", "min-height:44px", "line-height:20px", "padding:12px 16px", "box-sizing:border-box"]) assert.ok(a[0][2].includes(k), k);
+  assert.ok(en.includes(`<p style="margin:12px 0;font-size:12px;color:#555">${link}</p>`), "small plain fallback link kept");
+  assert.equal(M.ACCM_CONFIRM_MAIL_COPY.buttonEn, "Confirm ACCM email");
+  assert.equal(text.split(link).length - 1, 2, "plain text: link once per language block");
+});
+await t("Q7: nodemailer + @types/nodemailer pinned to exact versions (lockfile matches)", async () => {
+  const pkg = JSON.parse(read("package.json"));
+  assert.equal(pkg.dependencies.nodemailer, "10.3.1"); assert.equal(pkg.devDependencies["@types/nodemailer"], "8.0.2");
+  const lock = JSON.parse(read("package-lock.json"));
+  assert.equal(lock.packages["node_modules/nodemailer"].version, "10.3.1"); assert.equal(lock.packages["node_modules/@types/nodemailer"].version, "8.0.2");
+  assert.equal(lock.packages[""].dependencies.nodemailer, "10.3.1");
+});
+await t("Q8 marker gone; Q9 Copied timer cleared on unmount", async () => {
+  assert.ok(!read("src/content/access-request.ts").includes("Pending GFX Design review"));
+  const th = read("src/app/system/join/transfer-help.tsx");
+  assert.match(th, /useEffect\(\(\) => \(\) => \{\s*if \(timer\.current\) clearTimeout\(timer\.current\);\s*\}, \[\]\)/);
+  assert.match(th, /timer\.current = setTimeout\(\(\) => setCopied\(true\), 50\)/);
+});
+
+await t("page titles: no page title repeats the site name the layout template already adds", async () => {
+  assert.match(read("src/app/layout.tsx"), /template: `%s \| \$\{SITE_NAME\}`/);
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(`${d}/${e.name}`) : /\.(tsx?|mdx?)$/.test(e.name) ? [`${d}/${e.name}`] : []));
+  const bad = walk("src/app").filter((f) => f !== "src/app/layout.tsx").filter((f) => /\btitle:\s*["'`][^"'`]*GFX Society/.test(fs.readFileSync(f, "utf8")));
+  assert.deepEqual(bad, [], "use a bare title (template adds the name) or title: { absolute: ... }");
+  for (const [f, tt] of [["src/app/privacy/page.tsx", "Privacy Notice"], ["src/app/terms/page.tsx", "Terms of Use"], ["src/app/risk/page.tsx", "Risk Disclaimer"], ["src/app/disclosure/page.tsx", "IB Disclosure"]])
+    assert.ok(read(f).includes(`title: "${tt}"`), f);
+  assert.ok(read("src/app/go/[code]/page.tsx").includes('title: { absolute: "GFX Society" }'));
 });
 
 console.log(`ALL PASS accm confirm mail (${n})`);

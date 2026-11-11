@@ -9,9 +9,13 @@
  * address or the token. Logs carry fixed codes only.
  */
 
-import { accmConfirmUrl } from "./access-request";
+import { ACCM_EMAIL_RE, accmConfirmUrl } from "./access-request";
 
 export const GMAIL_SMTP = { host: "smtp.gmail.com", port: 465, secure: true } as const;
+
+/** QA Q4: bound every SMTP phase (~10 s each) so a hung Gmail connection ends in the neutral error, well before the
+ * platform function timeout. nodemailer defaults are 120 s / 30 s / 600 s. */
+export const SMTP_TIMEOUTS = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 10_000 } as const;
 
 export type MailConfig = { user: string; pass: string; from: string };
 
@@ -27,7 +31,8 @@ export function readMailConfig(env: Record<string, string | undefined>): MailCon
 /** Answer of public.issue_accm_confirm_token (service role): {email, token} or {error: 'none' | 'rate_limited'}. */
 export type IssueResult = { email?: unknown; token?: unknown; error?: unknown } | null;
 
-export type MailMessage = { from: string; to: string; subject: string; text: string; html: string };
+/** `to` as an object with an empty name (QA Q5): nodemailer never parses the address string for a display name. */
+export type MailMessage = { from: string; to: { name: ""; address: string }; subject: string; text: string; html: string };
 
 export type SendDeps = {
   /** null = flag on but SMTP env missing. */
@@ -45,7 +50,6 @@ export type SendDeps = {
 export type SendResult = "sent" | "none" | "rate_limited" | "error";
 
 const TOKEN_RE = /^[0-9a-f]{64}$/;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -62,6 +66,7 @@ export const ACCM_CONFIRM_MAIL_COPY = {
     "If this wasn't you, just ignore this email. Nothing happens unless the link is used.",
   ],
   button: "I-confirm ang ACCM email",
+  buttonEn: "Confirm ACCM email",
   footer: "GFX Society · goldfx.society@gmail.com · Education lang, not financial advice.",
 } as const;
 
@@ -70,12 +75,14 @@ export function buildAccmConfirmEmail(link: string): { subject: string; text: st
   const M = ACCM_CONFIRM_MAIL_COPY;
   const text = [M.tl[0], "", M.tl[1], "", link, "", M.tl[2], "", "---", "", M.en[0], "", M.en[1], "", link, "", M.en[2], "", "--", M.footer, ""].join("\n");
   const p = (s: string) => `<p style="margin:0 0 12px">${esc(s)}</p>`;
-  const a = `<p style="margin:16px 0"><a href="${esc(link)}" style="display:inline-block;padding:10px 16px;background:#111;color:#fff;text-decoration:none;border-radius:6px">${esc(M.button)}</a></p>`;
+  // One button per language block (each block works on its own). Full width on mobile, max 320px, >= 44px tall.
+  const btn = (label: string) =>
+    `<p style="margin:16px 0"><a href="${esc(link)}" style="display:block;width:100%;max-width:320px;box-sizing:border-box;padding:12px 16px;min-height:44px;line-height:20px;font-size:16px;text-align:center;background:#111;color:#fff;text-decoration:none;border-radius:6px">${esc(label)}</a></p>`;
   const html =
     `<!doctype html><html><body style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#111;max-width:560px">` +
-    p(M.tl[0]) + p(M.tl[1]) + a + p(M.tl[2]) +
+    p(M.tl[0]) + p(M.tl[1]) + btn(M.button) + p(M.tl[2]) +
     `<hr style="border:0;border-top:1px solid #ddd;margin:20px 0">` +
-    p(M.en[0]) + p(M.en[1]) + p(M.en[2]) +
+    p(M.en[0]) + p(M.en[1]) + btn(M.buttonEn) + p(M.en[2]) +
     `<p style="margin:12px 0;font-size:12px;color:#555">${esc(link)}</p>` +
     `<p style="margin:20px 0 0;font-size:12px;color:#555">${esc(M.footer)}</p></body></html>`;
   return { subject: M.subject, text, html };
@@ -100,14 +107,14 @@ export async function sendAccmConfirm(deps: SendDeps): Promise<SendResult> {
   }
   if (r.error === "none") return "none";
   if (r.error === "rate_limited") return "rate_limited";
-  if (typeof r.email !== "string" || typeof r.token !== "string" || !TOKEN_RE.test(r.token) || !EMAIL_RE.test(r.email) || /[\r\n]/.test(r.email)) {
+  if (typeof r.email !== "string" || typeof r.token !== "string" || !TOKEN_RE.test(r.token) || r.email.length > 254 || !ACCM_EMAIL_RE.test(r.email)) {
     log("issue_bad_shape");
     return "error";
   }
   const link = accmConfirmUrl(deps.siteUrl, r.token);
   const mail = buildAccmConfirmEmail(link);
   try {
-    await deps.send({ from: deps.config.from, to: r.email, ...mail });
+    await deps.send({ from: deps.config.from, to: { name: "", address: r.email }, ...mail });
   } catch {
     log("smtp_send_failed");
     return "error";

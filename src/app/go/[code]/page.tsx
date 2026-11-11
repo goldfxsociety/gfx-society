@@ -9,7 +9,7 @@ import { NextStepLink } from "@/components/funnel/next-step-link";
 import { GoRedirect } from "./go-redirect";
 
 export const metadata: Metadata = {
-  title: "GFX Society",
+  title: { absolute: "GFX Society" },
   robots: { index: false, follow: false },
 };
 

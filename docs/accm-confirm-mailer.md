@@ -58,22 +58,51 @@ the neutral error copy, before a token is issued. `SUPABASE_SERVICE_ROLE_KEY` (a
 - Revoking the app password stops the mailer. Rotating it means updating `GFX_SMTP_APP_PASSWORD` and redeploying.
 
 ## Go-live checklist (each step needs Jarvis's go)
-1. PR #67 is merged and `20261111120000_access_requests.sql` is applied (done before this PR).
-2. Apply `supabase/migrations/20261111130000_accm_confirm_mailer.sql`, then run
+1. PR #67 is merged and its migration is applied (done 11 Nov). Prod recorded it as version **20261111071025**
+   (applied via the Supabase MCP tool), not the repo filename `20261111120000_access_requests.sql`; it is the same
+   migration. Existing files are not renamed.
+2. Apply `supabase/migrations/20261111130000_accm_confirm_mailer.sql` AFTER 20261111071025 / 20261111120000 (it
+   replaces functions that migration created). The version prod records is assigned at apply time, so it may not be
+   `20261111130000` either. Then run
    `supabase/verification/20261111130000_accm_confirm_mailer_verify.sql`: every row must be true.
    Note: in PR #67's verify, the row `confirm_accm_email: anon + authenticated` turns false after this migration.
    That is intended (QA N1 removes anon access). Every other row stays true.
 3. Hosted check that the service-role key works for this RPC. The production key had 401 problems before, and the
    purge cron also depends on it.
 4. Set the three `GFX_SMTP_*` env vars on Vercel.
-5. Set the v1.5 "Last updated" date in `src/content/legal/privacy-notice-v1.5.md`, flip `ACCM_CONFIRM_MAIL_LIVE` to
-   `true` in a reviewed PR, and deploy.
-6. Turn the DB switch on (SQL editor):
+5. Turn the DB switch on FIRST (SQL editor). This is harmless while the app flag is still off, because the app sends
+   no ACCM email then:
    `update private.app_settings set value = 'true' where key = 'accm_confirm_mail_live';`
-   The verify row "mail switch is off" then reads false by design.
+   The verify row "Q6 switch seeded with its default 'false'" then reads false by design.
+6. Then set the v1.5 "Last updated" date in `src/content/legal/privacy-notice-v1.5.md`, flip `ACCM_CONFIRM_MAIL_LIVE`
+   to `true` in a reviewed PR, and deploy. (The other order would leave a window where the ACCM field shows but every
+   ACCM submit gets the generic error.)
 7. Ben runs one end-to-end test with his own second address.
 
-To roll back, set the DB switch to `'false'` (takes effect immediately) and/or flip the constant back and redeploy.
+## Unconfirmed addresses are purged after 7 days
+A raw ACCM email that is never confirmed is deleted once no unexpired link remains and the request was last submitted
+more than 7 days ago (`private.purge_stale_accm_emails()`). The request keeps its hash and goes back to `pending`, so it
+is checked on the Academy email only, and the user can update the request to enter an ACCM email again. The purge runs on
+every submit and token issue, in the daily cron (`/api/cron/members-cleanup` → `public.purge_member_gate_logs`), and in
+the monthly refresh.
+
+## Rollback (reverse order, each step with Jarvis's go)
+1. Flip `ACCM_CONFIRM_MAIL_LIVE` back to `false` and deploy (the ACCM field disappears, no more mail, `/privacy` back
+   to v1.4).
+2. Turn the DB switch off: `update private.app_settings set value = 'false' where key = 'accm_confirm_mail_live';`
+   (the DB refuses ACCM emails, issues no tokens, and confirm answers `invalid`).
+3. Scrub the raw addresses that are still stored (same as the migration's one-time cleanup; returns nothing, keeps
+   no plain email):
+
+   ```sql
+   begin;
+   update public.access_requests set status = 'pending', accm_email_hash = null, accm_email_confirmed_at = null, updated_at = now()
+    where status = 'awaiting_email_confirm';
+   delete from private.access_request_accm where accm_email is not null;
+   commit;
+   ```
+4. Re-run `supabase/verification/20261111130000_accm_confirm_mailer_verify.sql`: every row must be true again,
+   including both "N3 guard holds now" rows and "Q6 switch seeded with its default 'false'".
 
 No Supabase Auth URL, redirect or CORS settings are needed. The link is a plain site page, and the mail doesn't go
 through Supabase Auth.

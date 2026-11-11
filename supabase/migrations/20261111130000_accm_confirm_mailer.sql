@@ -1,7 +1,10 @@
 -- GFX Trading System: different-ACCM-email confirmation, hardening for the Gmail SMTP mailer (stacked on
 -- 20261111120000_access_requests.sql, PR #67). NOT APPLIED. Written to run on a database where 20261111120000 is
 -- ALREADY applied (PR #67 deploys first), with QA PASS and Jarvis's go. Re-runnable. 20261111120000 is not edited;
--- the four functions below are redefined in full (create or replace, same signatures, so no caller breaks).
+-- the four access-request functions below (plus purge_member_gate_logs from 20261102130000) are redefined in full
+-- (create or replace, same signatures, so no caller breaks; purge_member_gate_logs only gains one jsonb key).
+-- Prod recorded 20261111120000 as version 20261111071025 (applied via the Supabase MCP tool). Apply this file after
+-- 20261111071025 / 20261111120000; its recorded version is assigned at apply time.
 --
 -- What this changes (QA notes on PR #67 a1f394a)
 --  * N3/N6 DB-side switch: private.app_settings key 'accm_confirm_mail_live' (default 'false'). While it is not
@@ -16,6 +19,11 @@
 --    'invalid' and the token is NOT consumed. The page confirms only on a POST (button), never on the GET render.
 --  * N2: the monthly refresh also checks the Academy email of requests that are still 'awaiting_email_confirm'.
 --    An unconfirmed ACCM address is still never checked or linked. On an Academy match the raw ACCM address is deleted.
+--  * Q2: a raw ACCM email that is never confirmed is purged: once no unexpired token remains and the request was last
+--    submitted more than 7 days ago, the private row is deleted (the hash stays with the request) and the request goes
+--    back to 'pending' (Academy email only; an unconfirmed hash never counts). Runs per call in submit_access_request
+--    and issue_accm_confirm_token, in the daily cron purge (public.purge_member_gate_logs) and in the monthly refresh.
+--  * Q5: the ACCM email must be a plain addr-spec (no display name, <>, quotes, commas, spaces, CR/LF).
 --  * N7 (unchanged, info): p_ip is passed by the server action, but a direct RPC caller controls it, so the
 --    10-per-IP limit is advisory. The 3-per-user limit holds.
 
@@ -28,6 +36,51 @@ returns boolean language sql stable security definer set search_path = private, 
   select coalesce((select s.value = 'true' from private.app_settings s where s.key = 'accm_confirm_mail_live'), false);
 $$;
 revoke all on function private.accm_confirm_mail_live() from public, anon, authenticated;
+
+-- Q2: purge raw ACCM emails that were never confirmed. A row goes when no unexpired token remains AND the request was
+-- last submitted (updated_at) more than 7 days ago. The request keeps its accm_email_hash (privacy: "the hash stays
+-- with the request") and leaves 'awaiting_email_confirm' for 'pending', so it is checked on the Academy email only.
+-- The user can update the request to enter an ACCM email again. Returns the number of raw addresses deleted.
+create or replace function private.purge_stale_accm_emails()
+returns int language plpgsql security definer set search_path = private, public, pg_temp as $$
+declare
+  v int;
+begin
+  with stale as (
+    select s.request_id from private.access_request_accm s join public.access_requests r on r.id = s.request_id
+     where s.accm_email is not null
+       and (s.token_expires_at is null or s.token_expires_at <= now())
+       and r.updated_at < now() - interval '7 days'
+       for update of s, r
+  ), back as (
+    update public.access_requests r set status = 'pending', updated_at = now()
+      from stale where r.id = stale.request_id and r.status = 'awaiting_email_confirm'
+    returning r.id
+  ), gone as (
+    delete from private.access_request_accm s using stale where s.request_id = stale.request_id returning 1
+  )
+  select count(*) into v from gone;
+  return v;
+end;
+$$;
+revoke all on function private.purge_stale_accm_emails() from public, anon, authenticated;
+
+-- Daily cron purge (/api/cron/members-cleanup, service role): same as 20261102130000, plus the Q2 purge, so the
+-- 7-day bound holds even when nobody submits. Same return shape plus one count key.
+create or replace function public.purge_member_gate_logs()
+returns jsonb language plpgsql security definer set search_path = private, pg_temp as $$
+declare v int; r int; a int;
+begin
+  with d as (delete from private.member_code_requests where requested_at < now() - interval '1 day' returning 1)
+    select count(*) into v from d;
+  with d as (delete from private.member_code_rejects where rejected_at < now() - interval '1 day' returning 1)
+    select count(*) into r from d;
+  a := private.purge_stale_accm_emails();
+  return jsonb_build_object('code_requests', v, 'code_rejects', r, 'stale_accm_emails', a);
+end;
+$$;
+revoke all on function public.purge_member_gate_logs() from public, anon, authenticated;
+grant execute on function public.purge_member_gate_logs() to service_role;
 
 -- One-time cleanup (only while the switch is off): no raw ACCM email may sit in the private table.
 do $$
@@ -78,7 +131,8 @@ begin
     if not private.accm_confirm_mail_live() then
       return 'accm_email_disabled';
     end if;
-    if char_length(v_accm) > 254 or v_accm !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    -- Q5: plain addr-spec only (same rule as ACCM_EMAIL_RE in src/lib/members/access-request.ts).
+    if char_length(v_accm) > 254 or v_accm !~ '^[a-z0-9._%+-]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$' then
       return 'invalid_email';
     end if;
     if v_accm = lower(btrim(v_email)) then
@@ -94,6 +148,7 @@ begin
   end if;
   insert into private.access_request_attempts (user_id, ip_hash) values (v_uid, v_ip_hash);
   delete from private.access_request_attempts where attempted_at < now() - interval '2 days';
+  perform private.purge_stale_accm_emails();
 
   select * into v_req from public.access_requests
    where user_id = v_uid and status in ('pending', 'awaiting_email_confirm') for update;
@@ -154,6 +209,7 @@ begin
   if not private.accm_confirm_mail_live() then
     return jsonb_build_object('error', 'none');
   end if;
+  perform private.purge_stale_accm_emails();
   select r.id, s.accm_email into v_req, v_email
     from public.access_requests r join private.access_request_accm s on s.request_id = r.id
    where r.user_id = p_user_id and r.status = 'awaiting_email_confirm' and s.accm_email is not null
@@ -223,6 +279,7 @@ declare
   v_matched int := 0;
   v_pending int := 0;
 begin
+  perform private.purge_stale_accm_emails();
   for r in
     select q.id, q.user_id, q.status, q.accm_email_hash, q.accm_email_confirmed_at, q.created_at,
            (select a.role from private.member_allowlist a join auth.users u on u.id = q.user_id

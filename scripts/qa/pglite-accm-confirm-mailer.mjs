@@ -50,10 +50,21 @@ await expectVal('PR67 only: direct RPC with ACCM email -> awaiting (the N3 hole)
 check((await sval(`select count(*)::int from private.access_request_accm where accm_email is not null`)) === 1, 'PR67 only: raw ACCM email stored');
 
 const VERIFY = fs.readFileSync(R + 'verification/20261111130000_accm_confirm_mailer_verify.sql', 'utf8');
-{ const v = (await db.query(VERIFY)).rows; check(v.length >= 14 && v.some((r) => !r.ok), 'verify BEFORE: has false rows', JSON.stringify(v.filter((r) => r.ok).map((r) => r.check))); }
+{
+  // Q6: the verify header names exactly which rows are already true before applying (here the N3 hole row exists,
+  // so the two 'N3 guard holds now' rows are false, as the header says).
+  const v = (await db.query(VERIFY)).rows;
+  const pre = v.filter((r) => r.ok).map((r) => r.check.split(/[:(]| \.\.\./)[0].trim());
+  const want = ['Q6 private.app_settings exists', 'Q6 anon/authenticated', 'only issue_accm_confirm_token creates a raw token',
+    'N5 raw ACCM email is cleared on confirm', 'N5 member_hashes', 'refresh matcher still not executable by anon/authenticated',
+    'redefined public RPCs keep SECURITY DEFINER + search_path=public, pg_temp', 'Q2 holds now'];
+  check(JSON.stringify(pre) === JSON.stringify(want), `verify BEFORE: exactly the ${want.length} rows the header lists are true`, JSON.stringify(pre));
+  const hdr = VERIFY.slice(0, VERIFY.indexOf('with f as'));
+  check(want.every((w) => hdr.includes(`'${w.split(' ').slice(0, 3).join(' ')}`)), 'verify header names every pre-apply true row');
+}
 const sql = fs.readFileSync(R + 'migrations/20261111130000_accm_confirm_mailer.sql', 'utf8');
 try { await x(sql); await x(sql); check(true, 'migration applies twice on top of applied PR67 (re-runnable)'); } catch (e) { check(false, 'migration applies twice', e.message); process.exit(1); }
-{ const v = (await db.query(VERIFY)).rows; check(v.length >= 14 && v.every((r) => r.ok === true), `verify AFTER: all ${v.length} rows true`, JSON.stringify(v.filter((r) => !r.ok))); }
+{ const v = (await db.query(VERIFY)).rows; check(v.length === 20 && v.every((r) => r.ok === true), `verify AFTER: all ${v.length} rows true`, JSON.stringify(v.filter((r) => !r.ok))); }
 for (const f of ['20261111120000_access_requests_verify.sql', '20261111000000_academy_login_membership_verify.sql']) {
   const v = (await db.query(fs.readFileSync(R + 'verification/' + f, 'utf8'))).rows;
   const bad = v.filter((r) => !r.ok).map((r) => r.check);
@@ -117,6 +128,60 @@ check((await sval(`select count(*)::int from private.member_hashes('66666666-666
 // confirmed ACCM email still links at refresh
 await x(`select private.import_allowlist('[{"email":"listed@example.test","role":"client"},{"email":"awaiting@example.test","role":"ib"},{"email":"accm-link@example.test","role":"client"}]')`);
 await expectVal('confirmed ACCM email matched at refresh -> active', 'authenticated', U.link, `select public.my_membership()`, 'active');
+
+// ---- Q5: plain addr-spec only (switch on) ----
+const Q = { five: 'aaaa0005-0000-0000-0000-000000000005', p1: 'aaaa0001-0000-0000-0000-000000000001', p2: 'aaaa0002-0000-0000-0000-000000000002',
+            p3: 'aaaa0003-0000-0000-0000-000000000003', p4: 'aaaa0004-0000-0000-0000-000000000004' };
+await x(`insert into auth.users values ('${Q.five}','five@example.test',now()), ('${Q.p1}','p1@example.test',now()), ('${Q.p2}','p2@example.test',now()),
+  ('${Q.p3}','p3@example.test',now()), ('${Q.p4}','p4@example.test',now())`);
+for (const id of Object.values(Q)) await as('authenticated', id, consent);
+const subRaw = (accm) => `select public.submit_access_request(${accm}, null, 'request-v1', '203.0.113.9')`;
+for (const [label, lit] of [['display name', `'Name<a@example.test>'`], ['angle brackets', `'<a@example.test>'`], ['double quotes', `'"a"@example.test'`],
+                            ['single quote', `'a''b@example.test'`], ['comma', `'a,b@example.test'`], ['space', `'a b@example.test'`],
+                            ['CR/LF', `E'a@example.test\\r\\nbcc@example.test'`], ['semicolon', `'a;b@example.test'`], ['no dot in domain', `'a@localhost'`]]) {
+  await x(`delete from private.access_request_attempts`);
+  await expectVal(`Q5 SQL rejects ${label}`, 'authenticated', Q.five, subRaw(lit), 'invalid_email');
+}
+check((await sval(`select count(*)::int from private.access_request_accm s join public.access_requests r on r.id=s.request_id where r.user_id='${Q.five}'`)) === 0, 'Q5: nothing stored for rejected addresses');
+await expectVal('Q5 SQL accepts a plain addr-spec (dots, plus, subdomain)', 'authenticated', Q.five, subRaw(`'First.Last+tag@mail.example-co.test'`), 'awaiting_email_confirm');
+
+// ---- Q2: purge a raw ACCM email that is never confirmed ----
+const rawCount = async (uid) => sval(`select count(*)::int from private.access_request_accm s join public.access_requests r on r.id=s.request_id where r.user_id='${uid}' and s.accm_email is not null`);
+const age = async (uid, days, tokenExpiredDays = null) => {
+  await x(`update public.access_requests set updated_at = now() - interval '${days} days' where user_id='${uid}' and status='awaiting_email_confirm'`);
+  if (tokenExpiredDays !== null) await x(`update private.access_request_accm s set token_expires_at = now() + interval '${tokenExpiredDays} days' from public.access_requests r where r.id=s.request_id and r.user_id='${uid}'`);
+};
+for (const id of [Q.p1, Q.p2, Q.p3, Q.p4]) { await x(`delete from private.access_request_attempts`); await as('authenticated', id, sub(`${id.slice(0, 8)}-accm@example.test`)); }
+await x(`delete from private.accm_confirm_sends`);
+await issueJ(Q.p1); await issueJ(Q.p2);
+await age(Q.p1, 8, -1);    // > 7 days, token expired      -> purge
+await age(Q.p2, 8, 1);     // > 7 days, token still valid  -> keep
+await age(Q.p3, 6);        // < 7 days, never had a token  -> keep
+await age(Q.p4, 8);        // > 7 days, never had a token  -> purge (cron path below)
+const hashBefore = await sval(`select accm_email_hash from public.access_requests where user_id='${Q.p1}'`);
+await x(`delete from private.access_request_attempts`);
+await as('authenticated', U.b, sub(null)); // any submit runs the per-call purge
+check((await rawCount(Q.p1)) === 0, 'Q2 per-call purge (submit): >7 days + no unexpired token -> raw ACCM email deleted');
+check((await sval(`select accm_email_hash from public.access_requests where user_id='${Q.p1}'`)) === hashBefore && hashBefore !== null, 'Q2: the hash stays with the request');
+await expectVal('Q2: request leaves awaiting_email_confirm -> pending (Academy email only)', 'authenticated', Q.p1, `select public.my_join_state()->'request'->>'status'`, 'pending');
+await expectVal('Q2: unconfirmed hash never counts', 'authenticated', Q.p1, `select (public.my_join_state()->'request'->>'accm_confirmed')::boolean`, false);
+check((await rawCount(Q.p2)) === 1, 'Q2: kept while an unexpired token remains');
+check((await rawCount(Q.p3)) === 1, 'Q2: kept while younger than 7 days');
+check((await rawCount(Q.p4)) === 0, 'Q2: no-token row older than 7 days also purged by the same call');
+// cron path + refresh path
+await age(Q.p2, 8, -1);
+await x('set role service_role');
+const cron = (await db.query(`select public.purge_member_gate_logs() as j`)).rows[0].j;
+await x('reset role');
+check(cron.stale_accm_emails === 1 && 'code_requests' in cron && (await rawCount(Q.p2)) === 0, 'Q2 daily cron purge (purge_member_gate_logs, service role) deletes it and reports a count only', JSON.stringify(cron));
+await expectErr('Q2: authenticated cannot run the purge', 'authenticated', Q.p3, `select private.purge_stale_accm_emails()`, /permission denied/);
+await expectErr('Q2: authenticated cannot run the cron purge', 'authenticated', Q.p3, `select public.purge_member_gate_logs()`, /permission denied/);
+await age(Q.p3, 8);
+await x(`select private.import_allowlist('[{"email":"listed@example.test","role":"client"}]')`);
+check((await rawCount(Q.p3)) === 0, 'Q2 refresh path (import_allowlist -> match_access_requests) purges too');
+await expectVal('Q2: after purge the user can update the request with an ACCM email again -> awaiting', 'authenticated', Q.p1,
+  (await x(`delete from private.access_request_attempts`), sub(`${Q.p1.slice(0, 8)}-accm@example.test`)), 'awaiting_email_confirm');
+check((await rawCount(Q.p1)) === 1, 'Q2: re-entered address stored again for a fresh confirmation');
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

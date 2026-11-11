@@ -26,7 +26,7 @@ export const REQUEST_COPY = {
   submittedAwaiting:
     "Halos tapos na. I-click ang confirmation link na pinadala namin sa ACCM email mo (check din ang Spam o Promotions). Iche-check lang namin ang request pag na-confirm na ito.",
   confirmedLanding: "Na-confirm na ang ACCM email mo. Iche-check namin ito sa susunod na monthly update.",
-  // [Builder] confirm step (QA N1: POST button + signed-in requester). Pending GFX Design review.
+  // Confirm step (QA N1: POST button + signed-in requester). GFX Design approved 11 Nov.
   confirmPrompt: "Isang click na lang: pindutin ang button para i-confirm ang ACCM email sa request mo.",
   confirmButton: "I-confirm ang ACCM email",
   confirmLoginBody: "Mag-log in muna gamit ang Academy account na nag-request, tapos babalik ka rito para i-confirm.",

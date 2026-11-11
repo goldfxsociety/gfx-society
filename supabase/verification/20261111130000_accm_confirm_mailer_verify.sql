@@ -1,9 +1,19 @@
 -- Read-only. One result set: (check, ok). No emails, tokens or secrets are returned; the only row-level reads are
--- boolean existence checks. BEFORE applying 20261111130000_accm_confirm_mailer.sql: the new rows are false.
--- AFTER applying: every row must be true. Also re-run 20261111120000_access_requests_verify.sql and
--- 20261111000000_academy_login_membership_verify.sql (both must stay all true).
--- At go-live (switch set to 'true' with Jarvis's go) the row 'mail switch is off' becomes false by design; every
--- other row must stay true.
+-- boolean existence checks.
+-- AFTER applying 20261111130000_accm_confirm_mailer.sql: every row must be true. Also re-run
+-- 20261111120000_access_requests_verify.sql (exactly one row turns false by design: "confirm_accm_email: anon +
+-- authenticated", removed by QA N1) and 20261111000000_academy_login_membership_verify.sql (all true).
+-- BEFORE applying (on a DB where 20261111120000 is applied), exactly these 8 rows are ALREADY true, because older
+-- migrations already guarantee what they check:
+--   'Q6 private.app_settings exists ...', 'Q6 anon/authenticated: no USAGE on schema private ...',
+--   'only issue_accm_confirm_token creates a raw token ...', 'N5 raw ACCM email is cleared on confirm ...',
+--   'N5 member_hashes: ...', 'refresh matcher still not executable ...', 'redefined public RPCs keep SECURITY DEFINER ...',
+--   'Q2 holds now: ...' (true unless a raw ACCM row is already stale).
+-- The two 'N3 guard holds now' rows are also true before applying UNLESS someone stored an ACCM email through a direct
+-- RPC call (the QA N3 hole); this migration's cleanup removes such rows. Every other row is false before applying.
+-- scripts/qa/pglite-accm-confirm-mailer.mjs asserts this exact pre-apply set.
+-- At go-live (switch set to 'true' with Jarvis's go) the row "Q6 switch seeded with its default 'false'" becomes false
+-- by design; every other row must stay true.
 with f as (
   select n.nspname || '.' || p.proname as name, p.prosrc, p.prosecdef, coalesce(array_to_string(p.proconfig, ','), '') as cfg
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -13,12 +23,28 @@ with f as (
     coalesce(to_regprocedure('public.issue_accm_confirm_token(uuid)'), 0)::oid,
     coalesce(to_regprocedure('public.confirm_accm_email(text)'), 0)::oid,
     coalesce(to_regprocedure('private.match_access_requests()'), 0)::oid,
-    coalesce(to_regprocedure('private.member_hashes(uuid)'), 0)::oid)
+    coalesce(to_regprocedure('private.member_hashes(uuid)'), 0)::oid,
+    coalesce(to_regprocedure('private.purge_stale_accm_emails()'), 0)::oid,
+    coalesce(to_regprocedure('public.purge_member_gate_logs()'), 0)::oid)
 )
-select 'N3 switch row exists in private.app_settings' as check,
-       exists (select 1 from private.app_settings where key = 'accm_confirm_mail_live') as ok
+select 'Q6 private.app_settings exists (RLS-free key/value, no grants)' as check,
+       to_regclass('private.app_settings') is not null as ok
 union all
-select 'mail switch is off (expected until go-live)', not coalesce((select value = 'true' from private.app_settings where key = 'accm_confirm_mail_live'), false)
+select 'N3 switch row exists in private.app_settings',
+       exists (select 1 from private.app_settings where key = 'accm_confirm_mail_live')
+union all
+select 'Q6 switch seeded with its default ''false'' (false again only after go-live sets ''true'')',
+       coalesce((select value = 'false' from private.app_settings where key = 'accm_confirm_mail_live'), false)
+union all
+select 'Q6 anon/authenticated: no USAGE on schema private, no privilege on any private table, sequence or function',
+       not has_schema_privilege('anon', 'private', 'usage') and not has_schema_privilege('authenticated', 'private', 'usage')
+       and not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                        where n.nspname = 'private' and c.relkind in ('r', 'p', 'v', 'm', 'S')
+                          and (has_table_privilege('anon', c.oid, 'select,insert,update,delete')
+                               or has_table_privilege('authenticated', c.oid, 'select,insert,update,delete')))
+       and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                        where n.nspname = 'private'
+                          and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')))
 union all
 select 'private.accm_confirm_mail_live(): SECURITY DEFINER, pinned search_path, not executable by anon/authenticated',
        (select count(*) = 1 and bool_and(prosecdef and cfg = 'search_path=private, public, pg_temp') from f where name = 'private.accm_confirm_mail_live')
@@ -71,4 +97,26 @@ select 'refresh matcher still not executable by anon/authenticated',
 union all
 select 'redefined public RPCs keep SECURITY DEFINER + search_path=public, pg_temp',
        (select count(*) = 3 and bool_and(prosecdef and cfg = 'search_path=public, pg_temp') from f
-         where name in ('public.submit_access_request', 'public.issue_accm_confirm_token', 'public.confirm_accm_email'));
+         where name in ('public.submit_access_request', 'public.issue_accm_confirm_token', 'public.confirm_accm_email'))
+union all
+select 'Q2 purge_stale_accm_emails: SECURITY DEFINER, pinned search_path, private only, 7 days + no unexpired token, keeps the hash',
+       (select count(*) = 1 and bool_and(prosecdef and cfg = 'search_path=private, public, pg_temp'
+                                         and prosrc like '%7 days%' and prosrc like '%token_expires_at <= now()%'
+                                         and prosrc like '%status = ''pending''%' and prosrc not like '%accm_email_hash = null%')
+          from f where name = 'private.purge_stale_accm_emails')
+       and not has_function_privilege('anon', 'private.purge_stale_accm_emails()', 'execute')
+       and not has_function_privilege('authenticated', 'private.purge_stale_accm_emails()', 'execute')
+union all
+select 'Q2 purge runs per call (submit + issue), in the daily cron purge and in the monthly refresh',
+       (select count(*) = 4 and bool_and(prosrc like '%private.purge_stale_accm_emails()%') from f
+         where name in ('public.submit_access_request', 'public.issue_accm_confirm_token', 'public.purge_member_gate_logs', 'private.match_access_requests'))
+       and has_function_privilege('service_role', 'public.purge_member_gate_logs()', 'execute')
+       and not has_function_privilege('authenticated', 'public.purge_member_gate_logs()', 'execute')
+union all
+select 'Q2 holds now: no raw ACCM email older than 7 days without an unexpired token',
+       not exists (select 1 from private.access_request_accm s join public.access_requests r on r.id = s.request_id
+                    where s.accm_email is not null and (s.token_expires_at is null or s.token_expires_at <= now())
+                      and r.updated_at < now() - interval '7 days')
+union all
+select 'Q5 submit accepts only a plain addr-spec ACCM email',
+       (select coalesce(bool_and(prosrc like '%^[a-z0-9._\%+-]+@[a-z0-9]%' escape '\'), false) from f where name = 'public.submit_access_request');

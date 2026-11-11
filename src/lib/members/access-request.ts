@@ -12,7 +12,8 @@
  * When true: the field shows, the request action mails the link (Gmail SMTP, src/lib/members/accm-confirm-send.ts),
  * and /privacy shows Privacy v1.5 (privacy-notice-v1.5.md, the two ACCM-email passages restored with a change note).
  *
- * Go-live needs ALL of these together (Jarvis's go): this constant set to true; the DB switch
+ * Go-live needs ALL of these (Jarvis's go; order and rollback in docs/accm-confirm-mailer.md: DB switch on BEFORE
+ * this constant; rollback turns this constant off first): this constant set to true; the DB switch
  * private.app_settings 'accm_confirm_mail_live' = 'true' (migration 20261111130000; while it is off the DB refuses
  * ACCM emails and issues no tokens); GFX_SMTP_USER / GFX_SMTP_APP_PASSWORD / GFX_SMTP_FROM set on Vercel; a hosted
  * check that SUPABASE_SERVICE_ROLE_KEY works for issue_accm_confirm_token; and the v1.5 "Last updated" date set.
@@ -44,7 +45,13 @@ export type RequestDeps = {
   sendConfirm?: () => Promise<boolean>;
 };
 
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+/**
+ * ACCM email: plain addr-spec only (QA Q5). No display name, no <>, quotes, commas, spaces, CR/LF or other
+ * specials, so the hashed string and the delivered mailbox are always the same address. Same rule in SQL
+ * (public.submit_access_request, migration 20261111130000). Max 254 characters.
+ */
+export const ACCM_EMAIL_RE = /^[a-z0-9._%+-]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/i;
+const EMAIL_RE = ACCM_EMAIL_RE;
 const URLISH = [/\S*(?:\/\/|www\.)\S*/gi, /\S+\.(?:com|net|org|io|ph|me|co|info|xyz|link|ly|gg|app|dev|site|online|biz|to|cc|tv)\b\S*/gi];
 
 /** IB / sub-IB name hint: no links, no control characters, max 60 characters (the DB does the same). */

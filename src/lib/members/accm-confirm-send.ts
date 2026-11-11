@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { SITE_URL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ACCM_CONFIRM_MAIL_LIVE } from "./access-request";
-import { GMAIL_SMTP, readMailConfig, sendAccmConfirm, type SendResult } from "./accm-confirm-mail";
+import { GMAIL_SMTP, SMTP_TIMEOUTS, readMailConfig, sendAccmConfirm, type SendResult } from "./accm-confirm-mail";
 
 /**
  * Server-only wiring for the ACCM confirmation mail. Called from the /system/join request server action with the
@@ -33,7 +33,7 @@ export async function sendAccmConfirmForUser(userId: string): Promise<SendResult
       return (data ?? null) as { email?: unknown; token?: unknown; error?: unknown } | null;
     },
     send: async (msg) => {
-      const transport = nodemailer.createTransport({ ...GMAIL_SMTP, auth: { user: config!.user, pass: config!.pass } });
+      const transport = nodemailer.createTransport({ ...GMAIL_SMTP, ...SMTP_TIMEOUTS, auth: { user: config!.user, pass: config!.pass } });
       await transport.sendMail(msg);
     },
   });

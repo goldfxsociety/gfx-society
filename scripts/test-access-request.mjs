@@ -71,7 +71,10 @@ await t("mail not live: ACCM email ignored (never sent to the RPC), IB name clea
   assert.deepEqual(m.log[1], ["rpc", null, "Team Ana"]);
 });
 await t("mail live: invalid / same ACCM email caught before the RPC", async () => {
-  for (const [v, want] of [["nope", "invalid_email"], ["a@b", "invalid_email"], ["x".repeat(250) + "@a.test", "invalid_email"], [" ME@example.test ", "same_email"]]) {
+  for (const [v, want] of [["nope", "invalid_email"], ["a@b", "invalid_email"], ["x".repeat(250) + "@a.test", "invalid_email"], [" ME@example.test ", "same_email"],
+                           // Q5: plain addr-spec only (no display names, <>, quotes, commas, spaces, CR/LF)
+                           ["Ana <a@example.test>", "invalid_email"], ["<a@example.test>", "invalid_email"], ['"a"@example.test', "invalid_email"],
+                           ["a,b@example.test", "invalid_email"], ["a b@example.test", "invalid_email"], ["a@example.test\r\nBcc: b@example.test", "invalid_email"]]) {
     const m = mk(); assert.equal(await AR.submitRequest(m.deps, IN({ accmEmail: v }), ME, true), want, v); assert.equal(m.log.length, 1);
   }
 });

@@ -21,6 +21,10 @@ const SCN = {
   consented: { confirmed: true, consent: true, request: null },
   waiting: { confirmed: true, consent: true, request: { status: "pending", created_at: "2026-11-10T17:00:00Z", ib_name: "Team Ana" } },
   unconfirmed: { confirmed: false, consent: false, request: null },
+  // Different ACCM email still waiting for its confirmation click.
+  awaiting: { confirmed: true, consent: true, request: { status: "awaiting_email_confirm", created_at: "2026-11-10T17:00:00Z", has_accm_email: true, accm_confirmed: false, ib_name: null } },
+  // QA Q2: same request after the 7-day purge (raw email gone, hash kept, back to pending = Academy email only).
+  purged: { confirmed: true, consent: true, request: { status: "pending", created_at: "2026-11-02T17:00:00Z", has_accm_email: true, accm_confirmed: false, ib_name: null } },
 };
 const rpcLog = [];
 const mock = http.createServer((req, res) => {
@@ -204,6 +208,31 @@ try {
   await clickText(p, "button", "I-update ang request");
   await p.waitForSelector("#access-request-form");
   check((await p.$eval("#ar-ib", (i) => i.value)) === "Team Ana", "update: same request prefilled");
+  await p.close();
+
+  // ---- page titles: the layout template adds the site name once ----
+  for (const [path, want] of [["/privacy", "Privacy Notice | GFX Society"], ["/terms", "Terms of Use | GFX Society"], ["/risk", "Risk Disclaimer | GFX Society"], ["/disclosure", "IB Disclosure | GFX Society"]]) {
+    p = await open(path, null);
+    const ti = await p.title();
+    check(ti === want, `${path}: title has the site name once`, ti);
+    await p.close();
+  }
+
+  // ---- QA Q2: awaiting vs. after the 7-day purge of an unconfirmed ACCM email ----
+  p = await open("/system/join", "awaiting");
+  tx = await text(p);
+  check(tx.includes("Halos tapos na. I-click ang confirmation link") && !tx.includes("May active request ka na"), "awaiting: pending-confirmation copy", tx.slice(0, 300));
+  await p.close();
+  p = await open("/system/join", "purged");
+  await layout(p, "join after Q2 purge", { gold: 0 });
+  tx = await text(p);
+  check(tx.includes(`May active request ka na, submitted Nov 3, 2026. Iche-check ito sa ${want}, at sa bawat monthly update hanggang ma-match.`) && !tx.includes("Halos tapos na"),
+    "Q2 purged: normal active-request copy, no awaiting copy", tx.slice(0, 300));
+  check(tx.includes("I-update ang request") && !tx.includes("Verify membership"), "Q2 purged: update link, no verify / gold");
+  await clickText(p, "button", "I-update ang request");
+  await p.waitForSelector("#access-request-form");
+  if (FLAG_ON) check((await p.$eval('input[name="accm_email"]', (i) => i.value).catch(() => null)) === "", "Q2 purged + flag on: update form lets them re-enter the ACCM email (empty field)");
+  else check(!(await p.$('input[name="accm_email"]')), "Q2 purged + flag off: update form, no ACCM field");
   await p.close();
 
   // ---- confirm landing (QA N1: GET never confirms; POST button for the signed-in requester; token in #fragment) ----
