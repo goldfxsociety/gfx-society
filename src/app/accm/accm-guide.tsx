@@ -108,7 +108,7 @@ export function AccmGuide({ c }: { c: AccmCopy }) {
       <section aria-labelledby="accm-s4" className="flex flex-col gap-1">
         <h2 id="accm-s4" className="text-lg font-semibold">{c.s4}</h2>
         {c.faq.map((f) => (
-          <details key={f.q} className="rounded-md border border-border px-3">
+          <details key={f.q} className="rounded-lg border border-border px-4">
             <summary className="flex min-h-12 cursor-pointer items-center text-sm font-medium">{f.q}</summary>
             <p className="pb-3 text-sm text-muted-foreground">
               {f.a}
@@ -122,6 +122,11 @@ export function AccmGuide({ c }: { c: AccmCopy }) {
           </details>
         ))}
       </section>
+
+      {/* Design pr70-review P2 note: a muted /broker link from /accm (not a gold button, not in the bottom nav). */}
+      <Link href={c.brokerHref} className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline" data-testid="broker-link">
+        {c.brokerLink}
+      </Link>
     </div>
   );
 }

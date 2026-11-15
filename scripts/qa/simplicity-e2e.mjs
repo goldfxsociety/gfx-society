@@ -96,7 +96,7 @@ async function measure(page) {
       if (!vis(el) || el.type === "hidden") continue;
       const target = el.type === "checkbox" ? el.closest("label") ?? el : el;
       const h = target.getBoundingClientRect().height;
-      if (h < 43.5) small.push(`${el.tagName}:${(el.textContent || el.type || "").trim().slice(0, 30)}:${Math.round(h)}`);
+      if (h < 43.5 && !(el.tagName === "A" && el.closest("p, li") && el.closest("p, li").textContent.trim() !== el.textContent.trim() && document.body.dataset.inlineOk)) small.push(`${el.tagName}:${(el.textContent || el.type || "").trim().slice(0, 30)}:${Math.round(h)}`);
     }
     // Text inside closed <details> (not visible until opened), counted separately from visible text.
     const hidden = [...main.querySelectorAll("details:not([open])")].map((d) => [...d.childNodes].filter((n) => n.nodeName !== "SUMMARY").map((n) => n.textContent).join(" ")).join(" ");
@@ -120,13 +120,21 @@ const PAGES = [
   { slug: "gold-starter", path: "/academy/gold-starter", gold: "Simulan ang Lesson 1", ib: IB, noShared: true },
   { slug: "resources", path: "/resources", gold: null, risk: RISK_LINE, ib: IB },
   { slug: "go", path: "/go/ig_bio", gold: "Start learning", risk: RISK_LINE, ib: IB, noJs: true, outline: JOIN },
+  // Follow-up PR (P2.6): compact /system, /courses, /account.
+  { slug: "system", path: "/system", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
+  { slug: "courses", path: "/courses", gold: null, risk: RISK_LINE },
+  { slug: "courses-member", path: "/courses", scn: "member", gold: null, risk: RISK_LINE },
+  { slug: "account", inlineOk: true, path: "/account", gold: null, risk: RISK_LINE },
+  { slug: "account-member", inlineOk: true, path: "/account", scn: "member", gold: null, risk: RISK_LINE },
+  { slug: "account-fresh", inlineOk: true, path: "/account", scn: "fresh", gold: null, risk: RISK_LINE },
 ];
 
 try {
   for (const width of [360, 414]) {
     for (const pg of PAGES) {
-      const L = `${width} ${pg.path}`;
+      const L = `${width} ${pg.path}${pg.scn ? ` (${pg.scn})` : ""}`;
       const p = await open(pg.path, width, pg.scn, { noJs: pg.noJs });
+      if (pg.inlineOk) await p.evaluate(() => { document.body.dataset.inlineOk = "1"; }); // WCAG 2.5.8 inline-link exception
       const r = await measure(p);
       check(r.sw <= width, `${L}: no horizontal scroll`, `scrollWidth=${r.sw}`);
       if (pg.gold) check(r.gold.length === 1 && r.gold[0].startsWith(pg.gold), `${L}: exactly one gold, "${pg.gold}"`, JSON.stringify(r.gold));
@@ -222,6 +230,78 @@ try {
       console.log(`INFO audit ${path}: visible risk=${rc} edu=${ec}; hidden risk=${cnt(r.hidden, RISK_RE)} edu=${cnt(r.hidden, EDU_RE)}`);
     }
     console.log(`INFO audit: ${audited} of ${routes.length} routes show gold Join or an IB line`);
+  }
+
+  // ---- Follow-up PR checks ----
+  const MEMBERS_ONLY = "Members-only ang Trading System.";
+  for (const width of [360, 414]) {
+    // P2.6 /system: rows in a closed expander, Join first.
+    let p = await open("/system", width);
+    let x = await p.evaluate(() => { const d = document.querySelector('[data-testid="system-rows"]'); return { closed: d && !d.open, summary: d?.querySelector("summary")?.textContent.trim(), h2: document.querySelectorAll("main h2").length }; });
+    check(x.closed && x.summary?.startsWith("Ano ang kasama?"), `${width} /system: 3 rows inside closed "Ano ang kasama?"`, JSON.stringify(x));
+    await p.close();
+    // P2.6 /courses: notes under closed "Learn more"; no who-it's-for/included list on the cards.
+    p = await open("/courses", width, "member");
+    x = await p.evaluate(() => { const d = document.querySelector('[data-testid="courses-learn-more"]'); return { closed: d && !d.open, text: document.querySelector("main").innerText }; });
+    check(x.closed && !x.text.includes("Para sa dating traders na gustong bumalik nang may disiplina."), `${width} /courses: Learn more closed; cards compact`, JSON.stringify({ closed: x.closed }));
+    await p.close();
+    // P2.6 /account (logged in): delete copy + form only after opening "Delete my account".
+    for (const scn of ["member", "fresh"]) {
+      p = await open("/account", width, scn);
+      x = await p.evaluate(() => { const d = document.querySelector('[data-testid="delete-account"]'); return { closed: d && !d.open, visible: document.querySelector("main").innerText.includes("Hindi na ito maibabalik") }; });
+      check(x.closed && !x.visible, `${width} /account (${scn}): Delete copy inside closed details`, JSON.stringify(x));
+      await p.evaluate(() => { document.querySelector('[data-testid="delete-account"]').open = true; });
+      const vis = await p.evaluate(() => document.querySelector("main").innerText.includes("Hindi na ito maibabalik"));
+      check(vis, `${width} /account (${scn}): opening shows the unchanged delete copy`);
+      if (OUT && scn === "member") await p.screenshot({ path: `${OUT}/${width}-account-member-delete-open.png`, fullPage: true });
+      await p.close();
+    }
+    // /broker link: muted, not gold, right href, 44px.
+    for (const [path, href] of [["/resources", "/broker"], ["/accm", "/broker"], ["/en/accm", "/en/broker"]]) {
+      p = await open(path, width);
+      x = await p.$eval('[data-testid="broker-link"]', (a) => { const b = a.getBoundingClientRect(); const cs = getComputedStyle(a); return { href: a.getAttribute("href"), text: a.textContent.trim(), bg: cs.backgroundColor, color: cs.color, h: b.height, w: b.width }; }).catch(() => null);
+      check(x && x.href === href && x.text === "Choosing a broker →" && x.bg !== "rgb(212, 160, 23)" && x.color !== "rgb(212, 160, 23)" && x.h >= 43.5 && x.w > 0, `${width} ${path}: muted "Choosing a broker →" -> ${href}`, JSON.stringify(x));
+      await p.close();
+    }
+    // P3-6: members-only hint before the join click.
+    for (const path of ["/", "/start", "/community", "/academy/gold-starter"]) {
+      p = await open(path, width);
+      x = await p.evaluate((h, J) => {
+        const hint = [...document.querySelectorAll("main p")].find((e) => e.textContent.trim() === h);
+        const join = [...document.querySelectorAll("main a")].find((a) => a.textContent.trim().startsWith(J) && a.getAttribute("href") === "/system/join");
+        return { hint: Boolean(hint && hint.getBoundingClientRect().height > 0), count: document.querySelector("main").innerText.split(h).length - 1,
+          size: hint ? parseFloat(getComputedStyle(hint).fontSize) : 0, before: Boolean(hint && join && (hint.compareDocumentPosition(join) & Node.DOCUMENT_POSITION_FOLLOWING || (Math.abs(hint.getBoundingClientRect().top - join.getBoundingClientRect().bottom) <= 100 && hint.getBoundingClientRect().bottom <= window.innerHeight))) };
+      }, MEMBERS_ONLY, JOIN);
+      check(x.hint && x.count === 1 && x.size <= 12.5 && x.before, `${width} ${path}: one small "${MEMBERS_ONLY}" at the Join link (before it, or in the Home CTA group on the first screen)`, JSON.stringify(x));
+      await p.close();
+    }
+    // Gold-starter: Join the Trading System first in "Para sa later", ACCM steps second, one gold.
+    p = await open("/academy/gold-starter", width);
+    x = await p.evaluate(() => { const s = document.querySelector('[data-testid="gold-starter-next"]'); const links = [...s.querySelectorAll("a")].map((a) => [a.textContent.trim(), a.getAttribute("href"), getComputedStyle(a).backgroundColor]); return { links, discord: /discord|partner community/i.test(s.innerText) }; });
+    check(x.links[0]?.[0] === JOIN && x.links[0][1] === "/system/join" && x.links[0][2] !== "rgb(212, 160, 23)" && x.links[1]?.[0].startsWith("Tingnan ang steps") && !x.discord, `${width} /academy/gold-starter: "Para sa later" Join first, steps second, no Discord`, JSON.stringify(x));
+    if (OUT) await (await p.$('[data-testid="gold-starter-next"]')).screenshot({ path: `${OUT}/${width}-gold-starter-para-sa-later.png` });
+    await p.close();
+  }
+  // QA P3-8: next_step_click (location "go") fires on the /go Join link; no PII in props. The 1.5 s redirect timer is
+  // neutralised and the navigation cancelled so the queued Vercel Analytics call (window.vaq) can be read.
+  {
+    const p = await ctx.newPage();
+    await p.evaluateOnNewDocument(() => {
+      const st = window.setTimeout;
+      window.setTimeout = (fn, ms, ...a) => (ms === 1500 ? 0 : st(fn, ms, ...a));
+      document.addEventListener("click", (e) => { if (e.target.closest?.('a[href="/system/join"]')) e.preventDefault(); }, true);
+    });
+    await p.setViewport({ width: 360, height: 800, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await p.goto(`${BASE}/go/ig_bio?utm_source=instagram&utm_medium=bio&email=me%40example.test`, { waitUntil: "networkidle0" });
+    const a = await p.evaluateHandle((J) => [...document.querySelectorAll("main a")].find((x) => x.textContent.trim() === J), JOIN);
+    await a.asElement().click();
+    await new Promise((r) => setTimeout(r, 300));
+    const ev = await p.evaluate(() => (window.vaq ?? []).filter((q) => q[0] === "event").map((q) => q[1]));
+    const nsc = ev.filter((e) => e.name === "next_step_click");
+    check(nsc.length === 1 && nsc[0].data?.location === "go", '/go Join click: next_step_click {location: "go"} queued', JSON.stringify(ev));
+    check(nsc.length === 1 && !/@|example\.test|\d{7,}/.test(JSON.stringify(nsc[0].data)), "/go next_step_click props carry no PII", JSON.stringify(nsc[0]?.data));
+    check(p.url().includes("/go/ig_bio"), "/go: test stayed on the page (redirect neutralised)", p.url());
+    await p.close();
   }
   // /en/system/join logged in: no_match -> Having trouble? -> J4 EN caption; same actions as PH.
   for (const width of [360, 414]) {

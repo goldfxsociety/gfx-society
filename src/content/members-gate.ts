@@ -16,11 +16,16 @@ export const SYSTEM_COPY = {
     },
     { title: "Community", body: "Magtanong, mag-share ng natutunan, at matuto kasama ng ibang members." },
   ],
-  joinCta: "Join as member",
   underCta:
     "Members-only ito para sa mga registered sa ACCM sa ilalim ng IB line ng GFX. Bukas sa lahat ang free Academy lessons.",
   risk: "Max 1% risk per trade. Education lang, not financial advice.",
 } as const;
+
+/** /system "what's included" expander summary (P2.6 compact layout). */
+export const SYSTEM_ROWS_SUMMARY = "Ano ang kasama?";
+
+/** Short members-only hint before a gold Join click on Home (QA P3-6, Design "P3-6 for P2"). */
+export const MEMBERS_ONLY_HINT = "Members-only ang Trading System.";
 
 /** Consent version stored with member_status.consent_version. Bump when consent text changes. */
 export const MEMBERS_CONSENT_VERSION = "join-v2";

@@ -7,6 +7,7 @@ import { FIRST_LESSON_PATH } from "@/config/academy";
 import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { Expander } from "@/components/layout/expander";
+import { MEMBERS_ONLY_HINT } from "@/content/members-gate";
 import { IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 
 function academyBody(lessons: number | null, levels: number | null) {
@@ -108,6 +109,8 @@ export default async function Home({
             Start Lesson 1 →
           </Link>
         </div>
+        {/* QA P3-6: say members-only before the Join click (minimal on Home). */}
+        <p className="text-xs text-muted-foreground" data-testid="members-only-hint">{MEMBERS_ONLY_HINT}</p>
         <p className="text-sm text-muted-foreground">
           {user ? "Naka-save na ang progress mo sa account mo." : "No signup needed to learn."}
         </p>

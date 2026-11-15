@@ -12,7 +12,7 @@ const PH_TITLE = "Start small, then join the Trading System";
 
 type S = string;
 export type AccmCopy = {
-  lang: "fil" | "en"; path: S; joinHref: S; academyHref: S; title: S; description: S; back: S; eyebrow: S; h1: S; intro: S;
+  lang: "fil" | "en"; path: S; joinHref: S; academyHref: S; brokerHref: S; brokerLink: S; title: S; description: S; back: S; eyebrow: S; h1: S; intro: S;
   ib: S; s1: S; notReady: S; s2: S; steps: { open: S; code: S; verify: S; kyc: S; kycNote: S }; s3: S; help: S;
   discordCta: S; discordPrep: S; discordNote: S; discordSoon: S; s4: S; faq: FaqItem[];
 };
@@ -22,6 +22,8 @@ export const ACCM_COPY: AccmCopy = {
   path: "/accm",
   joinHref: "/system/join",
   academyHref: "/academy",
+  brokerHref: "/broker",
+  brokerLink: "Choosing a broker →",
   title: PH_TITLE,
   description: "Step-by-step guide: start small sa cents account, max 1% risk, laging may stop loss. Education only.",
   back: "← Back to Academy",
@@ -87,6 +89,8 @@ export const ACCM_COPY_EN: AccmCopy = {
   path: "/en/accm",
   joinHref: "/en/system/join",
   academyHref: "/academy",
+  brokerHref: "/en/broker",
+  brokerLink: "Choosing a broker →",
   title: PH_TITLE,
   description: "Step-by-step guide: start small with a cents account, max 1% risk, always with a stop loss. Education only.",
   back: "← Back to Academy",
