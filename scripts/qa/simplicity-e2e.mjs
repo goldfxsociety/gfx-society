@@ -120,6 +120,8 @@ const PAGES = [
   { slug: "gold-starter", path: "/academy/gold-starter", gold: "Simulan ang Lesson 1", ib: IB, noShared: true },
   { slug: "resources", path: "/resources", gold: null, risk: RISK_LINE, ib: IB },
   { slug: "go", path: "/go/ig_bio", gold: "Start learning", risk: RISK_LINE, ib: IB, noJs: true, outline: JOIN },
+  // Variant B (en-gold-starter-risk-fix.md §1): own risk sentence (RISK_LINE_EN) + Disclaimer carry both once.
+  { slug: "en-gold-starter", path: "/en/academy/gold-starter", gold: "Start Day 1", lang: "en", noShared: true },
   // Follow-up PR (P2.6): compact /system, /courses, /account.
   { slug: "system", path: "/system", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "courses", path: "/courses", gold: null, risk: RISK_LINE },
@@ -214,7 +216,7 @@ try {
     // and are the long-form disclosures themselves, so they are not page footers to audit.
     const LEGAL = new Set(["/privacy", "/terms", "/disclosure", "/risk"]);
     // Own risk text carries the 1% sentence + education line once (Design: /broker box; /academy/gold-starter Disclaimer).
-    const SHARED_EXEMPT = new Set(["/broker", "/en/broker", "/academy/gold-starter"]);
+    const SHARED_EXEMPT = new Set(["/broker", "/en/broker", "/academy/gold-starter", "/en/academy/gold-starter"]);
     for (const path of routes) {
       if (LEGAL.has(path)) continue;
       const p = await open(path, 360, null, { noJs: path.startsWith("/go/") });
@@ -223,6 +225,10 @@ try {
       const en = path.startsWith("/en/");
       // Design PR71: "Self-paced, Taglish." on PH pages only; /en pages may only use the EN lede.
       if (r.text.includes(LEDE_PH) || r.text.includes(LEDE_EN)) ledeSeen.push(`${path}=${r.text.includes(LEDE_PH) ? "ph" : "en"}`);
+      if (en) {
+        const DEMO_FIRST = /demo first|demo-first|start on a demo|practi[cs]e on a demo|on your demo|demo account first/i;
+        check(!DEMO_FIRST.test(r.text + " " + r.hidden), `audit 360 ${path}: no demo-first wording (visible or in closed expanders)`, (r.text + " " + r.hidden).match(/.{0,40}demo.{0,40}/i)?.[0]);
+      }
       if (en) check(!r.text.includes(LEDE_PH), `audit 360 ${path}: no PH "Self-paced, Taglish." on /en`);
       else check(!r.text.includes(LEDE_EN), `audit 360 ${path}: no EN lede on a PH page`);
       const ib = r.text.includes(IB) || r.text.includes(IB_EN);
@@ -239,6 +245,24 @@ try {
     console.log(`INFO lede seen on: ${ledeSeen.join(", ") || "(none)"}`);
   }
 
+  // ---- /en/academy/gold-starter Variant B: IB line under "Where should I trade?", cents-first copy ----
+  for (const width of [360, 414]) {
+    const p = await open("/en/academy/gold-starter", width);
+    const x = await p.evaluate(() => {
+      const d = [...document.querySelectorAll("main details")].find((e) => e.querySelector("summary")?.textContent.trim() === "Where should I trade?");
+      if (!d) return null;
+      d.open = true;
+      const ib = d.querySelector('[data-testid="faq-ib-line"]');
+      return { ib: ib?.textContent, visible: Boolean(ib && ib.getBoundingClientRect().height > 0), answer: d.querySelector("p")?.textContent, lines: document.querySelector("main").innerText.split("ACCM is GFX's partner broker.").length - 1 };
+    });
+    check(x && x.ib === IB_EN && x.visible && x.lines === 1, `${width} /en/academy/gold-starter: IB line once, under the "Where should I trade?" answer`, JSON.stringify(x));
+    check(x?.answer === "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself.", `${width} /en/academy/gold-starter: Variant B FAQ answer`, x?.answer);
+    const t = await p.evaluate(() => document.querySelector("main").innerText);
+    check(t.includes("If you trade, start small with a cents account: only money you can afford to lose. Max 1% risk per trade, always with a stop loss.") && t.includes("Start small with a cents account: real money, but only small amounts you can afford to lose, always with a stop loss."), `${width} /en/academy/gold-starter: Variant B risk line + box item`);
+    check(t.includes("Trading involves a real risk of loss. GoldFX Global is an education project of GFX Society. Education only, not financial advice. If you trade, start small (e.g. a cents account), max 1% risk per trade, always with a stop loss."), `${width} /en/academy/gold-starter: Disclaimer byte-intact`);
+    if (OUT) await p.screenshot({ path: `${OUT}/${width}-en-gold-starter-faq-open.png`, fullPage: true });
+    await p.close();
+  }
   // ---- Follow-up PR checks ----
   const MEMBERS_ONLY = "Members-only ang Trading System.";
   for (const width of [360, 414]) {

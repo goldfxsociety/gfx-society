@@ -7,6 +7,7 @@ import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist } from "@/components/funnel/seven-day-checklist";
 import { LanguageSwitch } from "@/components/academy/language-switch";
 import { StarterCta } from "@/components/academy/starter-cta";
+import { IB_DISCLOSURE_TEXT_EN } from "@/config/partners";
 import { TITLE, DESCRIPTION, HERO, PATH, LESSON_NOTE, OPEN_LESSON, DAYS, BOX, RISK_LINE_EN, FAQ, DISCLAIMER, PRIVACY } from "@/content/en-gold-starter";
 
 export const metadata: Metadata = {
@@ -111,7 +112,6 @@ export default async function EnGoldStarterPage() {
         <p className="mt-1">
           <strong>{RISK_LINE_EN}</strong>
         </p>
-        <p className="mt-1">Education only, not financial advice.</p>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -120,6 +120,9 @@ export default async function EnGoldStarterPage() {
           <details key={f.q} className="rounded-lg border px-4">
             <summary className="flex min-h-11 cursor-pointer items-center font-medium">{f.q}</summary>
             <p className="pb-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+            {"ib" in f && f.ib ? (
+              <p className="pb-3 text-xs text-muted-foreground" data-testid="faq-ib-line">{IB_DISCLOSURE_TEXT_EN}</p>
+            ) : null}
           </details>
         ))}
       </section>
