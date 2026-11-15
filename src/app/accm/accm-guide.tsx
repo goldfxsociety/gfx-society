@@ -5,9 +5,10 @@ import { RiskFooter } from "@/components/academy/risk-footer";
 import { LanguageSwitch } from "@/components/academy/language-switch";
 import { DiscordApplyLink } from "@/components/funnel/discord-apply-link";
 import { Expander } from "@/components/layout/expander";
+import { OpenOnHash } from "@/components/layout/open-on-hash";
 import { buttonVariants } from "@/components/ui/button";
 import { DISCORD_INVITE_URL, accmHref } from "@/config/journey";
-import type { AccmCopy } from "@/content/accm-guide";
+import { ACCM_DISCORD_ID, type AccmCopy } from "@/content/accm-guide";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY, SYSTEM_UNDER_CTA_EN } from "@/content/members-gate";
 import { AccmSelfCheck, CodeChip } from "./accm-self-check";
@@ -90,7 +91,8 @@ export function AccmGuide({ c }: { c: AccmCopy }) {
         <Link href={c.joinHref} className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
           {JOIN_SYSTEM_CTA}
         </Link>
-        <Expander summary={c.help} testId="help">
+        {/* id="discord": the Academy lesson help link (/accm#discord) lands here and opens it. */}
+        <Expander summary={c.help} testId="help" id={ACCM_DISCORD_ID}>
           {DISCORD_INVITE_URL ? (
             <>
               <DiscordApplyLink page="accm" lang={lang} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}>
@@ -103,6 +105,7 @@ export function AccmGuide({ c }: { c: AccmCopy }) {
             <p>{c.discordSoon}</p>
           )}
         </Expander>
+        <OpenOnHash id={ACCM_DISCORD_ID} />
       </section>
 
       <section aria-labelledby="accm-s4" className="flex flex-col gap-1">

@@ -6,7 +6,7 @@ import type { NavLesson } from "@/lib/academy/lesson-sequence";
 import { NextStepLink } from "@/components/funnel/next-step-link";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
-import { ACCM_COPY } from "@/content/accm-guide";
+import { LESSON_DISCORD_HREF, LESSON_DISCORD_LINK } from "@/content/accm-guide";
 import { Expander } from "@/components/layout/expander";
 import { JOIN_COPY, MEMBERS_ONLY_HINT } from "@/content/members-gate";
 
@@ -14,15 +14,15 @@ import { JOIN_COPY, MEMBERS_ONLY_HINT } from "@/content/members-gate";
 const NEXT_GOLD = cn(buttonVariants({ variant: "default" }), "h-auto min-h-12 w-full flex-col whitespace-normal py-2 text-center");
 
 /**
- * Lesson-end help (lesson-end-buttons spec): Discord is never gold and never a card; it is a muted text link under a
- * closed "May problema?" expander, reusing the approved /accm label. It goes to the ACCM next-step page (where the
- * Discord application lives), so the IB line sits in the same expander.
+ * Lesson-end help (lesson-end-buttons spec + P3-13): Discord is never gold and never a card; it is a muted text link
+ * ("Paano sumali sa Discord →") under a closed "May problema?" expander. It deep-links to the Discord step on /accm
+ * (ACCM first, then Discord; never straight to discord.gg), so the IB line sits in the same expander.
  */
 export function LessonHelp() {
   return (
     <Expander summary={JOIN_COPY.helpSummary} testId="lesson-help">
-      <NextStepLink location="lesson_help" className="inline-flex min-h-11 items-center self-start underline">
-        {ACCM_COPY.discordCta}
+      <NextStepLink location="lesson_help" href={LESSON_DISCORD_HREF} className="inline-flex min-h-11 items-center self-start underline">
+        {LESSON_DISCORD_LINK}
       </NextStepLink>
       <p className="text-xs">{IB_DISCLOSURE_TEXT}</p>
     </Expander>

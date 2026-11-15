@@ -15,10 +15,10 @@ const check = (ok, label, extra = "") => { if (ok) pass++; else fail++; console.
 
 const JOIN = "Join the Trading System";
 const LATER_KEY = "gfx_reconsent_later_at"; // src/components/consent/reconsent-banner.tsx
-const DISCORD = "Apply to join our Discord →";
+const DISCORD = "Paano sumali sa Discord →"; // P3-13 lesson label (LESSON_DISCORD_LINK); /accm keeps "Apply to join our Discord →"
 const IB = "Partner broker ng GFX ang ACCM.";
 const RISK_RE = /Max 1% risk per trade/g;
-const EDU_EN_RE = /Education only, not financial advice/g; // English NFA sentence (RiskFooter also has the Taglish one)
+const NFA_RE = /(?:not|hindi) financial advice/gi; // QA risk-audit counter (lesson-risk-dedupe spec)
 const EDU_RE = /Education (?:lang|only),? (?:not|hindi) financial advice/gi; // QA's counter
 const cnt = (t, re) => (t.replace(/\s+/g, " ").match(re) || []).length;
 
@@ -156,10 +156,10 @@ try {
       check(!/Start Level|Next module|partner community|Next step: guided training/.test(r.text), `${L}: no old labels / Discord-first copy`, r.text.match(/.{0,40}(Start Level|Next module|partner community).{0,40}/)?.[0]);
       const help = await p.evaluate((D) => { const d = document.querySelector('[data-testid="lesson-help"]'); const a = d && [...d.querySelectorAll("a")].find((x) => x.textContent.trim() === D);
         return { closed: d && !d.open, summary: d?.querySelector("summary")?.textContent.replace("▸", "").trim(), href: a?.getAttribute("href"), muted: a && getComputedStyle(a).backgroundColor !== "rgb(212, 160, 23)", ib: d?.textContent.includes("Partner broker ng GFX ang ACCM."), count: document.querySelectorAll('[data-testid="lesson-help"]').length, cards: document.querySelectorAll("[data-reminder]").length }; }, DISCORD);
-      check(help.count === 1 && help.closed && help.summary === "May problema?" && help.href === "/accm" && help.muted && help.ib && help.cards === 0, `${L}: Discord only as muted "${DISCORD}" in closed "May problema?" (+ IB line)`, JSON.stringify(help));
-      const rc = cnt(r.text, RISK_RE), ec = cnt(r.text, EDU_EN_RE);
-      check(rc === 1 && ec === 1, `${L}: "Max 1% risk per trade" x1 and "Education only, not financial advice" x1 (visible; placeholder body)`, `risk=${rc} edu=${ec}`);
-      console.log(`INFO ${L}: QA counter (EN + Taglish NFA) edu=${cnt(r.text, EDU_RE)} (RiskFooter's bilingual line, unchanged)`);
+      check(help.count === 1 && help.closed && help.summary === "May problema?" && help.href === "/accm#discord" && help.muted && help.ib && help.cards === 0, `${L}: Discord only as muted "${DISCORD}" in closed "May problema?" (+ IB line)`, JSON.stringify(help));
+      // lesson-risk-dedupe: QA's counters, exactly one each from the footer (placeholder DB body adds none).
+      const rc = cnt(r.text, RISK_RE), ec = cnt(r.text, NFA_RE);
+      check(rc === 1 && ec === 1, `${L}: QA once-rule: "Max 1% risk per trade" x1, "(not|hindi) financial advice" x1 (visible; placeholder body)`, `risk=${rc} nfa=${ec}`);
       if (pg.last) {
         check(r.text.includes("Members-only ang Trading System.") && r.text.includes(IB), `${L}: members-only hint + IB line in the Academy-complete box`);
         check(!/sumali sa\s+Discord community namin/.test(r.text), `${L}: Discord sentence removed from the end box`);
@@ -185,6 +185,28 @@ try {
       if (OUT) await p.screenshot({ path: `${OUT}/${width}-${pg.slug}.png`, fullPage: true });
       await p.close();
     }
+  }
+  // lesson-risk-dedupe: level indexes use the same footer -> one of each, never zero.
+  for (const width of [360, 414]) {
+    for (const path of ["/academy/foundations", "/academy/graduation"]) {
+      const p = await open(path, width);
+      const r = await measure(p);
+      check(cnt(r.text, RISK_RE) === 1 && cnt(r.text, NFA_RE) === 1, `${width} ${path}: QA once-rule on the level index`, `risk=${cnt(r.text, RISK_RE)} nfa=${cnt(r.text, NFA_RE)}`);
+      if (OUT) await p.screenshot({ path: `${OUT}/${width}-level-${path.split("/").pop()}.png`, fullPage: true });
+      await p.close();
+    }
+  }
+  // P3-13: the lesson help link lands on the open Discord step on /accm (real navigation, no interception).
+  for (const width of [360, 414]) {
+    const p = await open("/academy/foundations/what-is-a-spread", width);
+    await p.evaluate(() => { document.querySelector('[data-testid="lesson-help"]').open = true; });
+    await Promise.all([p.waitForNavigation({ waitUntil: "networkidle0" }), p.evaluate((D) => [...document.querySelectorAll('[data-testid="lesson-help"] a')].find((a) => a.textContent.trim() === D).click(), DISCORD)]);
+    await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
+    const x = await p.evaluate(() => { const d = document.getElementById("discord"); const b = d?.getBoundingClientRect(); return { url: location.pathname + location.hash, tag: d?.tagName, open: d?.open, inView: b ? b.top < innerHeight && b.bottom > 0 : false, invite: d?.innerText.includes("Apply to join our Discord →") || d?.innerText.includes("Discord: coming soon."), focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
+    check(x.url === "/accm#discord" && x.tag === "DETAILS" && x.open && x.inView && x.invite, `${width} lesson help -> /accm#discord: Discord step open and in view`, JSON.stringify(x));
+    check(x.focusIsSummary, `${width} lesson help -> /accm#discord: keyboard focus on the step's summary`, JSON.stringify(x));
+    if (OUT) await p.screenshot({ path: `${OUT}/${width}-accm-discord-landing.png` });
+    await p.close();
   }
   // Analytics labels: academy_complete on the last-lesson Join; QA P3-10 distinct gold-starter labels; lesson_help on Discord.
   // Click by text inside the page (fresh lookup each time; element handles go stale across re-renders).

@@ -264,10 +264,12 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const RF = require(path.join(tmp, "components/academy/risk-footer.js"));
 const strip = (h) => h.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
 const split = (h) => { const i = h.indexOf("<details"); return { outside: strip(h.slice(0, i)), inside: strip(h.slice(i, h.indexOf("</details>"))) }; };
-await t("RiskFooter wording byte-identical to main (all three paragraphs)", async () => {
+await t("RiskFooter wording byte-identical to main (Start small + long text); RISK_EDU_LINE = lesson-risk-dedupe single NFA line", async () => {
   const m = jsxText(main("src/components/academy/risk-footer.tsx"));
   assert.ok(m.includes(`<strong>Start small.</strong> ${RF.RISK_START_SMALL} </p>`));
-  assert.ok(m.includes(`> ${RF.RISK_EDU_LINE} </p>`));
+  // lesson-risk-dedupe spec: the bilingual line counted as two NFA hits; now one Taglish line, "walang profit promises" kept.
+  assert.ok(m.includes("Education only, not financial advice. Education lang, hindi financial advice, at walang profit promises."), "old line was on main");
+  assert.equal(RF.RISK_EDU_LINE, "Education lang, not financial advice, at walang profit promises.");
   assert.ok(m.includes(`> ${RF.RISK_WARNING_LONG} </p>`));
   assert.ok(RF.RISK_WARNING_LONG.startsWith("GFX Society provides trading education only"));
 });
@@ -539,7 +541,7 @@ await t("No demo-first wording in EN site copy (/en pages, EN content, *_EN copy
 // ======== lesson-end-buttons (en-gold-starter-risk-fix.md §2) + QA P3-10 / P3-12 ========
 await t("LessonNav: one mid-course label 'Next lesson →' (no 'Start {level} →'); last Academy lesson = gold Join -> /system/join", async () => {
   const n = read("src/components/academy/lesson-nav.tsx");
-  assert.ok(!/Start \{nextLevelTitle\}|Next module|partner community|guided training|sumali sa\s+Discord/.test(n), "old labels / Discord-first copy gone");
+  assert.ok(!/Start \{nextLevelTitle\}|Next module|partner community|guided training|sumali sa\s+Discord/.test(stripC(n)), "old labels / Discord-first copy gone");
   assert.equal(n.match(/<span className="text-base font-semibold">Next lesson →<\/span>/g)?.length, 2, "level-end + mid-level both 'Next lesson →'");
   assert.match(n, /<NextStepLink\s+location="academy_complete"\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "default" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/NextStepLink>/);
   assert.match(n, /\{MEMBERS_ONLY_HINT\}<\/p>\s*\{\/\*[^]*?\*\/\}\s*<NextStepLink\s+location="academy_complete"/, "hint before the Join");
@@ -547,11 +549,16 @@ await t("LessonNav: one mid-course label 'Next lesson →' (no 'Start {level} �
   // Each branch renders exactly one gold: level-end box (next) | Academy-complete box | mid-level link.
   assert.equal(n.match(/variant: "default"/g)?.length, 2, "NEXT_GOLD + Join");
 });
-await t("LessonHelp: Discord only as a muted 'Apply to join our Discord →' (approved /accm label) under closed 'May problema?', with the IB line", async () => {
+await t("LessonHelp (P3-13): muted 'Paano sumali sa Discord →' -> /accm#discord under closed 'May problema?', with the IB line; /accm invite keeps its label", async () => {
   const n = read("src/components/academy/lesson-nav.tsx");
   const h = n.slice(n.indexOf("export function LessonHelp"), n.indexOf("export function LessonNav"));
   assert.match(h, /<Expander summary=\{JOIN_COPY\.helpSummary\} testId="lesson-help">/);
-  assert.match(h, /<NextStepLink location="lesson_help" className="inline-flex min-h-11 items-center self-start underline">\s*\{ACCM_COPY\.discordCta\}/);
+  assert.match(h, /<NextStepLink location="lesson_help" href=\{LESSON_DISCORD_HREF\} className="inline-flex min-h-11 items-center self-start underline">\s*\{LESSON_DISCORD_LINK\}/);
+  const AG = await import("../src/content/accm-guide.ts");
+  assert.equal(AG.LESSON_DISCORD_LINK, "Paano sumali sa Discord →");
+  assert.equal(AG.LESSON_DISCORD_HREF, "/accm#discord");
+  assert.equal(AG.ACCM_DISCORD_ID, "discord");
+  assert.ok(!/discord\.gg|DISCORD_INVITE_URL|DiscordApplyLink/.test(h), "ACCM first: never straight to Discord from a lesson");
   assert.ok(!/variant/.test(h), "not a button");
   assert.match(h, /\{IB_DISCLOSURE_TEXT\}/);
   assert.equal(ACCM_COPY.discordCta, "Apply to join our Discord →"); assert.equal(ACCM_COPY_EN.discordCta, "Apply to join our Discord →");
@@ -588,6 +595,101 @@ await t("QA P3-10: gold-starter Join and 'Tingnan ang steps' log distinct next_s
 await t("QA P3-12: collapsed /account delete section keeps an h2 'Delete my account' inside <summary>", async () => {
   assert.match(read("src/components/layout/expander.tsx"), /\{heading \? <h2 className="text-sm font-medium">\{summary\}<\/h2> : summary\}/);
   assert.match(read("src/app/account/page.tsx"), /<Expander summary="Delete my account" heading testId="delete-account"/);
+});
+
+// ======== lesson-risk-dedupe (footer + P3-13 anchor + DB scripts) ========
+await t("Academy lessons in code: RiskFooter renders exactly one 'Max 1% risk per trade' and one NFA visibly; lesson tree adds none", async () => {
+  const h = renderToStaticMarkup(React.createElement(RF.RiskFooter));
+  const { outside } = split(h);
+  const QA_RISK = /Max 1% risk per trade/g, QA_NFA = /(?:not|hindi) financial advice/gi;
+  assert.equal(outside.match(QA_RISK)?.length, 1); assert.equal(outside.match(QA_NFA)?.length, 1);
+  // Code that renders on a lesson page besides the DB body: lesson page, nav, help, end card, progress, prompts.
+  const lp = read("src/app/academy/[levelSlug]/[lessonSlug]/page.tsx");
+  assert.equal(lp.match(/<RiskFooter \/>/g)?.length, 2, "Lesson 1 slot + other lessons slot");
+  assert.match(lp, /\{isLesson1 && \(\s*<>\s*<RiskFooter \/>/); assert.match(lp, /\{!isLesson1 && <RiskFooter \/>\}/);
+  for (const f of ["src/app/academy/[levelSlug]/[lessonSlug]/page.tsx", "src/components/academy/lesson-nav.tsx", "src/components/funnel/lesson1-end-card.tsx", "src/components/academy/lesson-progress-bar.tsx", "src/components/academy/save-progress-prompt.tsx", "src/components/academy/mark-complete-button.tsx", "src/app/academy/[levelSlug]/page.tsx"]) {
+    const src = stripC(read(f));
+    assert.ok(!QA_RISK.test(src) && !/(?:not|hindi) financial advice/i.test(src), `${f}: no extra risk/NFA sentence`);
+  }
+  assert.match(read("src/app/academy/[levelSlug]/page.tsx"), /<RiskFooter \/>/, "level index keeps the footer (never zero)");
+  assert.equal(RISK_LINE, "Max 1% risk per trade. Education lang, not financial advice.", "RISK_LINE byte-identical");
+});
+await t("/accm compact footer: visible line still RISK_LINE / RISK_LINE_EN_SHORT; new RISK_EDU_LINE only inside the closed expander", async () => {
+  const { outside, inside } = split(renderToStaticMarkup(React.createElement(RF.RiskFooter, { compact: "tl" })));
+  assert.equal(outside, RISK_LINE); assert.ok(inside.includes(RF.RISK_EDU_LINE));
+});
+await t("P3-13: id=\"discord\" on the /accm + /en/accm Discord step, opened by OpenOnHash", async () => {
+  const g = read("src/app/accm/accm-guide.tsx");
+  assert.match(g, /<Expander summary=\{c\.help\} testId="help" id=\{ACCM_DISCORD_ID\}>[\s\S]*?\{c\.discordCta\}[\s\S]*?<\/Expander>\s*<OpenOnHash id=\{ACCM_DISCORD_ID\} \/>/);
+  assert.match(read("src/components/layout/expander.tsx"), /<details id=\{id\}/);
+  const o = read("src/components/layout/open-on-hash.tsx");
+  assert.match(o, /window\.location\.hash !== `#\$\{id\}`/); assert.match(o, /el\.open = true/); assert.match(o, /"hashchange"/);
+  assert.equal(ACCM_COPY.discordCta, "Apply to join our Discord →", "/accm invite label unchanged");
+});
+await t("DB scripts (supabase/scripts/20261115_lesson_risk_dedupe): by id, no new table/grant, RAISE guards, pinned md5s, self-contained revert restoring updated_at", async () => {
+  const dir = "supabase/scripts/20261115_lesson_risk_dedupe";
+  const F = (f) => read(`${dir}/${f}`);
+  for (const f of ["README.md", "01_backup.sql", "02_apply.sql", "03_revert.sql", "verify.sql", "local-test.mjs"]) assert.ok(fs.existsSync(path.join(root, dir, f)), f);
+  const noC = (s) => s.replace(/--.*$/gm, "");
+  const apply = F("02_apply.sql"), backup = F("01_backup.sql"), revert = F("03_revert.sql"), verify = F("verify.sql");
+  const SLUGS = ["what-is-the-financial-market", "stocks-vs-forex-vs-gold", "how-do-traders-make-money", "bull-market-vs-bear-market", "what-is-a-spread", "what-is-a-broker", "candlestick-anatomy", "candlestick-patterns", "pips-lots-and-leverage", "types-of-orders", "cents-account-your-first-real-money-practice", "real-money-and-your-emotions", "opening-your-accm-account"];
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, MD5 = /^[0-9a-f]{32}$/;
+  // P2-SQL-2: no table, schema, RLS or grant anywhere; only public.lessons is written.
+  for (const [n, f] of [["backup", backup], ["apply", apply], ["revert", revert], ["verify", verify]]) {
+    assert.ok(!/\b(create|alter|drop|truncate)\s+(table|schema|policy|role|function)\b/i.test(noC(f)) && !/\b(grant|revoke)\b/i.test(noC(f)) && !/row level security/i.test(noC(f)), `${n}: no DDL / grants`);
+    assert.ok(!/lessons_backup_20261115_risk_dedupe/.test(f), `${n}: no backup table`);
+  }
+  for (const [n, f] of [["backup", backup], ["verify", verify]]) assert.ok(!/\b(insert|update|delete|merge|do)\b\s/i.test(noC(f).replace(/\bupdated_at\b/g, "")), `${n}: read-only SELECT`);
+  assert.equal(noC(apply).match(/\bupdate public\.lessons\b/g)?.length, 1); assert.equal(noC(revert).match(/\bupdate public\.lessons\b/g)?.length, 1);
+  // P2-SQL-1: a 13-row manifest keyed by id, with level_id + slug and pinned before/after md5s.
+  const man = JSON.parse(apply.match(/\$m\$([\s\S]*?)\$m\$/)[1]);
+  assert.equal(man.length, 13); assert.deepEqual(man.map((m) => m.slug).sort(), [...SLUGS].sort());
+  for (const m of man) { assert.match(m.id, UUID); assert.match(m.level_id, UUID); for (const k of ["before_content_md5", "before_tk_md5", "after_content_md5", "after_tk_md5"]) assert.match(m[k], MD5); }
+  assert.equal(new Set(man.map((m) => m.id)).size, 13);
+  const rman = JSON.parse(revert.match(/\$m\$([\s\S]*?)\$m\$/)[1]);
+  assert.deepEqual(rman.map(({ id, level_id, slug, after_content_md5, after_tk_md5, before_content_md5, before_tk_md5 }) => [id, level_id, slug, after_content_md5, after_tk_md5, before_content_md5, before_tk_md5]),
+    man.map(({ id, level_id, slug, after_content_md5, after_tk_md5, before_content_md5, before_tk_md5 }) => [id, level_id, slug, after_content_md5, after_tk_md5, before_content_md5, before_tk_md5]), "revert pins the same rows/md5s");
+  for (const m of man) for (const [n, f] of [["backup", backup], ["verify", verify]]) assert.ok(f.includes(`'${m.id}'::uuid, '${m.level_id}'::uuid, '${m.slug}'`), `${n}: ${m.slug} by id`);
+  // Every write matches by primary key id (+ level_id/slug sanity + md5 state), never by slug alone.
+  assert.match(noC(apply), /where l\.id = e\.id\s+and l\.level_id = e\.level_id and l\.slug = e\.slug\s+and md5\(l\.content\) = e\.before_content_md5 and md5\(l\.key_takeaways::text\) = e\.before_tk_md5;/);
+  assert.match(noC(revert), /where l\.id = e\.id and o\.id = e\.id\s+and l\.level_id = e\.level_id and l\.slug = e\.slug\s+and md5\(l\.content\) = e\.after_content_md5 and md5\(l\.key_takeaways::text\) = e\.after_tk_md5;/);
+  for (const f of [apply, revert, verify, backup]) assert.ok(!/where l\.slug in/.test(noC(f)), "no slug-only match");
+  // RAISE guards: one transaction / DO block; exact 13; rerun no-op; mixed/drifted abort; post-check.
+  for (const [n, f, tag] of [["apply", apply, "lrd_apply"], ["revert", revert, "lrd_revert"]]) {
+    assert.match(noC(f), new RegExp(`^\\s*begin;\\s*do \\$${tag}\\$[\\s\\S]*\\$${tag}\\$;\\s*commit;\\s*$`), `${n}: begin; DO; commit`);
+    assert.match(f, /if n_ok <> 13 then\s+raise exception/); assert.match(f, /get diagnostics n_upd = row_count;\s+if n_upd <> 13 then raise exception/);
+    assert.match(f, /for update;/);
+  }
+  assert.match(apply, /if n_after = 13 then\s+raise notice '[^']*already in the AFTER state\. Nothing changed\.';\s+return;/);
+  assert.match(apply, /if n_before <> 13 then\s+raise exception '[^']*mixed or drifted/);
+  assert.match(apply, /if n_after <> 13 then raise exception '[^']*rolled back/);
+  assert.match(revert, /if n_before = 13 then\s+raise notice '[^']*already hold the original text\. Nothing changed\.';\s+return;/);
+  assert.match(revert, /if n_after <> 13 then\s+raise exception '[^']*exact AFTER state/);
+  assert.match(revert, /if n_before <> 13 then raise exception '[^']*original md5/);
+  // Revert is self-contained: 13 dollar-quoted originals (unique tag), restores updated_at too.
+  const T = "$lrd_orig_20261115$";
+  const lits = [...revert.matchAll(/\('([0-9a-f-]{36})'::uuid,\n {7}\$lrd_orig_20261115\$[\s\S]*?\$lrd_orig_20261115\$,\n {7}\$lrd_orig_20261115\$[\s\S]*?\$lrd_orig_20261115\$::jsonb,\n {7}'(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(?:\.\d+)?\+00)'::timestamptz\)/g)];
+  assert.equal(lits.length, 13); assert.deepEqual(lits.map((x) => x[1]).sort(), man.map((m) => m.id).sort());
+  assert.equal(noC(revert).split(T).length - 1, 13 * 4, "tag used only for the 26 literals");
+  assert.match(noC(revert), /set content = o\.content, key_takeaways = o\.key_takeaways, updated_at = o\.updated_at/);
+  // Apply transform + wording (D per Design: "Risk no more than 1% of your account ...").
+  const CLOSING = "Trading involves real risk of loss. GFX provides education only, not financial advice. Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.";
+  const SHORT = "Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.";
+  const D_NEW = "Risk no more than 1% of your account on each trade, with a stop-loss on every trade.";
+  for (const s of [CLOSING, SHORT, D_NEW, "Disclosure: ACCM is GFX's partner broker.", "Max 1% risk per trade, stop-loss on every trade."]) assert.ok(apply.includes(`$s$${s}$s$`), s);
+  assert.ok(!apply.includes("Use no more than 1% of the account"), "old D wording gone");
+  assert.ok(!/Max 1% risk per trade/.test(D_NEW) && !/demo first|VIP|PDE/i.test(D_NEW));
+  assert.match(apply, /replace\(l\.content, E'\\n' \|\| short \|\| E'\\n\\n## ', E'\\n\\n## '\)/);
+  assert.match(apply, /e\.edit in \('C', 'BC'\) and l\.key_takeaways ->> -1 = short then l\.key_takeaways - \(-1\)/);
+  assert.deepEqual(Object.fromEntries(man.map((m) => [m.slug, m.edit])), { "what-is-the-financial-market": "A", "stocks-vs-forex-vs-gold": "A", "how-do-traders-make-money": "A", "bull-market-vs-bear-market": "A", "what-is-a-spread": "A", "what-is-a-broker": "B", "candlestick-anatomy": "B", "candlestick-patterns": "B", "pips-lots-and-leverage": "B", "types-of-orders": "B", "cents-account-your-first-real-money-practice": "BC", "real-money-and-your-emotions": "C", "opening-your-accm-account": "D" });
+  assert.match(F("README.md"), /01_backup\.sql[\s\S]*02_apply\.sql[\s\S]*verify\.sql[\s\S]*03_revert\.sql/);
+});
+await t("OpenOnHash (P3-16): focuses the native <summary> only when the fragment is #id (load + hashchange); no trap", async () => {
+  const o = stripC(read("src/components/layout/open-on-hash.tsx"));
+  assert.match(o, /if \(window\.location\.hash !== `#\$\{id\}`\) return;[\s\S]*el\.open = true;\s*el\.scrollIntoView\(\{ block: "start" \}\);\s*el\.querySelector\("summary"\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.equal(o.match(/\.focus\(/g)?.length, 1, "the only focus call sits after the hash guard");
+  assert.ok(!/keydown|tabindex|tabIndex|inert|aria-modal/.test(o), "no focus trap");
+  assert.match(o, /addEventListener\("hashchange", sync\)/); assert.match(o, /removeEventListener\("hashchange", sync\)/);
 });
 
 console.log(`ALL PASS simplicity (${n})`);
