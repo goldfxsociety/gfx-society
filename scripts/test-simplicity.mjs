@@ -36,6 +36,7 @@ const { BROKER_COPY, BROKER_COPY_EN } = await import("../src/content/broker-guid
 const { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY, SYSTEM_UNDER_CTA_EN } = await import("../src/content/members-gate.ts");
 const { TRANSFER_COPY, TRANSFER_COPY_EN, REQUEST_COPY, REQUEST_COPY_EN, JOIN_SYSTEM_CTA } = await import("../src/content/access-request.ts");
 const { ME } = await import("../src/config/members-home.ts");
+const ACCM_BRIDGE_DISCLOSURE_SRC = execFileSync("git", ["show", "origin/main:src/components/academy/accm-bridge.tsx"], { cwd: root, encoding: "utf8" }).match(/export const ACCM_BRIDGE_DISCLOSURE =\s*`[^`]+`;/)[0];
 const { joinPath, joinLoginPath, joinSignupPath, joinBaseFrom, memberNext, MEMBERS_HOME } = await import("../src/lib/members/routes.ts");
 
 // ---- one gold per page (source: page + the layout/components it renders) ----
@@ -98,34 +99,66 @@ await t("home: exactly one gold + byte-identical one-line IB disclosure, small/m
   assert.match(comp, /<p className="text-xs text-muted-foreground">\s*<strong>Disclosure:<\/strong> \{text\}\s*<\/p>/, "small muted text");
   assert.equal(IB_DISCLOSURE_TEXT, "Partner broker ng GFX ang ACCM.");
 });
-// ---- QA P1-1 (39b865e): every public page with the gold Join or an IB line renders the shared risk line ----
-const RISK_PAGES = {
-  "/": ["src/app/page.tsx"],
-  "/academy": ["src/components/academy/accm-bridge.tsx"],
-  "/academy/gold-starter": ["src/app/academy/gold-starter/page.tsx"],
-  "/start": ["src/app/start/page.tsx"],
-  "/community": ["src/app/community/page.tsx"],
-  "/resources": ["src/app/resources/page.tsx"],
-  "/go/<code>": ["src/app/go/[code]/page.tsx"],
-  "/accm + /en/accm": ["src/app/accm/accm-guide.tsx"],
-  "/broker + /en/broker": ["src/app/broker/broker-guide.tsx"],
-  "/system/join + /en/system/join": ["src/app/system/join/join-view.tsx"],
-};
-for (const [route, files] of Object.entries(RISK_PAGES)) {
-  await t(`${route}: shows the gold Join or an IB line, and renders the shared RISK_LINE (imported, not retyped)`, async () => {
-    const src = files.map(read).join("\n");
-    assert.ok(/IB_DISCLOSURE_TEXT|IbDisclosureShort|ACCM_BRIDGE_DISCLOSURE|JOIN_SYSTEM_CTA|c\.ib\b/.test(src), `${route} is in scope`);
-    const viaFooter = /<RiskFooter compact=/.test(src); // RiskFooter compact renders RISK_LINE / RISK_LINE_EN_SHORT itself
-    const rf = read("src/components/academy/risk-footer.tsx");
-    if (viaFooter) assert.match(rf, /import \{[^}]*\bRISK_LINE\b[^}]*\} from "@\/config\/training";/, "RiskFooter imports RISK_LINE");
-    else {
-      // SYSTEM_COPY.risk === RISK_LINE (asserted below), so the join doors count as the shared line.
-      if (!/SYSTEM_COPY\.risk\}/.test(src)) assert.match(src, /import \{[^}]*\bRISK_LINE\b[^}]*\} from "@\/config\/training";/, "RISK_LINE imported from config/training");
-      assert.match(src, /\{(?:RISK_LINE|SHARED_RISK_LINE|s\.risk|en \? RISK_LINE_EN_SHORT : SYSTEM_COPY\.risk|en \? RISK_LINE_EN_SHORT : RISK_LINE)\}/, "renders the shared line");
+// ---- QA P1-1 (39b865e) + P2-1 (bfd965d, PR55 rule): every public page with the gold Join, an ACCM CTA or an IB line
+// shows the 1% sentence ("Max 1% risk per trade", case-sensitive as in QA's audit) exactly once and the education line
+// (/Education (lang|only),? (not|hindi) financial advice/i) exactly once. Counted over the page's source literals
+// (comments stripped) plus each render of a shared constant. The shared RISK_LINE is required except where noted.
+const RISK_RE = /Max 1% risk per trade/g;
+const EDU_RE = /Education (?:lang|only),? (?:not|hindi) financial advice/gi;
+const stripC = (src) => src.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|^\s*\/\/.*$|([^:"'`])\/\/[^"'`\n]*$/gm, "$1");
+const count = (txt, re) => txt.match(re)?.length ?? 0;
+const RISK_PAGES = [
+  // route, page source files, rendered-text extras, regex for shared-line render sites (null = not required, with reason)
+  { route: "/", files: ["src/app/page.tsx"], shared: /\{RISK_LINE\}/g },
+  { route: "/community", files: ["src/app/community/page.tsx"], shared: /\{RISK_LINE\}/g },
+  { route: "/start", files: ["src/app/start/page.tsx"], shared: /\{s\.risk\}/g },
+  { route: "/academy", files: ["src/app/academy/page.tsx", "src/components/academy/accm-bridge.tsx"], shared: /\{RISK_LINE\}/g },
+  { route: "/resources", files: ["src/app/resources/page.tsx"], shared: /\{RISK_LINE\}/g },
+  { route: "/go/<code>", files: ["src/app/go/[code]/page.tsx"], shared: /\{RISK_LINE\}/g },
+  { route: "/system/join", files: ["src/app/system/join/join-view.tsx"], extra: () => "", shared: /SYSTEM_COPY\.risk\}/g },
+  // Design (pr70-review): the long risk box sits under the CTA; no second short line. The box carries both once.
+  { route: "/broker", files: ["src/app/broker/broker-guide.tsx"], extra: () => Object.values(BROKER_COPY).filter((v) => typeof v === "string").join("\n"), shared: null },
+  { route: "/en/broker", files: ["src/app/broker/broker-guide.tsx"], extra: () => Object.values(BROKER_COPY_EN).filter((v) => typeof v === "string").join("\n"), shared: null },
+  // Has its own 1% line (local RISK_LINE) and the Disclaimer's education line; adding the shared line would double both.
+  { route: "/academy/gold-starter", files: ["src/app/academy/gold-starter/page.tsx"], shared: null },
+];
+for (const pg of RISK_PAGES) {
+  await t(`${pg.route}: "Max 1% risk per trade" once, "not financial advice" once${pg.shared ? ", shared RISK_LINE rendered" : ""}`, async () => {
+    const src = stripC(pg.files.map(read).join("\n"));
+    const sharedN = pg.shared ? count(src, pg.shared) : 0;
+    const txt = src + "\n" + (pg.extra?.() ?? "");
+    const risk = count(txt, RISK_RE) + sharedN, edu = count(txt, EDU_RE) + sharedN;
+    assert.equal(risk, 1, `${pg.route}: 1% sentence count`);
+    assert.equal(edu, 1, `${pg.route}: education line count`);
+    if (pg.shared) {
+      assert.equal(sharedN, 1, "shared line rendered once");
+      assert.ok(/SYSTEM_COPY\.risk/.test(src) || /import \{[^}]*\bRISK_LINE\b[^}]*\} from "@\/config\/training";/.test(src), "RISK_LINE imported, not retyped");
+      assert.ok(!src.includes(RISK_LINE), "not retyped as a literal");
     }
-    assert.ok(!src.includes(`"${RISK_LINE}"`), "not retyped as a literal");
   });
 }
+await t("/accm + /en/accm: visible 1% + education line once via RiskFooter compact; the long text only inside the expander", async () => {
+  assert.match(read("src/app/accm/accm-guide.tsx"), /<RiskFooter compact=\{lang\} \/>/);
+  const rf = read("src/components/academy/risk-footer.tsx");
+  assert.match(rf, /<p data-testid="risk-line">\{compact === "en" \? RISK_LINE_EN_SHORT : RISK_LINE\}<\/p>/);
+  assert.equal(count(stripC(read("src/app/accm/accm-guide.tsx")) + JSON.stringify(ACCM_COPY), RISK_RE), 0, "no other 1% sentence in the /accm copy");
+  assert.equal(count(stripC(read("src/app/accm/accm-guide.tsx")) + JSON.stringify(ACCM_COPY), EDU_RE), 0);
+});
+await t("P2-1 fixes: /broker drops the extra short line; duplicates removed or trimmed with existing wording only", async () => {
+  const b = read("src/app/broker/broker-guide.tsx");
+  assert.ok(!/RISK_LINE/.test(b), "/broker: no shared short line (Design)");
+  for (const c of [BROKER_COPY, BROKER_COPY_EN]) { assert.equal(count(c.riskBody, RISK_RE), 1); assert.equal(count(c.riskBody, EDU_RE), 1); }
+  assert.match(read("src/app/start/page.tsx"), /note: IB_DISCLOSURE_TEXT,\s*risk: RISK_LINE,/);
+  const trimmed = "Real risk of loss. Start small, laging may stop loss.";
+  for (const f of ["src/app/start/page.tsx", "src/app/go/[code]/page.tsx"]) {
+    assert.ok(main(f).includes("Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss."), `${f} on main`);
+    assert.ok(read(f).includes(trimmed), `${f}: only the non-duplicated part kept`);
+  }
+  assert.match(read("src/components/academy/accm-bridge.tsx"), /\{ACCM_BRIDGE_DISCLOSURE\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>\s*<\/section>/);
+  assert.ok(read("src/components/academy/accm-bridge.tsx").includes(ACCM_BRIDGE_DISCLOSURE_SRC), "IB disclosure unchanged");
+  assert.ok(!read("src/app/resources/page.tsx").includes("Education lang, not financial advice. Max 1% risk per trade."), "/resources: old duplicate removed");
+  assert.ok(!/SHARED_RISK_LINE/.test(read("src/app/academy/gold-starter/page.tsx")));
+});
 await t("/community: RISK_LINE rendered next to the gold Join + IB line; meta description Join-first, not Discord-first", async () => {
   const c = read("src/app/community/page.tsx");
   assert.match(c, /\{JOIN_SYSTEM_CTA\}[\s\S]*?\{IB_DISCLOSURE_TEXT\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
@@ -134,15 +167,6 @@ await t("/community: RISK_LINE rendered next to the gold Join + IB line; meta de
   assert.match(c, /description: DESC,[\s\S]*openGraph: \{[^}]*description: DESC/, "description and og:description share it");
   assert.ok(!/Discord/.test(c.replace(/\/\/.*$/gm, "")), "no Discord on /community");
 });
-await t("/start, /academy bridge, /broker: shared risk line sits with the gold Join / IB line", async () => {
-  assert.match(read("src/app/start/page.tsx"), /note: IB_DISCLOSURE_TEXT,\s*risk: RISK_LINE,/);
-  assert.match(read("src/components/academy/accm-bridge.tsx"), /\{ACCM_BRIDGE_DISCLOSURE\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
-  assert.match(read("src/app/broker/broker-guide.tsx"), /\{JOIN_SYSTEM_CTA\}\s*<\/Link>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{en \? RISK_LINE_EN_SHORT : RISK_LINE\}<\/p>/);
-  for (const [f, frag] of [["src/app/start/page.tsx", "Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss."],
-    ["src/components/academy/accm-bridge.tsx", "Max 1% risk, laging may stop loss. Cents account?"], ["src/app/resources/page.tsx", "Education lang, not financial advice. Max 1% risk per trade."]]) {
-    assert.ok(main(f).includes(frag) && read(f).includes(frag), `existing risk text kept byte-identical in ${f}`);
-  }
-});
 await t("/go/<code>: one gold (Start learning), outline Join the Trading System -> /system/join, no Discord-first next step; IB + RISK_LINE", async () => {
   const g = read("src/app/go/[code]/page.tsx");
   assert.equal(golds(g), 1);
@@ -150,8 +174,6 @@ await t("/go/<code>: one gold (Start learning), outline Join the Trading System 
   assert.match(g, /<Link\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/Link>/);
   assert.ok(!/NextStepLink|partner community|GO_NEXT_STEP_HREF/.test(g), "Discord-first next step removed");
   assert.match(g, /\{IB_DISCLOSURE_TEXT\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
-  const edu = "Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.";
-  assert.ok(main("src/app/go/[code]/page.tsx").includes(edu) && g.includes(edu), "existing /go risk text unchanged");
 });
 await t("P3-4: J4 FAQ on /accm + /en/accm says the template is there after you log in; rest of each answer byte-identical", async () => {
   const j4 = (c) => c.faq.find((f) => f.a.includes("For Transfer IB")).a;

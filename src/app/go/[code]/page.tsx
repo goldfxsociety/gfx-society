@@ -42,7 +42,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
       <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       <p className="text-xs text-muted-foreground">
-        Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
+        Real risk of loss. Start small, laging may stop loss.
       </p>
       <GoRedirect href={target.href} />
     </div>

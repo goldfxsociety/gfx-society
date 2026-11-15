@@ -19,6 +19,10 @@ const IB = "Partner broker ng GFX ang ACCM.";
 const IB_EN = "ACCM is GFX's partner broker.";
 const LONG = "GFX Society provides trading education only — not financial advice.";
 const JOIN = "Join the Trading System";
+// PR55 P2-1 rule, same counters as QA's risk-audit: once each per page, in visible text.
+const RISK_RE = /Max 1% risk per trade/g;
+const EDU_RE = /Education (?:lang|only),? (?:not|hindi) financial advice/gi;
+const cnt = (t, re) => (t.replace(/\s+/g, " ").match(re) || []).length;
 
 // ---- fake Supabase (fake ids / example.test only) ----
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -94,7 +98,10 @@ async function measure(page) {
       const h = target.getBoundingClientRect().height;
       if (h < 43.5) small.push(`${el.tagName}:${(el.textContent || el.type || "").trim().slice(0, 30)}:${Math.round(h)}`);
     }
-    return { sw: document.documentElement.scrollWidth, vw: window.innerWidth, gold, small, text: main.innerText, lang: main.querySelector("[lang]")?.getAttribute("lang") ?? null };
+    // Text inside closed <details> (not visible until opened), counted separately from visible text.
+    const hidden = [...main.querySelectorAll("details:not([open])")].map((d) => [...d.childNodes].filter((n) => n.nodeName !== "SUMMARY").map((n) => n.textContent).join(" ")).join(" ");
+    const accmCta = [...main.querySelectorAll("a, button")].filter(vis).filter((e) => /accm|accmfx/i.test(e.getAttribute("href") || "") || /ACCM/.test(e.textContent || "")).length;
+    return { sw: document.documentElement.scrollWidth, vw: window.innerWidth, gold, small, text: main.innerText, hidden, accmCta, lang: main.querySelector("[lang]")?.getAttribute("lang") ?? null };
   });
 }
 
@@ -103,13 +110,15 @@ const PAGES = [
   { slug: "member-home", path: "/training", scn: "member", gold: "Ituloy →", risk: RISK_LINE, noIb: true },
   { slug: "accm", path: "/accm", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "en-accm", path: "/en/accm", gold: JOIN, risk: RISK_EN, ib: IB_EN, lang: "en" },
-  { slug: "broker", path: "/broker", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
-  { slug: "en-broker", path: "/en/broker", gold: JOIN, risk: RISK_EN, ib: IB_EN, lang: "en" },
+  { slug: "broker", path: "/broker", gold: JOIN, ib: IB, lang: "fil", noShared: true },
+  { slug: "en-broker", path: "/en/broker", gold: JOIN, ib: IB_EN, lang: "en", noShared: true },
   { slug: "system-join", path: "/system/join", gold: "Log in with your Academy account", risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "en-system-join", path: "/en/system/join", gold: "Log in with your Academy account", risk: RISK_EN, ib: IB_EN, lang: "en" },
   { slug: "academy", path: "/academy", gold: JOIN, risk: RISK_LINE, ib: IB, shot: false },
   { slug: "start", path: "/start", gold: JOIN, risk: RISK_LINE, ib: IB, shot: false },
   { slug: "community", path: "/community", gold: JOIN, risk: RISK_LINE, ib: IB },
+  { slug: "gold-starter", path: "/academy/gold-starter", gold: "Simulan ang Lesson 1", ib: IB, noShared: true },
+  { slug: "resources", path: "/resources", gold: null, risk: RISK_LINE, ib: IB },
   { slug: "go", path: "/go/ig_bio", gold: "Start learning", risk: RISK_LINE, ib: IB, noJs: true, outline: JOIN },
 ];
 
@@ -120,7 +129,13 @@ try {
       const p = await open(pg.path, width, pg.scn, { noJs: pg.noJs });
       const r = await measure(p);
       check(r.sw <= width, `${L}: no horizontal scroll`, `scrollWidth=${r.sw}`);
-      check(r.gold.length === 1 && r.gold[0].startsWith(pg.gold), `${L}: exactly one gold, "${pg.gold}"`, JSON.stringify(r.gold));
+      if (pg.gold) check(r.gold.length === 1 && r.gold[0].startsWith(pg.gold), `${L}: exactly one gold, "${pg.gold}"`, JSON.stringify(r.gold));
+      else check(r.gold.length <= 1, `${L}: at most one gold`, JSON.stringify(r.gold));
+      if (pg.slug !== "member-home") {
+        check(cnt(r.text, RISK_RE) === 1 && cnt(r.text, EDU_RE) === 1, `${L}: "Max 1% risk per trade" x1 and "not financial advice" x1 (visible)`, `risk=${cnt(r.text, RISK_RE)} edu=${cnt(r.text, EDU_RE)}`);
+        if (pg.noShared) check(!r.text.includes(RISK_LINE) && !r.text.includes(RISK_EN), `${L}: no extra shared short line (own risk text carries both)`);
+        console.log(`INFO ${L}: hidden (closed expanders) risk=${cnt(r.hidden, RISK_RE)} edu=${cnt(r.hidden, EDU_RE)}`);
+      }
       check(r.small.length === 0, `${L}: tap targets >= 44px`, JSON.stringify(r.small));
       if (pg.risk) check(r.text.split(pg.risk).length - 1 === 1, `${L}: risk line visible once`, r.text.slice(0, 200));
       if (pg.ib) check(r.text.includes(pg.ib), `${L}: IB line visible`);
@@ -177,15 +192,19 @@ try {
   }
 
   // Audit (QA P1-1): every public page that shows the gold "Join the Trading System" or an IB line also shows the
-  // shared risk line (RISK_LINE; /en pages RISK_LINE_EN_SHORT), visibly, in <main>. Routes: the partner-line list + sitemap.
+  // shared risk line (RISK_LINE; /en pages RISK_LINE_EN_SHORT), visibly, in <main>, and (QA P2-1) the 1% sentence and the
+  // education line exactly once each. Routes: QA's explicit list + sitemap. Offline the fake Supabase has no levels or
+  // lessons, so DB-backed /academy/<level>[/<lesson>] pages are only covered on a real preview (QA's risk-audit).
   {
-    const AUDIT = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join"];
+    const AUDIT = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/go/fb261012_lotsize", "/go/ref_m0042", "/system/join/confirm", "/account", "/courses", "/courses/gold-reset", "/dashboard", "/diagnostic", "/learning", "/login", "/signup", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join"];
     const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
     const routes = [...new Set([...AUDIT, ...[...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)])];
     let audited = 0;
     // Legal documents (/privacy, /terms, /disclosure, /risk) quote the IB line inside legal text; they carry no Join CTA
     // and are the long-form disclosures themselves, so they are not page footers to audit.
     const LEGAL = new Set(["/privacy", "/terms", "/disclosure", "/risk"]);
+    // Own risk text carries the 1% sentence + education line once (Design: /broker box; /academy/gold-starter Disclaimer).
+    const SHARED_EXEMPT = new Set(["/broker", "/en/broker", "/academy/gold-starter"]);
     for (const path of routes) {
       if (LEGAL.has(path)) continue;
       const p = await open(path, 360, null, { noJs: path.startsWith("/go/") });
@@ -194,9 +213,13 @@ try {
       const en = path.startsWith("/en/");
       const ib = r.text.includes(IB) || r.text.includes(IB_EN);
       const join = r.gold.some((g) => g.startsWith(JOIN));
-      if (!ib && !join) continue;
+      if (!ib && !join && !r.accmCta) continue;
       audited++;
-      check(r.text.includes(en ? RISK_EN : RISK_LINE), `audit 360 ${path}: ${[join && "gold Join", ib && "IB line"].filter(Boolean).join(" + ")} -> shared risk line visible`, r.text.slice(-300));
+      const why = [join && "gold Join", r.accmCta && "ACCM CTA", ib && "IB line"].filter(Boolean).join(" + ");
+      const rc = cnt(r.text, RISK_RE), ec = cnt(r.text, EDU_RE);
+      check(rc === 1 && ec === 1, `audit 360 ${path}: ${why} -> "Max 1% risk per trade" x1, "not financial advice" x1`, `risk=${rc} edu=${ec}`);
+      if (!SHARED_EXEMPT.has(path)) check(r.text.includes(en ? RISK_EN : RISK_LINE), `audit 360 ${path}: shared risk line visible`, r.text.slice(-300));
+      console.log(`INFO audit ${path}: visible risk=${rc} edu=${ec}; hidden risk=${cnt(r.hidden, RISK_RE)} edu=${cnt(r.hidden, EDU_RE)}`);
     }
     console.log(`INFO audit: ${audited} of ${routes.length} routes show gold Join or an IB line`);
   }

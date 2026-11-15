@@ -83,9 +83,6 @@ export default async function ResourcesPage() {
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
       <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
 
-      <p className="text-xs text-muted-foreground">
-        Education lang, not financial advice. Max 1% risk per trade.
-      </p>
 
       {resources.length === 0 && (
         <p className="text-sm text-muted-foreground">No resources published yet.</p>

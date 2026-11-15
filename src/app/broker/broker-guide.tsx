@@ -6,7 +6,6 @@ import { IbDisclosureFull, IbDisclosureShort } from "@/components/compliance/ib-
 import { AccmLink } from "@/components/partners/accm-link";
 import { buttonVariants } from "@/components/ui/button";
 import { NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
-import { RISK_LINE, RISK_LINE_EN_SHORT } from "@/config/training";
 import type { BrokerCopy } from "@/content/broker-guide";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY, SYSTEM_UNDER_CTA_EN } from "@/content/members-gate";
@@ -55,7 +54,6 @@ export function BrokerGuide({ c }: { c: BrokerCopy }) {
         <Link href={c.joinHref} className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
           {JOIN_SYSTEM_CTA}
         </Link>
-        <p className="text-xs text-muted-foreground" data-testid="risk-line">{en ? RISK_LINE_EN_SHORT : RISK_LINE}</p>
       </div>
 
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm" data-testid="broker-risk">

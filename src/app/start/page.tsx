@@ -98,7 +98,7 @@ export default async function StartPage() {
         </Link>
       </div>
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-        Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
+        Real risk of loss. Start small, laging may stop loss.
       </p>
     </div>
   );

@@ -12,7 +12,9 @@ const LINE_EN = "ACCM is GFX's partner broker.";
 const WINDOW = 1500;
 const MAX_DIVS = 3;
 const ACCM_HREF = /^(?:\/accm(?:[/?#]|$)|https?:\/\/(?:[\w-]+\.)*accm\.[a-z]+(?:[/?#]|$))/i;
-const EXTRA = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join"];
+const EXTRA = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join",
+  // DB-backed lesson with an ACCM link (QA P3-9). Offline (fake/no Supabase) it has no lesson content; on a preview it counts.
+  "/academy/graduation", "/academy/graduation/opening-your-accm-account"];
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 const BOUNDARY = new Set(["section", "article", "li", "aside", "footer", "header"]);
 
@@ -59,7 +61,7 @@ selfTest();
 const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
 const fromSitemap = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
 const pages = [...new Set([...EXTRA, ...fromSitemap])];
-let links = 0, n = 0; const bad = [];
+let links = 0, n = 0; const bad = []; const linkPages = new Set();
 for (const p of pages) {
   const r = await fetch(BASE + p, { redirect: "manual" });
   if (r.status !== 200) continue;
@@ -73,11 +75,16 @@ for (const p of pages) {
   for (const m of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)) {
     const href = m[1].replace(/&amp;/g, "&");
     if (!ACCM_HREF.test(href)) continue;
-    links++;
+    links++; linkPages.add(p);
     if (!hasLineInSection(html, els, m.index, line)) bad.push(`${p} -> ${href.slice(0, 60)}`);
   }
 }
-console.log(`pages=${n} accm_links=${links}`);
+console.log(`pages=${n} accm_links=${links} pages_with_accm_links=${linkPages.size} (${[...linkPages].join(", ")})`);
+const dbLessons = pages.filter((p) => /^\/academy\/(?!gold-starter)[^/]+\/[^/]+$/.test(p));
+if (!linkPages.has("/academy/graduation/opening-your-accm-account"))
+  console.log(`NOTE: no ACCM link on /academy/graduation/opening-your-accm-account; DB-backed lesson pages (${dbLessons.length} crawled) have no content without a real Supabase, so run against a preview for the full count.`);
+// EXPECT_LINK_PAGES=8 (QA's preview count) turns that into a hard check.
+if (process.env.EXPECT_LINK_PAGES) assert.equal(linkPages.size, Number(process.env.EXPECT_LINK_PAGES), "pages with ACCM links");
 assert.ok(n >= 10 && links >= 5, "crawl found too little; is the server up?");
 assert.deepEqual(bad, [], `ACCM links without the partner line in the same section:\n${bad.join("\n")}`);
 console.log("ALL PASS");
