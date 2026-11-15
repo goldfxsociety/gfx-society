@@ -426,7 +426,7 @@ await t("P2.6 /courses: compact cards (title, chip, price, action); notes under 
 });
 await t("P2.6 /account: Delete copy + form in a closed <details>, wording unchanged; risk line once (MembersFooter for members, own line otherwise)", async () => {
   const a = read("src/app/account/page.tsx");
-  assert.match(a, /<Expander summary="Delete my account" testId="delete-account"[^>]*>[\s\S]*<DeleteAccountForm \/>\s*<\/Expander>/);
+  assert.match(a, /<Expander summary="Delete my account" heading testId="delete-account"[^>]*>[\s\S]*<DeleteAccountForm \/>\s*<\/Expander>/);
   const words = (x) => x.replace(/<[^>]+>|\{" "\}/g, " ").replace(/\s+/g, " ");
   for (const frag of ["Ide-delete nito agad ang account mo at ang Academy data mo: profile, lesson progress, quiz attempts, diagnostic results at activity events. Hindi na ito maibabalik.",
     "Itatago lang namin ang consent record mo (anong boxes ang na-tick mo at kailan) nang 3 years, naka-link lang sa one-way hash ng email mo, bilang proof of consent, as described in the"]) {
@@ -491,6 +491,60 @@ await t("P3-6: members-only hint before the Join click on Home (minimal), /start
 await t("QA P3-5 stays closed: /community risk line asserted here and in simplicity-e2e", async () => {
   assert.ok(RISK_PAGES.some((p) => p.route === "/community" && p.shared));
   assert.match(read("scripts/qa/simplicity-e2e.mjs"), /slug: "community", path: "\/community", gold: JOIN, risk: RISK_LINE/);
+});
+
+// ======== lesson-end-buttons (en-gold-starter-risk-fix.md §2) + QA P3-10 / P3-12 ========
+await t("LessonNav: one mid-course label 'Next lesson →' (no 'Start {level} →'); last Academy lesson = gold Join -> /system/join", async () => {
+  const n = read("src/components/academy/lesson-nav.tsx");
+  assert.ok(!/Start \{nextLevelTitle\}|Next module|partner community|guided training|sumali sa\s+Discord/.test(n), "old labels / Discord-first copy gone");
+  assert.equal(n.match(/<span className="text-base font-semibold">Next lesson →<\/span>/g)?.length, 2, "level-end + mid-level both 'Next lesson →'");
+  assert.match(n, /<NextStepLink\s+location="academy_complete"\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "default" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/NextStepLink>/);
+  assert.match(n, /\{MEMBERS_ONLY_HINT\}<\/p>\s*\{\/\*[^]*?\*\/\}\s*<NextStepLink\s+location="academy_complete"/, "hint before the Join");
+  assert.ok(n.includes("{IB_DISCLOSURE_TEXT}"));
+  // Each branch renders exactly one gold: level-end box (next) | Academy-complete box | mid-level link.
+  assert.equal(n.match(/variant: "default"/g)?.length, 2, "NEXT_GOLD + Join");
+});
+await t("LessonHelp: Discord only as a muted 'Apply to join our Discord →' (approved /accm label) under closed 'May problema?', with the IB line", async () => {
+  const n = read("src/components/academy/lesson-nav.tsx");
+  const h = n.slice(n.indexOf("export function LessonHelp"), n.indexOf("export function LessonNav"));
+  assert.match(h, /<Expander summary=\{JOIN_COPY\.helpSummary\} testId="lesson-help">/);
+  assert.match(h, /<NextStepLink location="lesson_help" className="inline-flex min-h-11 items-center self-start underline">\s*\{ACCM_COPY\.discordCta\}/);
+  assert.ok(!/variant/.test(h), "not a button");
+  assert.match(h, /\{IB_DISCLOSURE_TEXT\}/);
+  assert.equal(ACCM_COPY.discordCta, "Apply to join our Discord →"); assert.equal(ACCM_COPY_EN.discordCta, "Apply to join our Discord →");
+  assert.equal(JOIN_COPY.helpSummary, "May problema?");
+  const lp = read("src/app/academy/[levelSlug]/[lessonSlug]/page.tsx");
+  assert.equal(lp.match(/<LessonHelp \/>/g)?.length, 1, "one help expander on every lesson");
+  assert.ok(!/DiscordAfterAccmReminder|afterPrimary=/.test(lp), "Discord reminder cards removed from lessons");
+  assert.ok(!fs.existsSync(path.join(root, "src/components/funnel/discord-after-accm-reminder.tsx")), "unused reminder component deleted");
+});
+await t("Training lesson ends: 'Next lesson →' (no 'Next module →'); Gold Reset last = gold Join + muted Back; GSB/GAS last -> capstone; capstone has the one gold Join", async () => {
+  const c = read("src/app/courses/[slug]/[lessonSlug]/page.tsx");
+  assert.ok(!/Next module →|Go to capstone/.test(c));
+  assert.match(c, /className=\{nextGold\} data-testid="lesson-next">\s*<span className="text-base font-semibold">Next lesson →<\/span>\s*<span className="text-sm opacity-80">\{next\.title\}<\/span>/);
+  assert.match(c, /<Link href=\{`\/courses\/\$\{slug\}\/capstone`\} className=\{nextGold\} data-testid="lesson-next">\s*<span className="text-base font-semibold">Next lesson →<\/span>\s*<span className="text-sm opacity-80">Capstone<\/span>/);
+  assert.match(c, /<Link href="\/system\/join" className=\{gold\} data-testid="lesson-join">\s*\{JOIN_SYSTEM_CTA\}/);
+  assert.match(c, /className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">\s*Back to Gold Reset/);
+  assert.match(c, /Next module \(pass the quiz first\)/, "locked state unchanged (outline, disabled)");
+  const cap = read("src/app/courses/[slug]/capstone/page.tsx");
+  assert.equal(golds(cap), 1);
+  assert.match(cap, /<Link href="\/system\/join" className=\{cn\(buttonVariants\(\{ variant: "default" \}\), "min-h-11 w-full"\)\} data-testid="capstone-join">\s*\{JOIN_SYSTEM_CTA\}/);
+  assert.match(cap, /<ContentDisclaimerFooter disclaimer=\{cap\?\.disclaimer\} \/>/, "risk/NFA via the content disclaimer (or MembersFooter), unchanged");
+  assert.ok(!/IB_DISCLOSURE/.test(c + cap), "no IB line in the members area");
+});
+await t("QA P3-10: gold-starter Join and 'Tingnan ang steps' log distinct next_step_click locations", async () => {
+  const gs = read("src/app/academy/gold-starter/page.tsx");
+  assert.match(gs, /<NextStepLink\s+location="gold_starter_join"\s+href="\/system\/join"/);
+  assert.match(gs, /<NextStepLink location="gold_starter_steps" className="inline-flex min-h-11 items-center self-start font-medium underline">\s*Tingnan ang steps →/);
+  assert.ok(!/location="gold_starter"/.test(gs));
+  const nsl = read("src/components/funnel/next-step-link.tsx");
+  for (const l of ["gold_starter_join", "gold_starter_steps", "lesson_help", "academy_complete"]) assert.ok(nsl.includes(`| "${l}"`), l);
+  const { safeProps } = await import("../src/lib/analytics/events.ts");
+  assert.deepEqual(safeProps({ location: "gold_starter_join", x: "a@b.test" }), { location: "gold_starter_join" }, "PII filter kept");
+});
+await t("QA P3-12: collapsed /account delete section keeps an h2 'Delete my account' inside <summary>", async () => {
+  assert.match(read("src/components/layout/expander.tsx"), /\{heading \? <h2 className="text-sm font-medium">\{summary\}<\/h2> : summary\}/);
+  assert.match(read("src/app/account/page.tsx"), /<Expander summary="Delete my account" heading testId="delete-account"/);
 });
 
 console.log(`ALL PASS simplicity (${n})`);

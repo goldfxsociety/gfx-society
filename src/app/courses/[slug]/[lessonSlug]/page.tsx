@@ -8,6 +8,7 @@ import { findCatalog, getCourseView } from "@/lib/training/courses";
 import { getMembership } from "@/lib/training/gate";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { LessonInteractive } from "./lesson-interactive";
 
 /** Plain-text paragraphs: split on blank lines; drop heading #, bold/italic markers, list bullets. */
@@ -68,6 +69,8 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   // 80% lock applies to modules only: next module needs this module's lessons completed.
   const moduleDone = inModule.every((l) => l.completed);
   const gold = cn(buttonVariants({ variant: "default" }), "min-h-11 w-full");
+  // lesson-end-buttons spec: one mid-course label, "Next lesson →", with the next title as a muted subtitle.
+  const nextGold = cn(buttonVariants({ variant: "default" }), "h-auto min-h-12 w-full flex-col whitespace-normal py-2 text-center");
   const secondary = cn(buttonVariants({ variant: "outline" }), "min-h-11 w-full");
 
   return (
@@ -113,8 +116,9 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         initialPractice={Boolean(prog?.practice_done)}
       />
       {next && (!nextIsNewModule || moduleDone) ? (
-        <Link href={`/courses/${slug}/${next.slug}`} className={gold}>
-          {nextIsNewModule ? `Next module → ${next.moduleTitle}` : `Next lesson → ${next.title}`}
+        <Link href={`/courses/${slug}/${next.slug}`} className={nextGold} data-testid="lesson-next">
+          <span className="text-base font-semibold">Next lesson →</span>
+          <span className="text-sm opacity-80">{next.title}</span>
         </Link>
       ) : next ? (
         <>
@@ -123,14 +127,24 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         </>
       ) : slug === "gold-reset" ? (
         <>
-          <Link href={`/courses/${slug}`} className={gold}>Back to Gold Reset</Link>
+          {/* Last Gold Reset lesson: gold Join the Trading System; Back to Gold Reset becomes a muted link. */}
+          <Link href="/system/join" className={gold} data-testid="lesson-join">
+            {JOIN_SYSTEM_CTA}
+          </Link>
+          <Link href={`/courses/${slug}`} className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline">
+            Back to Gold Reset
+          </Link>
           <Link href="/courses/gold-strategy-basics" className="inline-flex min-h-11 items-center text-sm underline">
             Kapag consistent ka na sa checklist, puwede mong tingnan ang Gold Strategy Basics.
           </Link>
         </>
       ) : (
         <>
-          <Link href={`/courses/${slug}/capstone`} className={gold}>Go to capstone →</Link>
+          {/* Capstone is the course end: the gold stays a path to it; Join the Trading System is on the capstone page. */}
+          <Link href={`/courses/${slug}/capstone`} className={nextGold} data-testid="lesson-next">
+            <span className="text-base font-semibold">Next lesson →</span>
+            <span className="text-sm opacity-80">Capstone</span>
+          </Link>
           <Link href={`/courses/${slug}`} className={secondary}>Back to course</Link>
         </>
       )}

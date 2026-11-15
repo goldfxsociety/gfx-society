@@ -7,10 +7,9 @@ import { gfxEvent } from "@/lib/analytics/events";
 export type NextStepLocation =
   | "home"
   | "start"
-  | "gold_starter"
-  | "lesson1"
-  | "lesson_end"
-  | "level_complete"
+  | "gold_starter_join"
+  | "gold_starter_steps"
+  | "lesson_help"
   | "academy_complete"
   | "community"
   | "go";
