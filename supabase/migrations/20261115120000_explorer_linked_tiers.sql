@@ -17,9 +17,14 @@
 --     that downgrades. private.import_allowlist_full(rows, source_file, actor) is a thin wrapper that calls it as is,
 --     then the same consented-user activation, and labels its audit row (§4.4 "call the same activation from the
 --     monthly refresh"), without touching its delete / grace rules.
---  3b. Ambiguous emails (§4.3.4, amendment v1.2): an allowlisted email hash with more than one owner
---     (private.hash_owners) never links anyone, in the upsert AND the monthly full path, and is counted in
---     `conflicts`. Role (amendment v1.2): the upsert never overwrites an existing role; role-less rows insert 'client'.
+--  3b. Ambiguous emails (§4.3.4, amendment v1.2 incl. option A): an allowlisted email hash with more than one owner
+--     (private.hash_owners) never links anyone in ANY import path (live import_allowlist, upsert, import_allowlist_full):
+--     activate_consented_members() skips it, and private.match_access_requests() is REDEFINED (live 15 Nov body,
+--     md5 252ce0b1..., plus the skip; same grants) so a pending request naming it stays pending. Counted in
+--     `conflicts` (distinct hashes) in the return value, and in the audit row where the new code writes one (upsert,
+--     full wrapper). Nothing user-facing changes: the user just sees the neutral pending copy.
+--     Role (amendment v1.2 (5)): the upsert never changes an existing row's role (explicit or blank); new rows take
+--     the row's role or 'client'. Only the monthly snapshot (import_allowlist) or an admin edit changes a role.
 --  4. Audit log (§4.6): additive columns on private.allowlist_refresh_log. Existing writes keep working (defaults).
 --  5. Request consent version: public.submit_access_request also accepts 'request-v2' (Privacy v1.6 consent text,
 --     no cadence). 'request-v1' stays accepted and valid. One-line change; see the last section.
@@ -122,6 +127,75 @@ returns table (email_hash text, user_id uuid) language sql stable security defin
 $$;
 revoke all on function private.hash_owners() from public, anon, authenticated;
 
+-- Request matching (amendment v1.2, option A): the live 15 Nov body (md5 252ce0b1...) plus one rule. An email hash with
+-- MORE THAN ONE owner (private.hash_owners) never links a request, in every import path: the live import_allowlist,
+-- the upsert and import_allowlist_full all call this function. Such a request just stays pending (normal refresh
+-- check, so the user sees the neutral pending copy; nothing user-facing reveals the conflict). The skipped hashes are
+-- left in pg_temp._mar_conflicts and counted in the result as `conflicts` (distinct hashes; no hash leaves the DB).
+-- A request can still link through its OTHER email when that one has a single owner. Same signature, security
+-- definer, search_path and grants (none) as live. revert.sql restores the live body byte for byte.
+create or replace function private.match_access_requests()
+returns jsonb language plpgsql security definer set search_path = private, public, pg_temp as $$
+declare
+  r record;
+  v_matched int := 0;
+  v_pending int := 0;
+begin
+  perform private.purge_stale_accm_emails();
+  drop table if exists pg_temp._mar_multi, pg_temp._mar_conflicts;
+  create temp table _mar_multi on commit drop as
+    select o.email_hash from private.hash_owners() o group by o.email_hash having count(distinct o.user_id) > 1;
+  create temp table _mar_conflicts (email_hash text primary key) on commit drop;
+  for r in
+    select q.id, q.user_id, q.status, q.accm_email_hash, q.accm_email_confirmed_at, q.created_at, h.academy_hash,
+           (select a.role from private.member_allowlist a where a.email_hash = h.academy_hash) as academy_listed,
+           (select a.role from private.member_allowlist a
+             where q.accm_email_confirmed_at is not null and a.email_hash = q.accm_email_hash) as accm_listed,
+           exists (select 1 from _mar_multi m where m.email_hash = h.academy_hash) as academy_multi,
+           exists (select 1 from _mar_multi m where m.email_hash = q.accm_email_hash) as accm_multi,
+           (select c.consented_at from private.member_join_consent c where c.user_id = q.user_id) as consent_at
+      from public.access_requests q
+      left join lateral (select private.email_hash(u.email) as academy_hash from auth.users u
+                          where u.id = q.user_id and u.email_confirmed_at is not null) h on true
+     where q.status in ('pending', 'awaiting_email_confirm') for update of q
+  loop
+    -- Count a skip only when it is real: the request would have matched, and stays pending only because of it.
+    if coalesce(case when r.academy_multi then null else r.academy_listed end,
+                case when r.accm_multi then null else r.accm_listed end) is null then
+      if r.academy_listed is not null and r.academy_multi then
+        insert into _mar_conflicts values (r.academy_hash) on conflict do nothing;
+      end if;
+      if r.accm_listed is not null and r.accm_multi then
+        insert into _mar_conflicts values (r.accm_email_hash) on conflict do nothing;
+      end if;
+    end if;
+    r.academy_listed := case when r.academy_multi then null else r.academy_listed end;
+    r.accm_listed := case when r.accm_multi then null else r.accm_listed end;
+    if coalesce(r.academy_listed, r.accm_listed) is null then
+      update public.access_requests set refresh_checks = refresh_checks + 1, last_checked_at = now() where id = r.id;
+      v_pending := v_pending + 1;
+    else
+      update public.access_requests
+         set status = 'matched', matched_via = case when r.academy_listed is not null then 'academy' else 'accm' end,
+             matched_at = now(), refresh_checks = refresh_checks + 1, last_checked_at = now()
+       where id = r.id;
+      -- An address that was never confirmed is not needed any more: drop the raw copy.
+      delete from private.access_request_accm where request_id = r.id and accm_email is not null;
+      insert into public.member_status (user_id, allowlist_status, role, member_verified_at, consent_at, consent_version, grace_until)
+        values (r.user_id, 'active', case when 'ib' in (r.academy_listed, r.accm_listed) then 'ib' else 'client' end, now(),
+                coalesce(r.consent_at, r.created_at), 'join-v2', null)
+      on conflict (user_id) do update set allowlist_status = 'active', role = excluded.role, member_verified_at = now(),
+          consent_at = coalesce(public.member_status.consent_at, excluded.consent_at),
+          consent_version = coalesce(public.member_status.consent_version, excluded.consent_version), grace_until = null;
+      v_matched := v_matched + 1;
+    end if;
+  end loop;
+  return jsonb_build_object('requests_matched', v_matched, 'requests_pending', v_pending,
+                            'conflicts', (select count(*)::int from _mar_conflicts));
+end;
+$$;
+revoke all on function private.match_access_requests() from public, anon, authenticated;
+
 -- Users with join-v2 consent on file, a confirmed email (member_hashes only returns confirmed ones) now on the
 -- allowlist, and no active/grace row -> member_status 'active'. Never-consented Explorers are not linked; an
 -- unconfirmed ACCM email never counts. Add-only: never touches active/grace rows. Returns how many were activated.
@@ -144,8 +218,13 @@ begin
        and not exists (select 1 from public.member_status ms
                         where ms.user_id = c.user_id and ms.allowlist_status in ('active', 'grace'))
   )
+  -- Real skips only: a candidate owns the hash and has no other (single-owner) listed hash to be linked through.
   update _act_conflicts x set blocked = true
-   where exists (select 1 from cand where x.email_hash in (select private.member_hashes(cand.user_id)));
+   where exists (select 1 from cand
+                  where x.email_hash in (select private.member_hashes(cand.user_id))
+                    and not exists (select 1 from private.member_allowlist a
+                                     where a.email_hash in (select private.member_hashes(cand.user_id))
+                                       and a.email_hash not in (select y.email_hash from _act_conflicts y)));
   with cand as (
     select c.user_id, c.consented_at,
            (select a.role from private.member_allowlist a
@@ -185,8 +264,10 @@ revoke all on function private.import_actor(text) from public, anon, authenticat
 -- ---------------------------------------------------------------- anytime upsert (add only)
 -- p_rows: JSON array of objects. Only "email" (required) and "role" ('ib' | 'client') are read; every other key
 -- (account ID, name, balance, ...) is ignored and never stored. Missing email or an unknown role value -> skipped.
--- Role (spec A4 + amendment v1.2 (5)): a row with no role inserts a NEW hash as 'client' but never changes the role of
--- an existing hash (e.g. 'ib'); a row with a role sets it. Conflicts (same email with both roles in this file, or an
+-- Role (spec A4 + amendment v1.2 (5)): the upsert NEVER changes the role of a hash that is already listed, whether
+-- the row's role is explicit or blank (an 'ib' row stays 'ib' even if the file says 'client'). A NEW hash takes the
+-- row's role, or 'client' when blank. Role changes come only from the monthly snapshot (import_allowlist) or an
+-- admin edit. `updated` is therefore always 0 (kept for the log column); listed hashes count as `unchanged`. Conflicts (same email with both roles in this file, or an
 -- email that belongs to more than one Academy user) are counted and NOT added, so nobody is auto-linked on an
 -- ambiguous row. A multi-owner hash that is ALREADY listed (e.g. from the monthly file) is skipped by the activation
 -- and counted here too.
@@ -222,13 +303,13 @@ begin
 
   select count(*) filter (where conflict),
          count(*) filter (where not conflict and a.email_hash is null),
-         count(*) filter (where not conflict and a.email_hash is not null and i.role is not null and a.role <> i.role),
-         count(*) filter (where not conflict and a.email_hash is not null and (i.role is null or a.role = i.role))
+         0,
+         count(*) filter (where not conflict and a.email_hash is not null)
     into v_conflicts, v_added, v_updated, v_unchanged
     from _up_in i left join private.member_allowlist a using (email_hash);
 
-  -- Existing hashes: seen again; the role changes only when this file states one. New hashes: role or 'client'.
-  update private.member_allowlist a set role = coalesce(i.role, a.role), seen_at = now()
+  -- Existing hashes: seen again, role untouched. New hashes: the row's role, or 'client' when blank.
+  update private.member_allowlist a set seen_at = now()
     from _up_in i where i.email_hash = a.email_hash and not i.conflict;
   insert into private.member_allowlist (email_hash, role)
     select email_hash, coalesce(role, 'client') from _up_in where not conflict
@@ -245,11 +326,13 @@ begin
   v_req := private.match_access_requests();
   v_act := private.activate_consented_members();
   -- conflicts = distinct hashes: ambiguous rows in this file (not added) + allowlisted multi-owner hashes that kept a
-  -- consented user from being linked.
+  -- consented user from being linked + multi-owner hashes that kept a pending request pending (_mar_conflicts).
   select count(*) into v_conflicts from (
     select email_hash from _up_in where conflict
     union
-    select email_hash from _act_conflicts where blocked) c;
+    select email_hash from _act_conflicts where blocked
+    union
+    select email_hash from _mar_conflicts) c;
 
   insert into private.allowlist_refresh_log
     (mode, source_file, actor, added, updated, unchanged, removed, requests_matched, requests_pending,
@@ -259,7 +342,7 @@ begin
           v_total - v_valid);
   return jsonb_build_object('added', v_added, 'updated', v_updated, 'unchanged', v_unchanged,
                             'consented_activated', v_act, 'conflicts', v_conflicts, 'skipped', v_total - v_valid,
-                            'relisted', v_relisted) || v_req;
+                            'relisted', v_relisted) || (v_req - 'conflicts');
 end;
 $$;
 revoke all on function private.upsert_allowlist(jsonb, text, text) from public, anon, authenticated;
@@ -275,7 +358,11 @@ begin
   v := private.import_allowlist(p_rows);
   v_act := private.activate_consented_members();
   -- The monthly file has no conflict check of its own: multi-owner hashes are skipped by the activation (§4.3.4).
-  select count(*) into v_conf from _act_conflicts where blocked;
+  -- plus pending requests that the request matching (inside import_allowlist) kept pending for the same reason.
+  select count(*) into v_conf from (
+    select email_hash from _act_conflicts where blocked
+    union
+    select email_hash from _mar_conflicts) c;
   select max(id) into v_log from private.allowlist_refresh_log where run_at = now();
   update private.allowlist_refresh_log
      set mode = 'full', source_file = private.clean_source_file(p_source_file), actor = private.import_actor(p_actor),

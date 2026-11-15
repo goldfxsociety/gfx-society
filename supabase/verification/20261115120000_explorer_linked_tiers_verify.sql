@@ -1,10 +1,11 @@
 -- Read-only. One result set: (check, ok). Returns no emails, hashes or row data: only catalog facts and booleans.
 -- Run BEFORE and AFTER applying 20261115120000_explorer_linked_tiers.sql, and after the revert.
--- 18 rows, three prefixes: 'pre:' / 'unchanged:' / no prefix = must hold always; 'apply:' = the migration is in;
--- 'revert:' = the three redefined public functions have their exact live 15 Nov 2026 bodies.
--- BEFORE apply (prod as of 15 Nov 2026): the 6 always rows and the 3 'revert:' rows are true (9 rows); all 9
+-- 19 rows, three prefixes: 'pre:' / 'unchanged:' / no prefix = must hold always; 'apply:' = the migration is in;
+-- 'revert:' = the four redefined functions (three public + private.match_access_requests) have their exact live
+-- 15 Nov 2026 bodies.
+-- BEFORE apply (prod as of 15 Nov 2026): the 5 always rows and the 4 'revert:' rows are true (9 rows); all 10
 --   'apply:' rows are false.
--- AFTER apply: the 6 always rows and the 9 'apply:' rows are true (15 rows); the 3 'revert:' rows are false by design.
+-- AFTER apply: the 5 always rows and the 10 'apply:' rows are true (15 rows); the 4 'revert:' rows are false by design.
 -- AFTER the revert (supabase/scripts/20261115_explorer_linked_tiers/revert.sql): same as BEFORE (9 true, 'apply:' false).
 -- scripts/qa/pglite-explorer-linked-tiers.mjs asserts all three sets.
 with fn as (
@@ -41,9 +42,6 @@ select 'pre: paid courses gold-strategy-basics + gold-advanced-setups have a pri
 union all
 select 'monthly import_allowlist body unchanged (md5 of the live 15 Nov body)',
        coalesce((select m = 'ac526943f1975f3be087350bf900d16f' from fn where name = 'private.import_allowlist'), false)
-union all
-select 'match_access_requests body unchanged (md5 of the live 15 Nov body)',
-       coalesce((select m = '252ce0b1289b29c27ef329532e95c9cf' from fn where name = 'private.match_access_requests'), false)
 union all
 select 'private schema: anon/authenticated have no USAGE',
        not has_schema_privilege('anon', 'private', 'usage') and not has_schema_privilege('authenticated', 'private', 'usage')
@@ -84,6 +82,14 @@ select 'apply: allowlist_refresh_log has mode, source_file, actor, updated, cons
 union all
 select 'apply: allowlist_refresh_log has no email / account-id style column',
        (select c @> array['mode'] and not exists (select 1 from unnest(c) x where x ~* '(email|account|user_id|name|balance|deposit)') from logcols)
+union all
+select 'apply: match_access_requests skips multi-owner hashes (new body md5; no anon/authenticated EXECUTE; search_path pinned)',
+       coalesce((select m = '370a739cd7fea71700a31ffb1d0ae722' and prosecdef and cfg = 'search_path=private, public, pg_temp'
+                        and not has_function_privilege('anon', oid, 'execute') and not has_function_privilege('authenticated', oid, 'execute')
+                   from fn where name = 'private.match_access_requests'), false)
+union all
+select 'revert: match_access_requests body is the live 15 Nov body (md5)',
+       coalesce((select m = '252ce0b1289b29c27ef329532e95c9cf' from fn where name = 'private.match_access_requests'), false)
 union all
 select 'revert: has_course_access body is the live 15 Nov body (md5)',
        coalesce((select m = '5c19835b884faeb0743116d75cb287a9' from fn where name = 'public.has_course_access'), false)

@@ -11,9 +11,12 @@
 --    schema); the next monthly import_allowlist run reconciles them as usual.
 --  * Members linked by private.activate_consented_members() (member_status rows set 'active') STAY active: the
 --    revert only restores schema and function bodies, it never undoes data. Remove one by hand only if needed.
---  * private.import_allowlist(jsonb) and private.match_access_requests() were never changed, so nothing to restore.
--- Afterwards run supabase/verification/20261115120000_explorer_linked_tiers_verify.sql: the 6 always rows ('pre:',
--- 'unchanged:', no prefix) and the 3 'revert:' rows are true (9 rows); every 'apply:' row is false.
+--  * private.match_access_requests() goes back to the exact live 15 Nov 2026 body (copied verbatim from
+--    20261111130000_accm_confirm_mailer.sql; md5 252ce0b1289b29c27ef329532e95c9cf, checked by a 'revert:' row), so a
+--    pending request naming a multi-owner email can match again. Same grants as before (none).
+--  * private.import_allowlist(jsonb) was never changed, so nothing to restore.
+-- Afterwards run supabase/verification/20261115120000_explorer_linked_tiers_verify.sql: the 5 always rows ('pre:',
+-- 'unchanged:', no prefix) and the 4 'revert:' rows are true (9 rows); every 'apply:' row is false.
 begin;
 
 create or replace function public.has_course_access(p_course_id uuid)
@@ -163,6 +166,48 @@ end;
 $$;
 revoke all on function public.submit_access_request(text, text, text, text) from public, anon;
 grant execute on function public.submit_access_request(text, text, text, text) to authenticated;
+
+-- Live 15 Nov 2026 body, byte for byte (20261111130000_accm_confirm_mailer.sql).
+create or replace function private.match_access_requests()
+returns jsonb language plpgsql security definer set search_path = private, public, pg_temp as $$
+declare
+  r record;
+  v_matched int := 0;
+  v_pending int := 0;
+begin
+  perform private.purge_stale_accm_emails();
+  for r in
+    select q.id, q.user_id, q.status, q.accm_email_hash, q.accm_email_confirmed_at, q.created_at,
+           (select a.role from private.member_allowlist a join auth.users u on u.id = q.user_id
+             where u.email_confirmed_at is not null and a.email_hash = private.email_hash(u.email)) as academy_role,
+           (select a.role from private.member_allowlist a
+             where q.accm_email_confirmed_at is not null and a.email_hash = q.accm_email_hash) as accm_role,
+           (select c.consented_at from private.member_join_consent c where c.user_id = q.user_id) as consent_at
+      from public.access_requests q where q.status in ('pending', 'awaiting_email_confirm') for update of q
+  loop
+    if coalesce(r.academy_role, r.accm_role) is null then
+      update public.access_requests set refresh_checks = refresh_checks + 1, last_checked_at = now() where id = r.id;
+      v_pending := v_pending + 1;
+    else
+      update public.access_requests
+         set status = 'matched', matched_via = case when r.academy_role is not null then 'academy' else 'accm' end,
+             matched_at = now(), refresh_checks = refresh_checks + 1, last_checked_at = now()
+       where id = r.id;
+      -- An address that was never confirmed is not needed any more: drop the raw copy.
+      delete from private.access_request_accm where request_id = r.id and accm_email is not null;
+      insert into public.member_status (user_id, allowlist_status, role, member_verified_at, consent_at, consent_version, grace_until)
+        values (r.user_id, 'active', case when 'ib' in (r.academy_role, r.accm_role) then 'ib' else 'client' end, now(),
+                coalesce(r.consent_at, r.created_at), 'join-v2', null)
+      on conflict (user_id) do update set allowlist_status = 'active', role = excluded.role, member_verified_at = now(),
+          consent_at = coalesce(public.member_status.consent_at, excluded.consent_at),
+          consent_version = coalesce(public.member_status.consent_version, excluded.consent_version), grace_until = null;
+      v_matched := v_matched + 1;
+    end if;
+  end loop;
+  return jsonb_build_object('requests_matched', v_matched, 'requests_pending', v_pending);
+end;
+$$;
+revoke all on function private.match_access_requests() from public, anon, authenticated;
 
 drop function if exists private.import_allowlist_full(jsonb, text, text);
 drop function if exists private.upsert_allowlist(jsonb, text, text);

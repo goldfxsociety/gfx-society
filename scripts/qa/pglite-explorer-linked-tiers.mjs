@@ -8,6 +8,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import fs from 'fs';
+import { createHash } from 'node:crypto';
 const R = new URL('../../supabase/', import.meta.url).pathname;
 const db = new PGlite({ extensions: { pgcrypto } });
 process.on('unhandledRejection', (e) => { console.log('FAIL unexpected error:', e?.message); process.exit(1); });
@@ -45,14 +46,21 @@ await x(`update public.training_courses set status = 'open' where slug in ('gold
 
 const VERIFY = fs.readFileSync(R + 'verification/20261115120000_explorer_linked_tiers_verify.sql', 'utf8');
 const verifyRows = async () => (await db.query(VERIFY)).rows;
-const PRE = ['pre: Gold Reset course row', 'pre: paid courses gold-strategy-basics', 'monthly import_allowlist body unchanged', 'match_access_requests body unchanged',
-             'private schema: anon/authenticated have no USAGE', 'unchanged: has_course_access + my_payment_info', 'revert: has_course_access body is', 'revert: my_payment_info body is',
-             'revert: submit_access_request body is'];
+const PRE = ['pre: Gold Reset course row', 'pre: paid courses gold-strategy-basics', 'monthly import_allowlist body unchanged',
+             'private schema: anon/authenticated have no USAGE', 'unchanged: has_course_access + my_payment_info', 'revert: match_access_requests body is',
+             'revert: has_course_access body is', 'revert: my_payment_info body is', 'revert: submit_access_request body is'];
+// md5 of a function body as written in a migration file (the text between `as $$` and `$$;`), for byte-for-byte checks.
+const fileBodyMd5 = (file, name) => { const t = fs.readFileSync(file, 'utf8'); const i = t.indexOf(`create or replace function ${name}`); const j = t.indexOf('$$', i) + 2;
+  return createHash('md5').update(t.slice(j, t.indexOf('$$;', j))).digest('hex'); };
+const fnMd5 = (name) => sval(`select md5(prosrc) from pg_proc where oid = to_regprocedure('${name}')`);
+const MAR_LIVE = fileBodyMd5(R + 'migrations/20261111130000_accm_confirm_mailer.sql', 'private.match_access_requests');
+check(MAR_LIVE === '252ce0b1289b29c27ef329532e95c9cf', 'live match_access_requests body in the repo = prod md5 (read-only SELECT, 15 Nov)', MAR_LIVE);
+check((await fnMd5('private.match_access_requests()')) === MAR_LIVE, 'before: installed match_access_requests = live body');
 const label = (c) => PRE.find((p) => c.startsWith(p));
 {
   const v = await verifyRows();
   const t = v.filter((r) => r.ok).map((r) => label(r.check) ?? r.check);
-  check(v.length === 18 && JSON.stringify(t) === JSON.stringify(PRE), `verify BEFORE: exactly the ${PRE.length} documented rows are true (incl. prod md5s = repo bodies)`, JSON.stringify(v.filter((r) => r.ok !== PRE.includes(label(r.check) ?? '')).map((r) => r.check)));
+  check(v.length === 19 && JSON.stringify(t) === JSON.stringify(PRE), `verify BEFORE: exactly the ${PRE.length} documented rows are true (incl. prod md5s = repo bodies)`, JSON.stringify(v.filter((r) => r.ok !== PRE.includes(label(r.check) ?? '')).map((r) => r.check)));
 }
 
 // ---- fixtures (fake) ----
@@ -112,7 +120,7 @@ try { await x(MIG); await x(MIG); check(true, 'migration applies twice (idempote
 {
   const v = await verifyRows();
   const bad = v.filter((r) => r.ok !== !r.check.startsWith('revert:')).map((r) => r.check);
-  check(v.length === 18 && bad.length === 0, 'verify AFTER: all 15 non-revert rows true, the 3 revert rows false', JSON.stringify(bad));
+  check(v.length === 19 && bad.length === 0 && v.filter((r) => r.ok).length === 15, 'verify AFTER: all 15 non-revert rows true, the 4 revert rows false', JSON.stringify(bad));
 }
 // ---- request consent version (Privacy v1.6): new consents store 'request-v2'; 'request-v1' stays accepted ----
 {
@@ -211,20 +219,26 @@ expectSub('upsert #2 (partial file of 1): only adds', r2, { added: 1, updated: 0
 check((await sval(`select count(*)::int from public.member_status where allowlist_status <> 'active'`)) === 0, 'upsert #2: nobody graced or removed');
 check((await sval(`select count(*)::int from private.member_allowlist`)) === before1 + 6, 'upsert #2: nobody deleted');
 await expectVal('upsert #2: Linked member missing from the partial file is still Linked', 'authenticated', U.link, 'select public.my_membership()', 'active');
-const r3 = await up([{ email: 'new1@example.test', role: 'IB' }]);
-expectSub('upsert #3: role change counts as updated', r3, { added: 0, updated: 1, unchanged: 0 });
-// P3-2 (amendment v1.2 (5)): a row with no role never overwrites an existing role; it is not skipped either.
-const r3b = await up([{ email: 'new1@example.test' }, { email: 'new2@example.test', role: '' }, { email: 'new3@example.test' }]);
-expectSub('upsert role-less rows: existing ib kept (unchanged), new one added, none skipped', r3b, { added: 1, updated: 0, unchanged: 2, skipped: 0, conflicts: 0 });
-check((await sval(`select string_agg(role, ',' order by email_hash = private.email_hash('new3@example.test'), email_hash) from private.member_allowlist
-  where email_hash in (private.email_hash('new1@example.test'), private.email_hash('new2@example.test'), private.email_hash('new3@example.test'))`)) === 'ib,ib,client',
-  'upsert role-less rows: new1/new2 stay ib, new3 inserted as client');
-const r3c = await up([{ email: 'new1@example.test', role: 'client' }, { email: 'new3@example.test', role: 'client' }]);
-expectSub('upsert: an explicit role still updates (ib -> client), same role unchanged', r3c, { added: 0, updated: 1, unchanged: 1 });
+// P3-2 (amendment v1.2 (5)): the upsert never changes an existing row's role, explicit or blank. New rows take the
+// row's role, or client when blank. Rows with no role are not skipped. new2 is an existing 'ib' row (upsert #2).
+const roleOf = (e) => sval(`select role from private.member_allowlist where email_hash = private.email_hash('${e}')`);
+check((await roleOf('new2@example.test')) === 'ib', 'role fixture: new2 is an existing ib row');
+const r3 = await up([{ email: 'new2@example.test', role: 'client' }]);
+expectSub('upsert: existing ib + explicit client -> unchanged, nothing updated', r3, { added: 0, updated: 0, unchanged: 1, skipped: 0 });
+check((await roleOf('new2@example.test')) === 'ib', 'upsert: existing ib with explicit client stays ib');
+const r3b = await up([{ email: 'new2@example.test' }, { email: 'new2@example.test', role: '' }]);
+expectSub('upsert: existing ib + blank role -> unchanged, not skipped', r3b, { added: 0, updated: 0, unchanged: 1, skipped: 0, conflicts: 0 });
+check((await roleOf('new2@example.test')) === 'ib', 'upsert: existing ib with a blank role stays ib');
+const r3c = await up([{ email: 'new4@example.test', role: 'IB' }, { email: 'new3@example.test' }, { email: 'new1@example.test', role: 'ib' }]);
+expectSub('upsert: two new rows added (explicit ib, blank), existing client row unchanged', r3c, { added: 2, updated: 0, unchanged: 1, skipped: 0 });
+check((await roleOf('new4@example.test')) === 'ib', 'upsert: new row with explicit ib becomes ib');
+check((await roleOf('new3@example.test')) === 'client', 'upsert: new row with a blank role becomes client');
+check((await roleOf('new1@example.test')) === 'client', 'upsert: existing client with explicit ib stays client');
 
 // ---- monthly snapshot stays the only downgrade; upsert restores ----
 const fullRows = [E.linkNoBuy, E.expC, E.req, 'new1@example.test', 'new2@example.test'].map((email) => ({ email, role: 'client' }));
 const rf = (await db.query(`select private.import_allowlist_full($1::jsonb, 'monthly-snapshot.csv') as r`, [JSON.stringify(fullRows)])).rows[0].r;
+check((await roleOf('new2@example.test')) === 'client', 'monthly snapshot can still change a role (new2 ib -> client)');
 check(rf.removed > 0 && rf.consented_activated === 0, 'import_allowlist_full: monthly rules ran (removed > 0), activation ran', JSON.stringify(rf));
 await expectVal('monthly snapshot without Linked member -> grace (14-day rule unchanged)', 'authenticated', U.link, 'select public.my_membership()', 'grace');
 check((await sval(`select (grace_until > now() + interval '13 days' and grace_until <= now() + interval '14 days') from public.member_status where user_id = '${U.link}'`)) === true, 'grace_until is 14 days out');
@@ -241,27 +255,73 @@ await x(`select private.import_allowlist('${JSON.stringify(fullRows.concat([{ em
 check((await sval(`select mode from private.allowlist_refresh_log order by id desc limit 1`)) === 'full', 'plain import_allowlist still logs (mode defaults to full)');
 check((await sval(`select count(*)::int from private.allowlist_refresh_log where source_file ~ '[/\\\\]' or coalesce(source_file,'') ~ '@'`)) === 0, 'audit log: no paths or emails in source_file');
 
-// ---- P3-1 (QA's case, amendment v1.2 (4)): a two-owner hash ALREADY listed by the monthly file never links anyone ----
-const Q = { qx: '10000000-0000-0000-0000-00000000000b', qy: '10000000-0000-0000-0000-00000000000c' };
-await x(`insert into auth.users values ('${Q.qx}','qx@example.test',now()),('${Q.qy}','qy@example.test',now())`);
-for (const k of ['qx', 'qy']) await as('authenticated', Q[k], consent);
-// qx claims qy's Academy email as a CONFIRMED ACCM email -> the hash has two owners.
+// ---- P3-1 / amendment v1.2 (4) + option A: a two-owner hash never links anyone, in EVERY import path ----
+// qy's Academy email is also qx's CONFIRMED ACCM email (pending request) -> two owners. sN: normal single-owner
+// pending requests with a confirmed ACCM email; each must still link through one of the three paths.
+const Q = { qx: '10000000-0000-0000-0000-00000000000b', qy: '10000000-0000-0000-0000-00000000000c',
+            s1: '10000000-0000-0000-0000-00000000000d', s2: '10000000-0000-0000-0000-00000000000e', s3: '10000000-0000-0000-0000-00000000000f' };
+await x(`insert into auth.users values ${Object.keys(Q).map((k) => `('${Q[k]}','${k}@example.test',now())`).join(',')}`);
+for (const k of Object.keys(Q)) await as('authenticated', Q[k], consent);
+const reqRow = (k, accm) => `('${Q[k]}', private.email_hash('${k}@example.test'), private.email_hash('${accm}'), now(), 'request-v1', 'pending')`;
 await x(`insert into public.access_requests (user_id, academy_email_hash, accm_email_hash, accm_email_confirmed_at, consent_version, status)
-  values ('${Q.qx}', private.email_hash('qx@example.test'), private.email_hash('qy@example.test'), now(), 'request-v1', 'pending')`);
-const monthly2 = fullRows.concat([{ email: E.link, role: 'client' }, { email: 'qy@example.test', role: 'client' }]);
+  values ${reqRow('qx', 'qy@example.test')}, ${reqRow('s1', 's1-accm@example.test')}, ${reqRow('s2', 's2-accm@example.test')}, ${reqRow('s3', 's3-accm@example.test')}`);
+const reqStatus = (k) => sval(`select status from public.access_requests where user_id = '${Q[k]}'`);
+const JOIN_KEYS = '["accm_confirmed","created_at","has_accm_email","ib_name","last_checked_at","status","updated_at"]';
+const stillPending = async (path) => {
+  check((await reqStatus('qx')) === 'pending', `${path}: two-owner request stays pending`);
+  await expectVal(`${path}: ACCM-email owner (qx) NOT linked`, 'authenticated', Q.qx, 'select public.my_membership()', 'none');
+  await expectVal(`${path}: Academy-email owner (qy) NOT linked`, 'authenticated', Q.qy, 'select public.my_membership()', 'none');
+  const js = await val('authenticated', Q.qx, 'select public.my_join_state()');
+  check(js?.request?.status === 'pending' && JSON.stringify(Object.keys(js.request).sort()) === JOIN_KEYS && !/conflict|owner/i.test(JSON.stringify(js)),
+    `${path}: qx's own join state is a plain pending request (nothing reveals the conflict)`, JSON.stringify(js && Object.keys(js.request ?? {})));
+};
+// Path 1: import_allowlist_full (the monthly file lists the two-owner hash).
+const monthly2 = fullRows.concat([{ email: E.link, role: 'client' }, { email: 'qy@example.test', role: 'client' }, { email: 's1-accm@example.test', role: 'client' }]);
 const rq = (await db.query(`select private.import_allowlist_full($1::jsonb, 'monthly-2.csv') as r`, [JSON.stringify(monthly2)])).rows[0].r;
 check((await sval(`select count(*)::int from private.member_allowlist where email_hash = private.email_hash('qy@example.test')`)) === 1, 'P3-1 fixture: two-owner hash is on the allowlist from the monthly file');
-expectSub('P3-1 full path: two-owner hash skipped, counted in conflicts', rq, { consented_activated: 0, conflicts: 1 });
-check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'P3-1 full path: audit row conflicts = 1');
-await expectVal('P3-1 full path: Academy-email owner (qy) NOT linked', 'authenticated', Q.qy, 'select public.my_membership()', 'none');
-check(rq.consented_activated === 0, 'P3-1 full path: the activation linked nobody on the two-owner hash');
-// Residual (reported, not changed): the unchanged, md5-pinned private.match_access_requests() (called by the live
-// import_allowlist and by the upsert) still matches qx's PENDING request on its confirmed ACCM email. Not asserted.
-console.log(`INFO residual: qx after the monthly file = ${await val('authenticated', Q.qx, 'select public.my_membership()')} (request ${await sval(`select status || '/' || coalesce(matched_via, '-') from public.access_requests where user_id = '${Q.qx}'`)})`);
-const rqu = await up([{ email: 'unrelated@example.test', role: 'client' }], 'mid-cycle-2.csv');
-expectSub('P3-1 upsert path: listed two-owner hash skipped by the activation, counted in conflicts', rqu, { added: 1, consented_activated: 0, conflicts: 1 });
-check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'P3-1 upsert path: audit row conflicts = 1');
-await expectVal('P3-1 upsert path: Academy-email owner (qy) NOT linked by the activation', 'authenticated', Q.qy, 'select public.my_membership()', 'none');
+expectSub('full path: two-owner hash skipped (activation + request match), counted once in conflicts', rq, { consented_activated: 0, conflicts: 1, requests_matched: 1 });
+check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'full path: audit row conflicts = 1');
+await stillPending('full path');
+check((await reqStatus('s1')) === 'matched', 'full path: single-owner pending request (s1) still links');
+await expectVal('full path: s1 Linked', 'authenticated', Q.s1, 'select public.my_membership()', 'active');
+// Path 2: upsert (two-owner hash already listed; this file adds s2's ACCM email).
+const rqu = await up([{ email: 'unrelated@example.test', role: 'client' }, { email: 's2-accm@example.test' }], 'mid-cycle-2.csv');
+expectSub('upsert path: two-owner hash skipped, counted in conflicts', rqu, { added: 2, consented_activated: 0, conflicts: 1, requests_matched: 1 });
+check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'upsert path: audit row conflicts = 1');
+await stillPending('upsert path');
+check((await reqStatus('s2')) === 'matched', 'upsert path: single-owner pending request (s2) still links');
+await expectVal('upsert path: s2 Linked', 'authenticated', Q.s2, 'select public.my_membership()', 'active');
+// Path 3: the live import_allowlist, called directly (body unchanged; it calls match_access_requests).
+const monthly3 = monthly2.concat([{ email: 's2-accm@example.test', role: 'client' }, { email: 's3-accm@example.test', role: 'client' }]);
+const rqp = (await db.query(`select private.import_allowlist($1::jsonb) as r`, [JSON.stringify(monthly3)])).rows[0].r;
+expectSub('plain import_allowlist path: two-owner request skipped, counted in its result', rqp, { conflicts: 1, requests_matched: 1 });
+await stillPending('plain import_allowlist path');
+check((await reqStatus('s3')) === 'matched', 'plain import_allowlist path: single-owner pending request (s3) still links');
+await expectVal('plain import_allowlist path: s3 Linked', 'authenticated', Q.s3, 'select public.my_membership()', 'active');
+check(!/@|[0-9a-f]{64}/.test(JSON.stringify([rq, rqu, rqp])), 'conflict results carry counts only (no emails or hashes)');
+// Re-running keeps it pending and idempotent (conflict counted again, nothing linked).
+const rqu2 = await up([{ email: 'unrelated@example.test', role: 'client' }], 'mid-cycle-3.csv');
+expectSub('upsert re-run: still 1 conflict, nothing linked', rqu2, { consented_activated: 0, conflicts: 1, requests_matched: 0 });
+await stillPending('upsert re-run');
+// Conflicts count only skips that actually happened: d1's pending request names d2's email (two owners) as its ACCM
+// email, but d1 still matches through its own single-owner Academy email -> linked, and no extra conflict counted.
+// d2 never consented (not an activation candidate). The only conflict left is the qx/qy one.
+const D = { d1: '10000000-0000-0000-0000-000000000010', d2: '10000000-0000-0000-0000-000000000011' };
+await x(`insert into auth.users values ('${D.d1}','d1@example.test',now()),('${D.d2}','d2@example.test',now())`);
+await as('authenticated', D.d1, consent);
+await x(`insert into public.access_requests (user_id, academy_email_hash, accm_email_hash, accm_email_confirmed_at, consent_version, status)
+  values ('${D.d1}', private.email_hash('d1@example.test'), private.email_hash('d2@example.test'), now(), 'request-v1', 'pending')`);
+await x(`insert into private.member_allowlist (email_hash, role) values (private.email_hash('d2@example.test'), 'client')`); // as if from the monthly file
+const rd = await up([{ email: 'd1@example.test' }], 'mid-cycle-4.csv');
+expectSub('real skips only: d1 links via its own email, conflicts stays 1 (qx/qy only)', rd, { added: 1, conflicts: 1, requests_matched: 1 });
+check((await sval(`select status || '/' || matched_via from public.access_requests where user_id = '${D.d1}'`)) === 'matched/academy', 'real skips only: d1 matched via academy (the two-owner ACCM email was not used)');
+check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'real skips only: audit row conflicts = 1');
+await stillPending('after the d1 upsert');
+// Direct call (QA repro S4): match_access_requests() on its own also keeps the two-owner request pending.
+const rm = (await db.query(`select private.match_access_requests() as r`)).rows[0].r;
+expectSub('direct match_access_requests() call: conflict counted, nothing matched', rm, { conflicts: 1, requests_matched: 0 });
+await stillPending('direct match_access_requests() call');
+
 // ---- revert + re-apply ----
 const REV = fs.readFileSync(R + 'scripts/20261115_explorer_linked_tiers/revert.sql', 'utf8');
 try { await x(REV); await x(REV); check(true, 'revert applies twice (idempotent)'); } catch (e) { check(false, 'revert applies twice', e.message); }
@@ -269,6 +329,14 @@ try { await x(REV); await x(REV); check(true, 'revert applies twice (idempotent)
   const v = await verifyRows();
   const bad = v.filter((r) => r.ok !== (label(r.check) !== undefined)).map((r) => r.check);
   check(bad.length === 0, 'verify AFTER REVERT: only the documented pre/unchanged/revert rows are true', JSON.stringify(bad));
+}
+check((await fnMd5('private.match_access_requests()')) === MAR_LIVE, 'after revert: match_access_requests md5 = the original live body (byte for byte)');
+check((await sval(`select has_function_privilege('anon', 'private.match_access_requests()', 'execute') or has_function_privilege('authenticated', 'private.match_access_requests()', 'execute')`)) === false,
+  'after revert: match_access_requests grants unchanged (no anon/authenticated EXECUTE)');
+check((await sval(`select to_regprocedure('private.hash_owners()') is null`)) === true, 'after revert: hash_owners dropped');
+{ // Old behaviour back: the live body matches the two-owner pending request again.
+  const r = (await db.query(`select private.import_allowlist($1::jsonb) as r`, [JSON.stringify(monthly3)])).rows[0].r;
+  check(r.conflicts === undefined && r.requests_matched === 1 && (await reqStatus('qx')) === 'matched', 'after revert: old behaviour back (two-owner request matches, no conflicts key)', JSON.stringify(r));
 }
 await expectErr('after revert: request-v2 refused again (live 15 Nov body)', 'authenticated', U.rv,
   `select public.submit_access_request(null, null, 'request-v2', '203.0.113.20')`, /unknown consent version/);
