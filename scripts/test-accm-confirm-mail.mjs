@@ -197,7 +197,7 @@ await t("join form shows the ACCM field and helper behind the (now live) flag; s
 await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; they differ only in the v1.5 parts", async () => {
   assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   const page = read("src/app/privacy/page.tsx");
-  assert.match(page, /ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.5\.md" : "privacy-notice\.md"/);
+  assert.match(page, /ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.6\.md" : "privacy-notice\.md"/); // v1.6 (15 Nov) carries every v1.5 part
   const v14 = read("src/content/legal/privacy-notice.md"), v15 = read("src/content/legal/privacy-notice-v1.5.md");
   assert.match(v14, /Version: 1\.4/); assert.ok(!/ACCM email \(kung binigay\)|Different ACCM email/.test(v14));
   assert.match(v15, /Version: 1\.5/); assert.match(v15, /\*\*What changed in v1\.5 \(11 Nov 2026\):\*\*/);
@@ -211,6 +211,15 @@ await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; th
   const v15only = (l) => /Version: 1\.5|What changed in v1\.5|^\| Google LLC \(Gmail\)|^\| Different ACCM email waiting|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   const v14only = (l) => /Version: 1\.4|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   assert.deepEqual(b.filter((l) => !v15only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")), a.filter((l) => !v14only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")));
+});
+await t("privacy v1.6 = v1.5 plus only the request-cadence lines (drift guard; every v1.5 mailer passage kept)", async () => {
+  const v15 = read("src/content/legal/privacy-notice-v1.5.md").split("\n"), v16 = read("src/content/legal/privacy-notice-v1.6.md").split("\n");
+  const changed = (l) => /^Last updated:|What changed in v1\.6|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
+  const norm = (a) => a.filter((l) => !changed(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
+  assert.deepEqual(norm(v16), norm(v15));
+  const v16s = v16.join("\n");
+  assert.ok(v16s.includes("and we remove it once it is confirmed, or within 8 days if it isn't."));
+  assert.ok(v16s.includes("| Different ACCM email waiting for confirmation (plain email, private table) |"));
 });
 await t("admin client comment names the new service-role use; issue RPC called only from the server wiring", async () => {
   assert.match(read("src/lib/supabase/admin.ts"), /issue_accm_confirm_token/);

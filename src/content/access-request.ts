@@ -6,8 +6,13 @@
  * monthly refresh) and makes no timing promise, including none about the confirmation mailer.
  */
 
-/** Consent version stored on access_requests.consent_version (SQL: submit_access_request). */
-export const REQUEST_CONSENT_VERSION = "request-v1";
+/**
+ * Consent version stored on access_requests.consent_version (SQL: submit_access_request).
+ * request-v2 (15 Nov 2026, Privacy v1.6): same data and purpose as request-v1, cadence wording only ("each import"
+ * instead of "each monthly update"). request-v1 rows stay valid; no re-consent. The DB accepts both from migration
+ * 20261115120000_explorer_linked_tiers (apply it before this app deploys; the live function accepts request-v1 only).
+ */
+export const REQUEST_CONSENT_VERSION = "request-v2";
 
 export const REQUEST_COPY = {
   openLink: "Hindi pa naka-verify? I-request dito.",
@@ -19,7 +24,7 @@ export const REQUEST_COPY = {
   accmEmailHelper: "Kailangan naming i-confirm ang email na ito, kaya may ipapadala kaming link.",
   ibNameLabel: "IB o sub-IB name (optional)",
   consent:
-    "Pumapayag ako na i-check ng GFX Society ang email(s) na ito sa ACCM member data sa bawat monthly update. Email at IB name lang ang sine-save namin, para i-check ang membership sa bawat refresh. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com.",
+    "Pumapayag ako na i-check ng GFX Society ang email(s) na ito sa ACCM member data sa bawat import (puwede anytime, kasama ang existing monthly refresh). Email at IB name lang ang sine-save namin, para i-check ang membership sa bawat import. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com.", // request-v2: cadence from the Privacy v1.6 line (spec §3)
   privacyLink: "Privacy Policy",
   submit: "I-submit ang request",
   submittedPending:
@@ -52,7 +57,7 @@ export const REQUEST_COPY_EN = {
   accmEmailHelper: "We'll send a link to confirm this email.",
   ibNameLabel: "IB or sub-IB name (optional)",
   consent:
-    "I agree that GFX Society may check these email(s) against ACCM member data at each monthly update. We only save the email(s) and IB name, so we can check membership at each refresh. To ask us to delete this data, email goldfx.society@gmail.com.",
+    "I agree that GFX Society may check these email(s) against ACCM member data at each import (this can happen any time, including the existing monthly refresh). We only save the email(s) and IB name, so we can check membership at each import. To ask us to delete this data, email goldfx.society@gmail.com.", // request-v2
   privacyLink: "Privacy Policy",
   submit: "Submit request",
   submittedPending:

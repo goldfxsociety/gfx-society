@@ -1,11 +1,11 @@
 -- Read-only. One result set: (check, ok). Returns no emails, hashes or row data: only catalog facts and booleans.
 -- Run BEFORE and AFTER applying 20261115120000_explorer_linked_tiers.sql, and after the revert.
--- 16 rows, three prefixes: 'pre:' / 'unchanged:' / no prefix = must hold always; 'apply:' = the migration is in;
--- 'revert:' = the two redefined public functions have their exact live 15 Nov 2026 bodies.
--- BEFORE apply (prod as of 15 Nov 2026): the 6 always rows and the 2 'revert:' rows are true (8 rows); all 8
+-- 18 rows, three prefixes: 'pre:' / 'unchanged:' / no prefix = must hold always; 'apply:' = the migration is in;
+-- 'revert:' = the three redefined public functions have their exact live 15 Nov 2026 bodies.
+-- BEFORE apply (prod as of 15 Nov 2026): the 6 always rows and the 3 'revert:' rows are true (9 rows); all 9
 --   'apply:' rows are false.
--- AFTER apply: the 6 always rows and the 8 'apply:' rows are true (14 rows); the 2 'revert:' rows are false by design.
--- AFTER the revert (supabase/scripts/20261115_explorer_linked_tiers/revert.sql): same as BEFORE (8 true, 'apply:' false).
+-- AFTER apply: the 6 always rows and the 9 'apply:' rows are true (15 rows); the 3 'revert:' rows are false by design.
+-- AFTER the revert (supabase/scripts/20261115_explorer_linked_tiers/revert.sql): same as BEFORE (9 true, 'apply:' false).
 -- scripts/qa/pglite-explorer-linked-tiers.mjs asserts all three sets.
 with fn as (
   select p.oid, n.nspname || '.' || p.proname as name, md5(p.prosrc) as m, p.prosrc, p.prosecdef,
@@ -22,7 +22,8 @@ with fn as (
      coalesce(to_regprocedure('private.import_allowlist(jsonb)'), 0)::oid,
      coalesce(to_regprocedure('private.match_access_requests()'), 0)::oid,
      coalesce(to_regprocedure('public.has_course_access(uuid)'), 0)::oid,
-     coalesce(to_regprocedure('public.my_payment_info(text)'), 0)::oid)
+     coalesce(to_regprocedure('public.my_payment_info(text)'), 0)::oid,
+     coalesce(to_regprocedure('public.submit_access_request(text,text,text,text)'), 0)::oid)
 ), newfn as (
   select * from fn where name in ('private.upsert_allowlist', 'private.import_allowlist_full', 'private.activate_consented_members',
                                   'private.explorer_course', 'private.join_consented', 'private.import_actor', 'private.clean_source_file')
@@ -68,10 +69,13 @@ select 'apply: my_payment_info lets a consented Explorer see Gold Reset',
        coalesce((select prosrc like '%private.explorer_course(c.id)%' and prosrc like '%private.join_consented(auth.uid())%'
                    from fn where name = 'public.my_payment_info'), false)
 union all
-select 'unchanged: has_course_access + my_payment_info keep grants (authenticated yes, anon no) and SECURITY DEFINER',
-       (select count(*) from fn where name in ('public.has_course_access', 'public.my_payment_info')
+select 'unchanged: has_course_access + my_payment_info + submit_access_request keep grants (authenticated yes, anon no) and SECURITY DEFINER',
+       (select count(*) from fn where name in ('public.has_course_access', 'public.my_payment_info', 'public.submit_access_request')
            and prosecdef and cfg = 'search_path=public, pg_temp'
-           and has_function_privilege('authenticated', oid, 'execute') and not has_function_privilege('anon', oid, 'execute')) = 2
+           and has_function_privilege('authenticated', oid, 'execute') and not has_function_privilege('anon', oid, 'execute')) = 3
+union all
+select 'apply: submit_access_request accepts request-v1 + request-v2 (live body, one line changed; md5)',
+       coalesce((select m = '45419dcecbb48ed1db7689ccb434914c' from fn where name = 'public.submit_access_request'), false)
 union all
 select 'apply: allowlist_refresh_log has mode, source_file, actor, updated, consented_activated, conflicts, skipped',
        (select c @> array['actor', 'conflicts', 'consented_activated', 'mode', 'skipped', 'source_file', 'updated'] from logcols)
@@ -83,4 +87,7 @@ select 'revert: has_course_access body is the live 15 Nov body (md5)',
        coalesce((select m = '5c19835b884faeb0743116d75cb287a9' from fn where name = 'public.has_course_access'), false)
 union all
 select 'revert: my_payment_info body is the live 15 Nov body (md5)',
-       coalesce((select m = '96bbcf2c9095dd4fb99aa6016a2c2081' from fn where name = 'public.my_payment_info'), false);
+       coalesce((select m = '96bbcf2c9095dd4fb99aa6016a2c2081' from fn where name = 'public.my_payment_info'), false)
+union all
+select 'revert: submit_access_request body is the live 15 Nov body (md5, accepts request-v1 only)',
+       coalesce((select m = 'da445ef25e6a78018d00afb84dd1fe67' from fn where name = 'public.submit_access_request'), false);

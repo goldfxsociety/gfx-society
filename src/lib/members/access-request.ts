@@ -9,7 +9,8 @@
  * Different-ACCM-email confirmation mailer switch (app side). LIVE (true) since the go-live PR (11 Nov 2026).
  * While true: the ACCM email field shows, the request action mails the link only through the server path
  * (src/lib/members/accm-confirm-send.ts, Gmail SMTP, token issued by the service-role RPC), the
- * /system/join/confirm page offers the POST confirm button, and /privacy shows Privacy v1.5 (privacy-notice-v1.5.md).
+ * /system/join/confirm page offers the POST confirm button, and /privacy shows Privacy v1.6 (privacy-notice-v1.6.md;
+ * v1.5 = privacy-notice-v1.5.md, kept as history).
  * Missing GFX_SMTP_* env still fails closed with the neutral error, before any token is issued.
  * If false (rollback): the field is hidden, any value is ignored server-side, no SMTP env is read, no token is issued
  * and no mail is sent, the confirm page shows the neutral error, and /privacy falls back to Privacy v1.4
@@ -21,7 +22,8 @@
  * SUPABASE_SERVICE_ROLE_KEY works for issue_accm_confirm_token. Order (docs/accm-confirm-mailer.md): env, key check,
  * DB switch on, THEN deploy this constant. Rollback: a revert PR setting this back to false (deploy) FIRST, then the
  * DB switch off, then the scrub SQL.
- * Keep the two privacy files in step (scripts/test-accm-confirm-mail.mjs checks they differ only in the v1.5 parts).
+ * Keep the privacy files in step (scripts/test-accm-confirm-mail.mjs checks v1.4/v1.5 and v1.5/v1.6 differ only in
+ * the parts each version changed).
  */
 export const ACCM_CONFIRM_MAIL_LIVE = true;
 

@@ -225,8 +225,9 @@ try {
     await p.close();
     p = await open("/privacy", null);
     const pv = await text(p);
-    check(FLAG_ON ? pv.includes("Version: 1.5") && pv.includes("Different ACCM email") : pv.includes("Version: 1.4") && !pv.includes("Different ACCM email"),
-      FLAG_ON ? "/privacy serves v1.5 (live)" : "/privacy serves v1.4 (rollback)");
+    check(FLAG_ON ? pv.includes("Version: 1.6") && pv.includes("Different ACCM email") && pv.includes("sa bawat import (puwede anytime, kasama ang existing monthly refresh)") && !pv.includes("monthly update")
+      : pv.includes("Version: 1.4") && !pv.includes("Different ACCM email"),
+      FLAG_ON ? "/privacy serves v1.6 (live)" : "/privacy serves v1.4 (rollback)");
     await p.close();
   }
 

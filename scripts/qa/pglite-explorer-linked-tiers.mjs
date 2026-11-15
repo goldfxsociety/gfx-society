@@ -46,12 +46,13 @@ await x(`update public.training_courses set status = 'open' where slug in ('gold
 const VERIFY = fs.readFileSync(R + 'verification/20261115120000_explorer_linked_tiers_verify.sql', 'utf8');
 const verifyRows = async () => (await db.query(VERIFY)).rows;
 const PRE = ['pre: Gold Reset course row', 'pre: paid courses gold-strategy-basics', 'monthly import_allowlist body unchanged', 'match_access_requests body unchanged',
-             'private schema: anon/authenticated have no USAGE', 'unchanged: has_course_access + my_payment_info', 'revert: has_course_access body is', 'revert: my_payment_info body is'];
+             'private schema: anon/authenticated have no USAGE', 'unchanged: has_course_access + my_payment_info', 'revert: has_course_access body is', 'revert: my_payment_info body is',
+             'revert: submit_access_request body is'];
 const label = (c) => PRE.find((p) => c.startsWith(p));
 {
   const v = await verifyRows();
   const t = v.filter((r) => r.ok).map((r) => label(r.check) ?? r.check);
-  check(v.length === 16 && JSON.stringify(t) === JSON.stringify(PRE), `verify BEFORE: exactly the ${PRE.length} documented rows are true (incl. prod md5s = repo bodies)`, JSON.stringify(v.filter((r) => r.ok !== PRE.includes(label(r.check) ?? '')).map((r) => r.check)));
+  check(v.length === 18 && JSON.stringify(t) === JSON.stringify(PRE), `verify BEFORE: exactly the ${PRE.length} documented rows are true (incl. prod md5s = repo bodies)`, JSON.stringify(v.filter((r) => r.ok !== PRE.includes(label(r.check) ?? '')).map((r) => r.check)));
 }
 
 // ---- fixtures (fake) ----
@@ -65,12 +66,13 @@ const U = {
   aw: '10000000-0000-0000-0000-000000000007',    // consented, different-email request awaiting confirmation
   cx: '10000000-0000-0000-0000-000000000008',    // claims Y's email as a CONFIRMED ACCM email (owner conflict)
   cy: '10000000-0000-0000-0000-000000000009',    // consented Explorer whose Academy email is also cx's ACCM email
+  rv: '10000000-0000-0000-0000-00000000000a',    // consented Explorer used only for the request consent-version checks
 };
 const E = Object.fromEntries(Object.keys(U).map((k) => [k, `${k.toLowerCase()}@example.test`]));
 await x(`insert into auth.users values ${Object.keys(U).map((k) => `('${U[k]}','${E[k]}',${k === 'unconf' ? 'null' : 'now()'})`).join(',')}`);
 await x(`select private.import_allowlist('[{"email":"${E.link}","role":"client"},{"email":"${E.linkNoBuy}","role":"client"}]')`);
 const consent = `select public.record_member_consent('join-v2')`;
-for (const k of ['expC', 'link', 'linkNoBuy', 'req', 'aw', 'cx', 'cy']) await as('authenticated', U[k], consent);
+for (const k of ['expC', 'link', 'linkNoBuy', 'req', 'aw', 'cx', 'cy', 'rv']) await as('authenticated', U[k], consent);
 await expectVal('fixture: Linked is active', 'authenticated', U.link, 'select public.my_membership()', 'active');
 await expectVal('fixture: consented Explorer is none', 'authenticated', U.expC, 'select public.my_membership()', 'none');
 await x(`insert into public.course_purchases (user_id, course_id, price_php, amount_entered, payment_code, gcash_ref, receipt_sha256, status, decided_at)
@@ -103,12 +105,29 @@ const gating = async (phase, rules) => {
 // ---- BEFORE the migration: Explorers cannot read Gold Reset (today's rule) ----
 await gating('before', [['expC', []], ['link', COURSES]]);
 
+await expectErr('before: live submit_access_request refuses request-v2 (apply the migration before the app deploys)', 'authenticated', U.rv,
+  `select public.submit_access_request(null, null, 'request-v2', '203.0.113.20')`, /unknown consent version/);
 const MIG = fs.readFileSync(R + 'migrations/20261115120000_explorer_linked_tiers.sql', 'utf8');
 try { await x(MIG); await x(MIG); check(true, 'migration applies twice (idempotent)'); } catch (e) { check(false, 'migration applies twice', e.message); process.exit(1); }
 {
   const v = await verifyRows();
   const bad = v.filter((r) => r.ok !== !r.check.startsWith('revert:')).map((r) => r.check);
-  check(v.length === 16 && bad.length === 0, 'verify AFTER: all 14 non-revert rows true, the 2 revert rows false', JSON.stringify(bad));
+  check(v.length === 18 && bad.length === 0, 'verify AFTER: all 15 non-revert rows true, the 3 revert rows false', JSON.stringify(bad));
+}
+// ---- request consent version (Privacy v1.6): new consents store 'request-v2'; 'request-v1' stays accepted ----
+{
+  const sub = (v) => `select public.submit_access_request(null, null, ${v === null ? 'null' : `'${v}'`}, '203.0.113.20')`;
+  const app = fs.readFileSync(R + '../src/content/access-request.ts', 'utf8').match(/REQUEST_CONSENT_VERSION = "([^"]+)"/)[1];
+  check(app === 'request-v2', 'app sends request-v2', app);
+  await expectVal('after: request-v2 accepted', 'authenticated', U.rv, sub('request-v2'), 'pending');
+  const stored = (await db.query(`select consent_version from public.access_requests where user_id = '${U.rv}'`)).rows[0]?.consent_version;
+  check(stored === 'request-v2', 'after: new request stores consent_version request-v2', stored);
+  await expectVal('after: request-v1 still accepted (page loaded before a deploy)', 'authenticated', U.rv, sub('request-v1'), 'pending');
+  await expectErr('after: unknown version refused', 'authenticated', U.rv, sub('request-v3'), /unknown consent version/);
+  await expectErr('after: null version refused', 'authenticated', U.rv, sub(null), /unknown consent version/);
+  const v1rows = (await db.query(`select count(*)::int as n from public.access_requests where consent_version = 'request-v1' and status in ('pending', 'awaiting_email_confirm')`)).rows[0].n;
+  check(v1rows >= 2, 'existing request-v1 rows untouched (no re-consent)', String(v1rows));
+  await x(`delete from public.access_requests where user_id = '${U.rv}'`); // keep the import counts below independent of this block
 }
 
 // ---- tier gating (spec §1, §2.4, acceptance 1, 8) ----
@@ -222,6 +241,8 @@ try { await x(REV); await x(REV); check(true, 'revert applies twice (idempotent)
   const bad = v.filter((r) => r.ok !== (label(r.check) !== undefined)).map((r) => r.check);
   check(bad.length === 0, 'verify AFTER REVERT: only the documented pre/unchanged/revert rows are true', JSON.stringify(bad));
 }
+await expectErr('after revert: request-v2 refused again (live 15 Nov body)', 'authenticated', U.rv,
+  `select public.submit_access_request(null, null, 'request-v2', '203.0.113.20')`, /unknown consent version/);
 await x(`delete from public.member_status where user_id = '${U.expC}'`); // back to a plain consented Explorer
 await gating('after revert', [['expC', []]]);
 try { await x(MIG); check(true, 're-apply after revert'); } catch (e) { check(false, 're-apply after revert', e.message); }
