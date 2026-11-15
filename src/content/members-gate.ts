@@ -26,13 +26,15 @@ export const SYSTEM_COPY = {
 export const MEMBERS_CONSENT_VERSION = "join-v2";
 
 export const JOIN_COPY = {
-  title: "Join the GFX Trading System", // existing
+  title: "Join the Trading System", // simplicity spec v2 §3 / App. C (12 Nov)
   intro: "Mag-verify para ma-access ang courses, market breakdowns, at community.", // Addendum A
   // Logged out (Academy login reuse, 11 Nov). No email field, no allowlist check before login.
   loggedOutBody:
     "Log in muna gamit ang Academy account mo. Pagka-log in, i-tick ang email check para ma-verify ang membership mo.", // Design approved 11 Nov
+  /** Logged-out one-line intro (simplicity spec App. C). loggedOutBody stays for reference / EN parity. */
+  loggedOutIntro: "Log in with your Academy account para ma-verify ang membership mo.",
   loginCta: "Log in with your Academy account", // Design approved 11 Nov
-  signupPrompt: "Wala ka pang Academy account?", // Design approved 11 Nov
+  signupPrompt: "Wala ka pang account?", // simplicity spec App. C (12 Nov)
   signupLink: "Create a free account", // Design approved 11 Nov
   // Logged in, not yet a member.
   loggedInBody: "Isang step na lang: i-tick ang email check sa ibaba para ma-verify ang membership mo.", // Design approved 11 Nov
@@ -45,6 +47,7 @@ export const JOIN_COPY = {
   submit: "Verify membership", // Design approved 11 Nov
   academyLink: "Ituloy ang free Academy lessons", // existing string
   accmLink: "Tungkol sa ACCM", // [Builder] (tertiary link, no disclosure line per D3)
+  helpSummary: "May problema?", // simplicity spec §2 / App. C: muted help grouped under one expander
   consentRequired: "I-tick muna ang consent box para ma-check namin ang email mo.", // existing
   notVerified:
     "Hindi pa namin ma-verify ang membership mo. Members-only ito para sa mga ACCM client na naka-register sa ilalim ng GFX. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov (no_match)
@@ -61,3 +64,41 @@ export const MEMBERS_COPY = {
   grace:
     "Hindi na namin ma-verify ang ACCM registration mo. Kung sa tingin mo mali ito, mag-email sa goldfx.society@gmail.com.", // Design review 2 Nov
 } as const;
+
+/**
+ * /en/system/join (simplicity spec v2, Appendix H): meaning identical to JOIN_COPY. loginCta, signupLink and submit
+ * were already English in PH and are reused verbatim. Same keys as JOIN_COPY so the same components render either.
+ */
+export const JOIN_COPY_EN = {
+  title: "Join the Trading System",
+  intro: "Verify to access the courses, market breakdowns, and community.",
+  loggedOutIntro: "Log in with your Academy account to verify your membership.",
+  loggedOutBody: "Log in first with your Academy account. After you log in, tick the email check to verify your membership.",
+  loginCta: JOIN_COPY.loginCta,
+  signupPrompt: "Don't have an Academy account yet?",
+  signupLink: JOIN_COPY.signupLink,
+  loggedInBody: "One step left: tick the email check below to verify your membership.",
+  consentLead: "The GFX Trading System is members-only.",
+  consentBody:
+    "To verify you, we will check whether your email is registered with ACCM under the GFX Society IB line. We only use the email for this; we cannot see or save your balance, deposits, or trades. There is no minimum deposit to become a member.",
+  consentCheckbox: "I agree to this email check.",
+  privacyLink: "Privacy Policy",
+  submit: JOIN_COPY.submit,
+  academyLink: "Continue with the free Academy lessons",
+  accmLink: "About ACCM",
+  helpSummary: "Having trouble?",
+  consentRequired: "Tick the consent box first so we can check your email.",
+  notVerified:
+    "We couldn't verify your membership yet. This is members-only for ACCM clients registered under GFX. If you think this is wrong, email goldfx.society@gmail.com.",
+  notVerifiedAcademyLink: "Back to the free Academy lessons",
+  unverifiedEmail:
+    "Confirm your Academy account email first. Check your inbox (including Spam or Promotions) for the confirmation link, then try again.",
+  rateLimited: "Too many tries. Please wait about an hour, then try again.",
+  error: "There was an error checking this. Try again later, or email goldfx.society@gmail.com.",
+} as const satisfies Record<keyof typeof JOIN_COPY, string>;
+
+export type JoinCopy = Record<keyof typeof JOIN_COPY, string>;
+
+/** SYSTEM_COPY.underCta in English (simplicity spec Appendix H, meaning identical). */
+export const SYSTEM_UNDER_CTA_EN =
+  "This is members-only for people registered with ACCM under GFX's IB line. The free Academy lessons are open to everyone.";

@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
-import { TRANSFER_COPY as T, TRANSFER_TEMPLATE as TPL, TRANSFER_TEMPLATE_TEXT } from "@/content/access-request";
+import { TRANSFER_COPY, TRANSFER_COPY_EN, TRANSFER_TEMPLATE as TPL, TRANSFER_TEMPLATE_TEXT } from "@/content/access-request";
 import { cn } from "@/lib/utils";
 
 /**
  * Journey 4 (spec §7): muted inline expander on no_match with Ben's IB-transfer email template. Not a chooser, not gold.
  * No transfer-timing promise, no second-account CTA.
  */
-export function TransferHelp() {
+export function TransferHelp({ lang = "tl" }: { lang?: "tl" | "en" }) {
+  const T = lang === "en" ? TRANSFER_COPY_EN : TRANSFER_COPY;
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

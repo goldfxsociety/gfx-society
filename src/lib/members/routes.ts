@@ -14,19 +14,27 @@ export const JOIN_SIGNUP_PATH = "/signup?next=%2Fsystem%2Fjoin";
  */
 export function memberNext(next: string | null | undefined): string {
   const p = safeNextPath(next, MEMBERS_HOME);
-  return /^\/system\/join(?:[/?#]|$)/.test(p) ? MEMBERS_HOME : p;
+  return /^\/(?:en\/)?system\/join(?:[/?#]|$)/.test(p) ? MEMBERS_HOME : p;
 }
 
-/** /system/join carrying a safe `next` (omitted when it would just be MEMBERS_HOME). */
-export function joinPath(next: string | null | undefined): string {
+/** The two join front doors: PH and EN (simplicity spec v2). Same logic, different copy. */
+export const JOIN_BASES = ["/system/join", "/en/system/join"] as const;
+export type JoinBase = (typeof JOIN_BASES)[number];
+/** Only the two known doors; anything else (or nothing) is the PH door. Used for the hidden form field. */
+export function joinBaseFrom(v: unknown): JoinBase {
+  return v === "/en/system/join" ? "/en/system/join" : "/system/join";
+}
+
+/** /system/join (or the EN door) carrying a safe `next` (omitted when it would just be MEMBERS_HOME). */
+export function joinPath(next: string | null | undefined, base: JoinBase = "/system/join"): string {
   const p = memberNext(next);
-  return p === MEMBERS_HOME ? "/system/join" : `/system/join?next=${encodeURIComponent(p)}`;
+  return p === MEMBERS_HOME ? base : `${base}?next=${encodeURIComponent(p)}`;
 }
 
-/** Login / signup that come back to /system/join with the same safe `next`. */
-export function joinLoginPath(next: string | null | undefined): string {
-  return `/login?next=${encodeURIComponent(joinPath(next))}`;
+/** Login / signup that come back to the same join door with the same safe `next`. */
+export function joinLoginPath(next: string | null | undefined, base: JoinBase = "/system/join"): string {
+  return `/login?next=${encodeURIComponent(joinPath(next, base))}`;
 }
-export function joinSignupPath(next: string | null | undefined): string {
-  return `/signup?next=${encodeURIComponent(joinPath(next))}`;
+export function joinSignupPath(next: string | null | undefined, base: JoinBase = "/system/join"): string {
+  return `/signup?next=${encodeURIComponent(joinPath(next, base))}`;
 }

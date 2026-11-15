@@ -1,10 +1,10 @@
 import { IB_DISCLOSURE_TEXT, IB_LONGFORM_PAYMENT_TEXT, NEUTRAL_LICENSING_TEXT, activePartners } from "@/config/partners";
 
-/** Short disclosure — place next to every broker link or button. */
-export function IbDisclosureShort() {
+/** Short disclosure — place next to every broker link or button. `text`: the EN line on /en pages. */
+export function IbDisclosureShort({ text = IB_DISCLOSURE_TEXT }: { text?: string } = {}) {
   return (
     <p className="text-xs text-muted-foreground">
-      <strong>Disclosure:</strong> {IB_DISCLOSURE_TEXT}
+      <strong>Disclosure:</strong> {text}
     </p>
   );
 }

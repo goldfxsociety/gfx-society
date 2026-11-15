@@ -25,6 +25,19 @@ export const ME = {
   quizTag: "Quiz",
   capstoneRow: "Capstone",
   nav: { home: "Home", courses: "Courses", account: "Account", tools: "Tools", navigate: "Navigate", modules: "Modules", later: "Paparating pa" },
+  // Member home, 4 cards (simplicity spec v2 P1.3 + Ben's decision 3). Signals is a placeholder only: no link,
+  // no dates, no performance claims.
+  home: {
+    lead: "Ituloy ang training mo.",
+    continueTitle: "Continue training",
+    coursesTitle: "Courses",
+    coursesLine: "Gold Reset at iba pang courses.",
+    signalsTitle: "Signals",
+    signalsLine: "Coming soon.",
+    signalsBadge: "Coming soon",
+    accountTitle: "Account",
+    accountLine: "Settings at mga nabili mong courses.",
+  },
 } as const;
 
 export const STATE_ICON = { done: "✓", in_progress: "◐", not_started: "○" } as const;

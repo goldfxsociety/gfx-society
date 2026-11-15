@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { REQUEST_COPY as R } from "@/content/access-request";
-import { JOIN_COPY as C } from "@/content/members-gate";
+import { Expander } from "@/components/layout/expander";
+import { REQUEST_COPY, REQUEST_COPY_EN } from "@/content/access-request";
+import { JOIN_COPY, JOIN_COPY_EN } from "@/content/members-gate";
 import { ACCM_CONFIRM_MAIL_LIVE } from "@/lib/members/access-request";
+import type { JoinBase } from "@/lib/members/routes";
 import { joinConsent, submitAccessRequest, type JoinState, type RequestState } from "./actions";
 import { TransferHelp } from "./transfer-help";
 
@@ -23,12 +25,20 @@ type Props = {
   request: JoinRequestView | null;
   /** "Dec 1, 2026": the next 1st in Asia/Manila, computed on the server. */
   nextFirst: string;
+  /** "en" on /en/system/join: same logic and actions, English copy (simplicity spec v2). */
+  lang?: "tl" | "en";
 };
+
+const copyFor = (lang: "tl" | "en") =>
+  lang === "en"
+    ? { C: JOIN_COPY_EN, R: REQUEST_COPY_EN, base: "/en/system/join" as JoinBase, accm: "/en/accm" }
+    : { C: JOIN_COPY, R: REQUEST_COPY, base: "/system/join" as JoinBase, accm: "/accm" };
 
 const link = "inline-flex min-h-11 items-center self-start py-2 text-left text-sm underline";
 
 /** Logged-in, not-yet-member: consent + verify, then (no_match) the request form and the optional help. */
-export function JoinForm({ next, consentRecorded, academyEmail, request, nextFirst }: Props) {
+export function JoinForm({ next, consentRecorded, academyEmail, request, nextFirst, lang = "tl" }: Props) {
+  const { C, R, base, accm } = copyFor(lang);
   const [verify, verifyAction, verifying] = useActionState<JoinState, FormData>(joinConsent, { result: "idle" });
   const [sent, requestAction, sending] = useActionState<RequestState, FormData>(submitAccessRequest, { result: "idle" });
   const [consent, setConsent] = useState(consentRecorded);
@@ -52,6 +62,7 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
       {showVerify && (
         <form action={verifyAction} className="flex flex-col gap-4">
           <input type="hidden" name="next" value={next} />
+          <input type="hidden" name="join_base" value={base} />
           <p className="text-sm">{C.loggedInBody}</p>
           <p className="text-sm leading-relaxed">
             <strong>{C.consentLead}</strong> {C.consentBody}
@@ -92,35 +103,49 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
               : active && !formOpen ? (active.status === "awaiting_email_confirm" ? R.submittedAwaiting : R.activeRequest(active.submitted, nextFirst))
               : ""}
           </div>
-          {!submitted && (
-            <button
-              type="button"
-              aria-expanded={formOpen}
-              aria-controls="access-request-form"
-              onClick={() => setFormOpen((v) => !v)}
-              className={`${link} text-muted-foreground`}
-            >
-              {active ? R.updateLink : R.openLink}
-            </button>
-          )}
-          {!submitted && formOpen && (
-            <RequestForm
-              action={requestAction}
-              state={sent}
-              pending={sending}
-              next={next}
-              academyEmail={academyEmail}
-              ibName={active?.ibName ?? ""}
-            />
-          )}
-          <Link href="/accm" className={`${link} text-muted-foreground`}>
-            {R.noAccmLink}
-          </Link>
-          <TransferHelp />
-          <Link href="/academy" className={link}>
-            {C.notVerifiedAcademyLink}
-          </Link>
+          {/* All muted help under one "May problema?" / "Having trouble?" (simplicity spec P2.5); opens on no_match. */}
+          <Expander summary={C.helpSummary} open testId="join-help">
+            {!submitted && (
+              <button
+                type="button"
+                aria-expanded={formOpen}
+                aria-controls="access-request-form"
+                onClick={() => setFormOpen((v) => !v)}
+                className={`${link} text-muted-foreground`}
+              >
+                {active ? R.updateLink : R.openLink}
+              </button>
+            )}
+            {!submitted && formOpen && (
+              <RequestForm
+                action={requestAction}
+                state={sent}
+                pending={sending}
+                next={next}
+                academyEmail={academyEmail}
+                ibName={active?.ibName ?? ""}
+                lang={lang}
+              />
+            )}
+            <Link href={accm} className={`${link} text-muted-foreground`}>
+              {R.noAccmLink}
+            </Link>
+            <TransferHelp lang={lang} />
+            <Link href="/academy" className={link}>
+              {C.notVerifiedAcademyLink}
+            </Link>
+          </Expander>
         </div>
+      )}
+      {!noMatch && (
+        <Expander summary={C.helpSummary} testId="join-help">
+          <Link href="/academy" className={link}>
+            {C.academyLink}
+          </Link>
+          <Link href={accm} className={`${link} text-xs text-muted-foreground`}>
+            {C.accmLink}
+          </Link>
+        </Expander>
       )}
     </div>
   );
@@ -133,6 +158,7 @@ function RequestForm({
   next,
   academyEmail,
   ibName,
+  lang,
 }: {
   action: (fd: FormData) => void;
   state: RequestState;
@@ -140,7 +166,9 @@ function RequestForm({
   next: string;
   academyEmail: string;
   ibName: string;
+  lang: "tl" | "en";
 }) {
+  const { C, R, base } = copyFor(lang);
   const accmRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
   const alertRef = useRef<HTMLParagraphElement>(null);
@@ -156,8 +184,9 @@ function RequestForm({
   }, [state, accmErr, consentErr, formErr]);
 
   return (
-    <form id="access-request-form" action={action} noValidate className="flex flex-col gap-4 rounded-lg border border-border p-4">
+    <form id="access-request-form" action={action} noValidate className="flex flex-col gap-4 rounded-lg border border-border p-4 text-foreground">
       <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="join_base" value={base} />
       <h2 className="text-lg font-semibold">{R.heading}</h2>
       <p className="text-sm leading-relaxed">{R.intro}</p>
       <div className="flex flex-col gap-1">

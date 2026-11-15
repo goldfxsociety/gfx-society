@@ -26,7 +26,7 @@ const PHRASES = ["Buksan ang lesson", "Simulan sa Step 1", "Tingnan ang steps", 
 // Intentional / proper nouns. Removed from text before matching.
 const ALLOW = ["Lesson in Taglish for now", "(the sign-up pages are in Taglish for now)", "Tagalog / Taglish",
   // English phrases containing a marker word
-  "at risk"];
+  "at risk", "at least"];
 
 const ent = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 const decode = (s) => s.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) =>

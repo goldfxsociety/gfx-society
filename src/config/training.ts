@@ -4,6 +4,8 @@
  */
 
 export const RISK_LINE = "Max 1% risk per trade. Education lang, not financial advice.";
+/** EN, meaning identical to RISK_LINE (simplicity spec Appendix H). Not the longer Starter Kit RISK_LINE_EN. */
+export const RISK_LINE_EN_SHORT = "Max 1% risk per trade. Education only, not financial advice.";
 export const RISK_LINK_TEXT = "Basahin ang full risk disclosure →";
 export const STATUS_SURFACE_NOTE = "Wala pa kaming email updates. Check this page for updates sa payment mo.";
 export const APPROVAL_TIME = "1–2 days";

@@ -7,10 +7,12 @@
 import assert from "node:assert/strict";
 const BASE = (process.env.BASE ?? "http://localhost:3000").replace(/\/$/, "");
 const LINE = "Partner broker ng GFX ang ACCM.";
+// /en pages carry the EN line instead (simplicity spec v2, Appendix H).
+const LINE_EN = "ACCM is GFX's partner broker.";
 const WINDOW = 1500;
 const MAX_DIVS = 3;
 const ACCM_HREF = /^(?:\/accm(?:[/?#]|$)|https?:\/\/(?:[\w-]+\.)*accm\.[a-z]+(?:[/?#]|$))/i;
-const EXTRA = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter"];
+const EXTRA = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join"];
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 const BOUNDARY = new Set(["section", "article", "li", "aside", "footer", "header"]);
 
@@ -31,14 +33,14 @@ export function parse(html) {
   return els;
 }
 
-export function hasLineInSection(html, els, aStart) {
+export function hasLineInSection(html, els, aStart, line = LINE) {
   const a = els.findIndex((e) => e.start === aStart && e.tag === "a");
-  if (a < 0) return html.slice(Math.max(0, aStart - WINDOW), aStart + WINDOW).includes(LINE); // fallback
+  if (a < 0) return html.slice(Math.max(0, aStart - WINDOW), aStart + WINDOW).includes(line); // fallback
   let divs = 0;
   for (let k = els[a].parent; k >= 0; k = els[k].parent) {
     const e = els[k];
     if (e.tag === "body" || e.tag === "main" || e.tag === "html") return false;
-    if (html.slice(e.start, e.end).includes(LINE)) return true;
+    if (html.slice(e.start, e.end).includes(line)) return true;
     if (BOUNDARY.has(e.tag)) return false;
     if (e.tag === "div" && ++divs >= MAX_DIVS && !els.some((x, i) => i !== k && BOUNDARY.has(x.tag) && x.start < e.start && x.end >= e.end)) return false;
   }
@@ -62,14 +64,17 @@ for (const p of pages) {
   const r = await fetch(BASE + p, { redirect: "manual" });
   if (r.status !== 200) continue;
   let html = (await r.text()).replace(/<script[\s\S]*?<\/script>/g, (s) => " ".repeat(s.length));
-  if (process.env.STRIP_LINE) html = html.split(LINE).join(" ".repeat(LINE.length));
+  const line = p.startsWith("/en/") ? LINE_EN : LINE;
+  // HTML escapes the apostrophe in the EN line.
+  html = html.split("ACCM is GFX&#x27;s partner broker.").join(LINE_EN).split("ACCM is GFX&#39;s partner broker.").join(LINE_EN);
+  if (process.env.STRIP_LINE) html = html.split(line).join(" ".repeat(line.length));
   n++;
   const els = parse(html);
   for (const m of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)) {
     const href = m[1].replace(/&amp;/g, "&");
     if (!ACCM_HREF.test(href)) continue;
     links++;
-    if (!hasLineInSection(html, els, m.index)) bad.push(`${p} -> ${href.slice(0, 60)}`);
+    if (!hasLineInSection(html, els, m.index, line)) bad.push(`${p} -> ${href.slice(0, 60)}`);
   }
 }
 console.log(`pages=${n} accm_links=${links}`);

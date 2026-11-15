@@ -43,10 +43,11 @@ await t("joinPath / joinLoginPath / joinSignupPath carry next; default equals th
 await t("join action + page use the safe next helpers; consent remembered via my_join_state", async () => {
   const a = read("src/app/system/join/actions.ts");
   assert.match(a, /redirect\(memberNext\(next\)\)/);
-  assert.match(a, /redirect\(joinLoginPath\(next\)\)/);
+  // Login comes back to the same door (PH or EN); join_base is whitelisted by joinBaseFrom.
+  assert.equal(a.match(/redirect\(joinLoginPath\(next, joinBaseFrom\(formData\.get\("join_base"\)\)\)\)/g)?.length, 2);
   assert.match(a, /rpc\("my_join_state"\)/);
   assert.match(a, /formData\.get\("consent"\) === "on" \|\| \(await d\.consentRecorded\(\)\)/);
-  const p = read("src/app/system/join/page.tsx");
+  const p = read("src/app/system/join/join-view.tsx");
   assert.match(p, /if \(membership !== "none"\) redirect\(dest\)/);
   assert.match(read("src/lib/members/membership.ts"), /redirect\(joinPath\(path\)\)/);
 });
@@ -207,7 +208,7 @@ await t("spec copy verbatim (spot checks)", async () => {
 // ---- join page / form structure ----
 await t("request form: hidden when logged out (page has no form), 16px inputs, labels, aria-describedby, role=status, one gold", async () => {
   const f = read("src/app/system/join/join-form.tsx");
-  const page = read("src/app/system/join/page.tsx");
+  const page = read("src/app/system/join/page.tsx") + read("src/app/system/join/join-view.tsx");
   assert.ok(!page.includes("RequestForm") && !page.includes("submitAccessRequest"));
   assert.match(f, /role="status"/);
   assert.match(f, /aria-describedby=\{consentErr \? "ar-consent-err" : undefined\}/);
@@ -218,29 +219,36 @@ await t("request form: hidden when logged out (page has no form), 16px inputs, l
   assert.equal(page.match(/SYSTEM_COPY\.risk/g)?.length, 1);
 });
 
-// ---- /accm + /broker: one gold CTA "Join the Trading System" ----
-for (const [file, extra] of [["src/app/accm/page.tsx", "src/app/accm/accm-self-check.tsx"], ["src/app/broker/page.tsx", null]]) {
-  await t(`${file}: exactly one gold CTA -> /system/join; Discord + account buttons outline; disclosures kept`, async () => {
+// ---- /accm + /broker (PH + EN share one layout each, simplicity spec v2): one gold CTA "Join the Trading System" ----
+const { ACCM_COPY, ACCM_COPY_EN } = await import("../src/content/accm-guide.ts");
+const { BROKER_COPY, BROKER_COPY_EN } = await import("../src/content/broker-guide.ts");
+for (const [file, extra] of [["src/app/accm/accm-guide.tsx", "src/app/accm/accm-self-check.tsx"], ["src/app/broker/broker-guide.tsx", null]]) {
+  await t(`${file}: exactly one gold CTA -> the join door; account buttons outline; disclosures kept`, async () => {
     const src = read(file) + (extra ? read(extra) : "");
     assert.equal(src.match(/variant: "default"/g)?.length, 1, "one gold");
-    assert.match(src, /<Link href="\/system\/join" className=\{cn\(buttonVariants\(\{ variant: "default" \}\), "[^"]*h-11 w-full"\)\}>\s*\{JOIN_SYSTEM_CTA\}/);
-    assert.match(src, /DiscordApplyLink page="(accm|broker)" className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)/);
-    assert.match(src, /JOIN_COPY\.intro[\s\S]*SYSTEM_COPY\.underCta/);
+    assert.match(src, /<Link href=\{c\.joinHref\} className=\{cn\(buttonVariants\(\{ variant: "default" \}\), "h-11 w-full"\)\}>\s*\{JOIN_SYSTEM_CTA\}/);
+    if (file.includes("accm")) assert.match(src, /DiscordApplyLink page="accm" lang=\{lang\} className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)/);
+    else assert.ok(!src.includes("DiscordApplyLink"), "/broker: Discord helper dropped (spec §3)");
+    assert.match(src, /\{join\.intro\}[\s\S]*\{underCta\}/);
     assert.ok(!/\bVIP\b|\bPDE\b/.test(src)); // existing FAQ/self-check negations ("walang guaranteed profit") are disclaimers
   });
 }
+await t("join doors: PH copy -> /system/join, EN copy -> /en/system/join", async () => {
+  assert.equal(ACCM_COPY.joinHref, "/system/join"); assert.equal(BROKER_COPY.joinHref, "/system/join");
+  assert.equal(ACCM_COPY_EN.joinHref, "/en/system/join"); assert.equal(BROKER_COPY_EN.joinHref, "/en/system/join");
+});
 await t("/accm: heading + coming-soon fallback; self-check button outline with disclosure", async () => {
-  const p = read("src/app/accm/page.tsx");
-  assert.match(p, /3\. Pagka-register: join the Trading System/);
-  assert.match(p, /Discord: coming soon\./);
+  assert.equal(ACCM_COPY.s3, "3. Pagka-register: join the Trading System");
+  assert.equal(ACCM_COPY.discordSoon, "Discord: coming soon.");
+  assert.match(read("src/app/accm/accm-guide.tsx"), /\{c\.discordSoon\}/);
   const s = read("src/app/accm/accm-self-check.tsx");
   assert.match(s, /variant: "outline" \}\), "h-12 flex-1 text-base"/);
   assert.match(s, /Open cents account →/); assert.match(s, /\{disclosure\}/);
 });
-await t("/broker: Step 2 heading; account CTA outline with IbDisclosureShort", async () => {
-  const p = read("src/app/broker/page.tsx");
-  assert.match(p, /Step 2: Join the Trading System/);
-  assert.match(p, /variant: "outline" \}\), "h-12 w-full text-base"\)\}\s*>\s*Open ACCM Cents Account →\s*<\/AccmLink>\s*<IbDisclosureShort \/>/);
+await t("/broker: account CTA outline with IbDisclosureShort right under it", async () => {
+  const p = read("src/app/broker/broker-guide.tsx");
+  assert.match(p, /variant: "outline" \}\), "h-12 w-full text-base"\)\}>\s*\{c\.openCta\}\s*<\/AccmLink>\s*<IbDisclosureShort text=\{c\.ib\} \/>/);
+  assert.equal(BROKER_COPY.openCta, "Open ACCM Cents Account →"); assert.equal(BROKER_COPY_EN.openCta, "Open ACCM Cents Account →");
 });
 
 // ---- privacy + F2 ----
