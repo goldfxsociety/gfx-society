@@ -60,6 +60,8 @@ assert.equal(memberCourseState("active", "approved", 23, 0), "owned");
 assert.equal(memberCourseState("none", "closed", 23, 0), "verify");
 assert.equal(memberCourseState("none", "approved", 23, 4), "owned");
 assert.equal(showMembersNav("none"), false);
+// Sprint 3: confirmed Explorers get the members nav too.
+assert.equal(showMembersNav("none", true), true);
 
 const coursesLib = read("src/lib/training/courses.ts");
 assert.match(coursesLib, /pay\.state === "approved" \|\| pay\.state === "free"/);
@@ -74,7 +76,7 @@ for (const path of ["src/app/courses/page.tsx", "src/app/account/page.tsx"]) {
   const text = read(path);
   assert.match(text, /showMembersNav/, path);
   assert.match(text, /<MembersNav/, path);
-  assert.match(text, /if \(!member\) return|if \(!showMembersNav\(membership\)\) return/, path);
+  assert.match(text, /if \(!member\) return|if \(!showMembersNav\(membership, explorer\)\) return/, path);
 }
 assert.match(read("src/app/courses/page.tsx"), /active="courses"/);
 assert.match(read("src/app/account/page.tsx"), /active="account"/);
@@ -83,7 +85,7 @@ assert.match(read("src/app/account/page.tsx"), /active="account"/);
   const footers = account.match(/<MembersFooter/g) ?? [];
   assert.equal(footers.length, 1);
   assert.equal(account.includes("hideRiskLine"), false);
-  const memberGate = account.indexOf("if (!showMembersNav(membership)) return body");
+  const memberGate = account.indexOf("if (!showMembersNav(membership, explorer)) return body");
   const footerAt = account.indexOf("<MembersFooter");
   assert.equal(memberGate > 0 && footerAt > memberGate, true);
   assert.equal((account.match(/variant: "default"/g) ?? []).length, 1);

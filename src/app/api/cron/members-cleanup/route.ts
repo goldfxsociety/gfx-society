@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  * - deletes members-gate code-request logs older than 1 day (that purge also runs on every code request), and
  * - purges unconfirmed raw ACCM emails (`private.purge_stale_accm_emails()`: no unexpired link and last submitted more
  *   than 7 days ago; also runs on every submit and token issue). When nobody submits, this cron is what keeps the
- *   "within / up to 8 days" bound in Privacy v1.5. Monitoring: docs/accm-confirm-mailer.md, "Monitoring the purge cron".
+ *   "within / up to 8 days" bound in Privacy v1.5 / v1.6. Monitoring: docs/accm-confirm-mailer.md, "Monitoring the purge cron".
  * Protected by CRON_SECRET (Vercel sends "Authorization: Bearer <CRON_SECRET>").
  */
 function secretMatches(header: string | null, secret: string): boolean {

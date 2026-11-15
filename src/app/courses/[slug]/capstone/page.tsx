@@ -9,6 +9,7 @@ import { CapstoneChecklist } from "./capstone-checklist";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { joinPath } from "@/lib/members/routes";
 
 export const metadata: Metadata = { title: "Capstone | GFX", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -20,8 +21,9 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
   const { loggedIn, membership } = await getMembership();
   if (!loggedIn) redirect(`/login?next=/courses/${slug}/capstone`);
   const info = await getPaymentInfo(slug);
-  // S8 = A: a removed member keeps the capstone of a bought course.
-  if (membership === "none" && info.state !== "approved") redirect("/system/join");
+  // S8 = A: a removed member keeps the capstone of a bought course. Sprint 3: a consented Explorer gets the Gold Reset
+  // capstone (the DB answers "free" only then).
+  if (membership === "none" && info.state !== "approved" && info.state !== "free") redirect(joinPath(`/courses/${slug}/capstone`));
   if (!info.course_id) redirect(`/courses/${slug}`);
   const supabase = await createClient();
   const [{ data: cap }, { data: prog }] = await Promise.all([

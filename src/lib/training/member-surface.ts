@@ -30,9 +30,12 @@ export type SurfaceCard =
   | "locked"
   | "sales_closed";
 
-/** Active and grace members keep Home · Courses · Account. Everyone else keeps the Academy tabs. */
-export function showMembersNav(membership: SurfaceMembership): boolean {
-  return membership === "active" || membership === "grace";
+/**
+ * Home · Courses · Account for Linked (active / grace) and, since Sprint 3, for Explorers (signed in, confirmed email).
+ * Logged-out and unconfirmed visitors keep the Academy tabs.
+ */
+export function showMembersNav(membership: SurfaceMembership, explorer = false): boolean {
+  return membership === "active" || membership === "grace" || explorer;
 }
 
 export function memberCourseState(
@@ -41,7 +44,12 @@ export function memberCourseState(
   lessonCount: number,
   done: number,
 ): SurfaceCard {
-  if (membership === "none") return pay === "approved" ? "owned" : "verify";
+  if (membership === "none") {
+    // S8: a delisted owner keeps a bought course. Sprint 3: the DB answers 'free' for Gold Reset to a consented
+    // Explorer only; everything else is the join door ("verify": consent for Gold Reset, "Link" for paid courses).
+    if (pay === "approved") return "owned";
+    if (pay !== "free") return "verify";
+  }
   switch (pay) {
     case "approved":
       return "owned";

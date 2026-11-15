@@ -125,7 +125,6 @@ export function AccmSelfCheck({ href, disclosure, lang = "tl" }: { href: string;
         <CodeChip duplicate lang={lang} />
       </div>
       {!ready && <p className="text-xs text-muted-foreground">{ui.tickFirst}</p>}
-      <p className="text-xs text-muted-foreground">{ui.minDeposit}</p>
       <p className="text-xs text-muted-foreground">{disclosure}</p>
     </div>
   );

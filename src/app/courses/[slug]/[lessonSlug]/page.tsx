@@ -9,6 +9,7 @@ import { getMembership } from "@/lib/training/gate";
 import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { joinPath } from "@/lib/members/routes";
 import { LessonInteractive } from "./lesson-interactive";
 
 /** Plain-text paragraphs: split on blank lines; drop heading #, bold/italic markers, list bullets. */
@@ -46,8 +47,9 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   const { loggedIn, membership } = await getMembership();
   if (!loggedIn) redirect(`/login?next=/courses/${slug}/${lessonSlug}`);
   const v = await getCourseView(catalog, membership);
-  // S8 = A: a removed member keeps bought courses (v.state "owned"); everything else needs membership.
-  if (membership === "none" && v.state !== "owned") redirect("/system/join");
+  // S8 = A: a removed member keeps bought courses (v.state "owned"). Sprint 3: a consented Explorer gets Gold Reset
+  // (the DB answers "free" only then). Everything else goes to the join door, keeping this lesson as `next`.
+  if (membership === "none" && v.state !== "owned" && !v.state.startsWith("free_")) redirect(joinPath(`/courses/${slug}/${lessonSlug}`));
   const idx = v.lessons.findIndex((l) => l.slug === lessonSlug);
   // Not owned / draft / locked: RLS returns nothing, so no body ever reaches the client.
   if (idx < 0) redirect(`/courses/${slug}#modules`);

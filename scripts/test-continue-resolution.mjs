@@ -138,9 +138,10 @@ for (const path of ["src/app/training/page.tsx", "src/app/courses/page.tsx", "sr
 }
 
 const training = read("src/app/training/page.tsx");
-assert.equal((training.match(/variant: "default"/g) ?? []).length, 2);
-assert.equal(training.includes("current && lesson ?"), true);
-assert.equal(training.includes("finished ?"), true);
+// Sprint 3: one gold class shared by the exclusive gold.kind branches (lesson / finished / consent / link).
+assert.equal((training.match(/variant: "default"/g) ?? []).length, 1);
+assert.equal(training.includes('gold.kind === "lesson" && current && lesson ?'), true);
+assert.equal(training.includes('gold.kind === "finished" && finished ?'), true);
 
 const nav = read("src/components/members-home/members-nav.tsx");
 assert.deepEqual(

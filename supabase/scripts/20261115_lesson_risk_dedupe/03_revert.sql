@@ -5,7 +5,9 @@
 --   * aborts unless all 13 ids exist with the expected level_id + slug;
 --   * all 13 already back to the originals: NOTICE, changes nothing (safe rerun);
 --   * otherwise aborts unless all 13 are in the exact AFTER state of 02_apply.sql (md5), so later edits are never clobbered;
---   * after the UPDATE, aborts (rolls back) unless every row matches the original md5s and updated_at.
+--   * after the UPDATE, aborts (rolls back) unless every row matches the original body md5s (content and key_takeaways).
+--     updated_at is restored by the UPDATE but is NOT asserted by this post-check; verify.sql's updated_at_is_original
+--     column is where it is checked.
 -- No new table, schema, RLS or grant.
 begin;
 

@@ -49,7 +49,9 @@ export const JOIN_COPY = {
     "Para ma-verify ka, iche-check namin kung ang email mo ay naka-register sa ACCM sa ilalim ng IB line ng GFX Society. Email lang ang gagamitin namin para dito; hindi namin nakikita o sine-save ang balance, deposit, o trades mo. Walang minimum deposit para maging member.",
   consentCheckbox: "Pumapayag ako sa email check na ito.",
   privacyLink: "Privacy Policy",
-  submit: "Verify membership", // Design approved 11 Nov
+  submit: "I-link ang ACCM account mo", // Sprint 3 (explorer-linked-tiers-spec §3): join gold when they came to link
+  /** Sprint 3: consent submit when `next` is Gold Reset, and the outline after no_match / pending (spec §2.2, §3). */
+  continueGoldReset: "Ituloy ang Gold Reset",
   academyLink: "Ituloy ang free Academy lessons", // existing string
   accmLink: "Tungkol sa ACCM", // [Builder] (tertiary link, no disclosure line per D3)
   helpSummary: "May problema?", // simplicity spec §2 / App. C: muted help grouped under one expander
@@ -71,8 +73,8 @@ export const MEMBERS_COPY = {
 } as const;
 
 /**
- * /en/system/join (simplicity spec v2, Appendix H): meaning identical to JOIN_COPY. loginCta, signupLink and submit
- * were already English in PH and are reused verbatim. Same keys as JOIN_COPY so the same components render either.
+ * /en/system/join (simplicity spec v2, Appendix H): meaning identical to JOIN_COPY. loginCta and signupLink
+ * were already English in PH and are reused verbatim (submit is Taglish in PH since Sprint 3). Same keys as JOIN_COPY so the same components render either.
  */
 export const JOIN_COPY_EN = {
   title: "Join the Trading System",
@@ -88,7 +90,8 @@ export const JOIN_COPY_EN = {
     "To verify you, we will check whether your email is registered with ACCM under the GFX Society IB line. We only use the email for this; we cannot see or save your balance, deposits, or trades. There is no minimum deposit to become a member.",
   consentCheckbox: "I agree to this email check.",
   privacyLink: "Privacy Policy",
-  submit: JOIN_COPY.submit,
+  submit: "Link your ACCM account",
+  continueGoldReset: "Continue Gold Reset",
   academyLink: "Continue with the free Academy lessons",
   accmLink: "About ACCM",
   helpSummary: "Having trouble?",

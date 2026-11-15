@@ -8,7 +8,9 @@ import { MembersFooter } from "@/components/training/members-footer";
 import { RISK_LINE } from "@/config/training";
 import { Expander } from "@/components/layout/expander";
 import { getMembership } from "@/lib/members/membership";
+import { tierFrom } from "@/lib/members/tier";
 import { showMembersNav } from "@/lib/training/member-surface";
+import { DepositInfo } from "@/components/members/deposit-info";
 import { DeleteAccountForm } from "./delete-account-form";
 import { MyCourses } from "./my-courses";
 
@@ -23,6 +25,9 @@ export default async function AccountPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const { membership } = await getMembership();
+  // Sprint 3: Explorers (signed in, confirmed email) get the members nav too (explorer-linked-tiers-spec §2.4).
+  const explorer = Boolean(user) && tierFrom({ loggedIn: true, confirmed: Boolean(user?.email_confirmed_at), membership }) === "explorer";
+  const linked = membership === "active" || membership === "grace";
 
   if (!user) {
     return (
@@ -49,6 +54,9 @@ export default async function AccountPage() {
 
       <MyCourses />
 
+      {/* Sprint 3 (spec §2.3): in-app funding facts for Linked (and grace). Muted, not gold, no IB line. */}
+      {linked && <DepositInfo />}
+
       {/* Simplicity spec v2 P2.6: the Delete copy and form sit in a closed <details>; wording unchanged. */}
       <Expander summary="Delete my account" heading testId="delete-account" className="border-destructive/50">
         <p className="leading-relaxed text-foreground">
@@ -67,12 +75,12 @@ export default async function AccountPage() {
       </Expander>
 
       {/* Members get the risk line from MembersFooter; everyone else gets it here (once per page either way). */}
-      {showMembersNav(membership) ? null : (
+      {showMembersNav(membership, explorer) ? null : (
         <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       )}
     </div>
   );
-  if (!showMembersNav(membership)) return body;
+  if (!showMembersNav(membership, explorer)) return body;
   return (
     <div className="mx-auto flex w-full flex-1 gap-8 lg:max-w-6xl lg:px-4">
       <MembersNav active="account" />

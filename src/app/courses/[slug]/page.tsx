@@ -14,6 +14,9 @@ import { MembersFooter } from "@/components/training/members-footer";
 import { RefundLine } from "@/components/training/refund-line";
 import { Curriculum } from "@/components/members-home/curriculum";
 import { MembersNav } from "@/components/members-home/members-nav";
+import { joinPath } from "@/lib/members/routes";
+import { isExplorerCourse } from "@/lib/members/tier";
+import { getTier } from "@/lib/members/tier-server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,14 +29,14 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const catalog = findCatalog(slug);
   if (!catalog) notFound();
-  const { membership } = await getMembership();
-  const v = await getCourseView(catalog, membership);
+  const { loggedIn, membership } = await getMembership();
+  const [v, t] = await Promise.all([getCourseView(catalog, membership), getTier({ loggedIn, membership })]);
   const paid = v.pricePhp > 0;
   const gold = cn(buttonVariants({ variant: "default" }), "h-auto min-h-11 w-full max-w-full whitespace-normal break-words py-2 text-center");
   const secondary = cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-center");
   const action = resolveContinue(v.lessons, v.capstone);
   const next = action.kind === "lesson" ? action.lesson : undefined;
-  const member = showMembersNav(membership);
+  const member = showMembersNav(membership, t.tier === "explorer");
   const canLearn = v.state === "owned" || v.state === "free_new" || v.state === "free_progress" || v.state === "free_done";
 
   const page = (
@@ -104,10 +107,21 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
       </section>
 
       <section className="flex flex-col gap-2">
-        {v.state === "verify" && (
+        {/* Sprint 3 (explorer-linked-tiers-spec §2.4): Gold Reset = consent first, then free; paid = Link, never Buy. */}
+        {v.state === "verify" && isExplorerCourse(slug) && (
+          <Link href={joinPath(`/courses/${slug}`)} className={gold}>{ME.heroEmpty}</Link>
+        )}
+        {v.state === "verify" && !isExplorerCourse(slug) && t.tier === "explorer" && (
           <>
-            <p className="text-sm text-muted-foreground">Members-only ito. I-verify ang member email mo.</p>
-            <Link href="/system/join" className={gold}>Verify membership →</Link>
+            <p className="text-sm text-muted-foreground">{ME.lockedExplorer}</p>
+            <Link href="/system/join" className={secondary}>{ME.home.linkCta}</Link>
+          </>
+        )}
+        {/* Amendment v1.2 (1): logged out / unconfirmed keep main's copy and sign-in path (no ACCM mention). */}
+        {v.state === "verify" && !isExplorerCourse(slug) && t.tier !== "explorer" && (
+          <>
+            <p className="text-sm text-muted-foreground">{ME.membersOnlyCourse}</p>
+            <Link href="/system/join" className={gold}>{ME.verifyCta}</Link>
           </>
         )}
         {v.state === "not_owned" &&

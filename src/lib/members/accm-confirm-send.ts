@@ -2,7 +2,12 @@ import nodemailer from "nodemailer";
 import { SITE_URL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ACCM_CONFIRM_MAIL_LIVE } from "./access-request";
-import { GMAIL_SMTP, SMTP_TIMEOUTS, readMailConfig, sendAccmConfirm, type SendResult } from "./accm-confirm-mail";
+import { GMAIL_SMTP, SMTP_TIMEOUTS, mailerCanSend, readMailConfig, sendAccmConfirm, type SendResult } from "./accm-confirm-mail";
+
+/** Server-only presence check for the waiting copy (amendment v1.2 (3)). Boolean only; values never leave this module. */
+export function accmConfirmMailCanSend(): boolean {
+  return mailerCanSend(ACCM_CONFIRM_MAIL_LIVE, process.env);
+}
 
 /**
  * Server-only wiring for the ACCM confirmation mail. Called from the /system/join request server action with the

@@ -197,7 +197,7 @@ await t("join form shows the ACCM field and helper behind the (now live) flag; s
 await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; they differ only in the v1.5 parts", async () => {
   assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   const page = read("src/app/privacy/page.tsx");
-  assert.match(page, /ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.5\.md" : "privacy-notice\.md"/);
+  assert.match(page, /ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.6\.md" : "privacy-notice\.md"/); // v1.6 (15 Nov) carries every v1.5 part
   const v14 = read("src/content/legal/privacy-notice.md"), v15 = read("src/content/legal/privacy-notice-v1.5.md");
   assert.match(v14, /Version: 1\.4/); assert.ok(!/ACCM email \(kung binigay\)|Different ACCM email/.test(v14));
   assert.match(v15, /Version: 1\.5/); assert.match(v15, /\*\*What changed in v1\.5 \(11 Nov 2026\):\*\*/);
@@ -211,6 +211,15 @@ await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; th
   const v15only = (l) => /Version: 1\.5|What changed in v1\.5|^\| Google LLC \(Gmail\)|^\| Different ACCM email waiting|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   const v14only = (l) => /Version: 1\.4|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   assert.deepEqual(b.filter((l) => !v15only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")), a.filter((l) => !v14only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")));
+});
+await t("privacy v1.6 = v1.5 plus only the request-cadence lines (drift guard; every v1.5 mailer passage kept)", async () => {
+  const v15 = read("src/content/legal/privacy-notice-v1.5.md").split("\n"), v16 = read("src/content/legal/privacy-notice-v1.6.md").split("\n");
+  const changed = (l) => /^Last updated:|What changed in v1\.6|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
+  const norm = (a) => a.filter((l) => !changed(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
+  assert.deepEqual(norm(v16), norm(v15));
+  const v16s = v16.join("\n");
+  assert.ok(v16s.includes("and we remove it once it is confirmed, or within 8 days if it isn't."));
+  assert.ok(v16s.includes("| Different ACCM email waiting for confirmation (plain email, private table) |"));
 });
 await t("admin client comment names the new service-role use; issue RPC called only from the server wiring", async () => {
   assert.match(read("src/lib/supabase/admin.ts"), /issue_accm_confirm_token/);
@@ -306,6 +315,32 @@ await t("docs (R1/R2 + go-live): migration-history repair mapping, purge latency
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), "go-live steps a-e in order");
   const rb = d.slice(d.indexOf("## Rollback"));
   assert.ok(rb.indexOf("`ACCM_CONFIRM_MAIL_LIVE` back to `false`") < rb.indexOf("Turn the DB switch off") && rb.indexOf("Turn the DB switch off") < rb.indexOf("delete from private.access_request_accm"), "rollback: flag, switch, scrub");
+});
+
+await t("amendment v1.2 (3): 'link sent' copy only when the mailer can send (flag AND secrets present; presence only)", async () => {
+  const ALL = { GFX_SMTP_USER: "u@example.test", GFX_SMTP_APP_PASSWORD: "placeholder", GFX_SMTP_FROM: "GFX <u@example.test>", SUPABASE_SERVICE_ROLE_KEY: "placeholder" };
+  assert.equal(M.mailerCanSend(true, ALL), true);
+  assert.equal(M.mailerCanSend(false, ALL), false, "flag off -> cannot send");
+  for (const drop of Object.keys(ALL)) {
+    assert.equal(M.mailerCanSend(true, { ...ALL, [drop]: undefined }), false, `${drop} missing`);
+    assert.equal(M.mailerCanSend(true, { ...ALL, [drop]: "  " }), false, `${drop} blank`);
+  }
+  // Flag off reads no env at all.
+  const spy = new Proxy({}, { get: () => { throw new Error("env read with the flag off"); } });
+  assert.equal(M.mailerCanSend(false, spy), false);
+  assert.equal(typeof M.mailerCanSend(true, {}), "boolean", "returns a boolean only, never a value");
+  const send = read("src/lib/members/accm-confirm-send.ts");
+  assert.match(send, /export function accmConfirmMailCanSend\(\): boolean \{\n  return mailerCanSend\(ACCM_CONFIRM_MAIL_LIVE, process\.env\);\n\}/);
+  const { REQUEST_COPY, REQUEST_COPY_EN } = await import("../src/content/access-request.ts");
+  assert.equal(REQUEST_COPY.submittedAwaitingSaved, "Halos tapos na. Na-save na ang request mo. Iche-check namin at iu-update ka.");
+  assert.equal(REQUEST_COPY_EN.submittedAwaitingSaved, "Almost done. Your request is saved. We'll check and update you.");
+  for (const c of [REQUEST_COPY.submittedAwaitingSaved, REQUEST_COPY_EN.submittedAwaitingSaved]) assert.ok(!/link|email|mail|spam|confirm/i.test(c), "neutral: no mailer mention");
+  const f = read("src/app/system/join/join-form.tsx");
+  assert.match(f, /active\.status === "awaiting_email_confirm" \? \(mailerCanSend \? R\.submittedAwaiting : R\.submittedAwaitingSaved\)/, "reload: link copy only when the mailer can send");
+  assert.match(f, /mailerCanSend = false/, "defaults to the neutral copy");
+  assert.match(f, /sent\.result === "awaiting_email_confirm" \? R\.submittedAwaiting/, "right after a real send: link copy");
+  assert.match(read("src/app/system/join/join-view.tsx"), /mailerCanSend=\{accmConfirmMailCanSend\(\)\}/);
+  // submitRequest returns awaiting_email_confirm only after the mail actually went out (see the submitRequest test).
 });
 
 console.log(`ALL PASS accm confirm mail (${n})`);

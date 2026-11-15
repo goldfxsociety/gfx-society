@@ -13,6 +13,9 @@ import { Chip } from "@/components/training/chip";
 import { GraceBanner } from "@/components/training/grace-banner";
 import { MembersFooter } from "@/components/training/members-footer";
 import { Expander } from "@/components/layout/expander";
+import { joinPath } from "@/lib/members/routes";
+import { GOLD_RESET_PATH, isExplorerCourse } from "@/lib/members/tier";
+import { getTier } from "@/lib/members/tier-server";
 
 export const metadata: Metadata = { title: "Courses | GFX Trading System" };
 export const dynamic = "force-dynamic";
@@ -21,7 +24,8 @@ const BTN = CONTINUE_ACTION_CLASS;
 
 /** §1.4: owned/in-progress Continue (latest activity) > Gold Reset Start > Verify. */
 function pickGold(views: CourseView[], member: boolean): string | null {
-  if (!member) return "verify";
+  // Not signed in / unconfirmed, or an Explorer without consent: the Gold Reset card's join link is the gold.
+  if (!member || views.some((v) => isExplorerCourse(v.catalog.slug) && v.state === "verify")) return "verify";
   const active = views
     .filter((v) => ["owned", "free_progress"].includes(v.state))
     .sort((a, b) => (b.lastActivity ?? "").localeCompare(a.lastActivity ?? ""));
@@ -30,7 +34,7 @@ function pickGold(views: CourseView[], member: boolean): string | null {
   return reset ? reset.catalog.slug : null;
 }
 
-function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
+function CardAction({ v, gold, explorer }: { v: CourseView; gold: boolean; explorer: boolean }) {
   const slug = v.catalog.slug;
   const style = (g: boolean) => cn(buttonVariants({ variant: g ? "default" : "outline" }), BTN);
   const action = resolveContinue(v.lessons, v.capstone);
@@ -38,10 +42,21 @@ function CardAction({ v, gold }: { v: CourseView; gold: boolean }) {
   const learnLabel = continueLabel(action, v.done, { start: "Start →", resume: "Continue →" }) ?? (v.done === 0 ? "Start →" : "Continue →");
   switch (v.state) {
     case "verify":
-      return (
+      // Sprint 3 (explorer-linked-tiers-spec §2.4): Gold Reset is free after join-v2 consent (join door, then back
+      // here); paid courses are Linked-only: outline "Link", never Buy.
+      // Amendment v1.2 (1): the Link copy is for signed-in Explorers only. Logged out / unconfirmed keep main's
+      // "Members-only" copy and sign-in path (no ACCM mention, so no IB line on this page).
+      return isExplorerCourse(slug) ? (
+        <Link href={joinPath(GOLD_RESET_PATH)} className={style(gold)}>{ME.heroEmpty}</Link>
+      ) : explorer ? (
         <>
-          <p className="text-sm text-muted-foreground">Members-only ang courses. I-verify muna ang member email mo.</p>
-          <Link href="/system/join" className={style(gold)}>Verify membership →</Link>
+          <p className="text-sm text-muted-foreground">{ME.lockedExplorer}</p>
+          <Link href="/system/join" className={style(false)}>{ME.home.linkCta}</Link>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">{ME.membersOnlyCourses}</p>
+          <Link href="/system/join" className={style(false)}>{ME.verifyCta}</Link>
         </>
       );
     case "free_new":
@@ -112,8 +127,9 @@ const CHIP: Record<CourseView["state"], [string, "neutral" | "amber" | "green" |
 };
 
 export default async function CoursesPage() {
-  const { membership, views } = await getAllCourseViews();
-  const member = showMembersNav(membership);
+  const { loggedIn, membership, views } = await getAllCourseViews();
+  const t = await getTier({ loggedIn, membership });
+  const member = showMembersNav(membership, t.tier === "explorer");
   const gold = pickGold(views, member);
 
   const page = (
@@ -134,7 +150,7 @@ export default async function CoursesPage() {
           return (
             <li key={v.catalog.slug}>
               <article
-                aria-label={`${v.catalog.title}, ${v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}, ${chip?.[0] ?? "members only"}`}
+                aria-label={`${v.catalog.title}, ${v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}, ${chip?.[0] ?? (isExplorerCourse(v.catalog.slug) ? "Free" : "Linked only")}`}
                 className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -145,7 +161,7 @@ export default async function CoursesPage() {
                 </div>
                 <p className="text-sm font-semibold">{v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}</p>
                 <div className="flex flex-col gap-2">
-                  <CardAction v={v} gold={gold === v.catalog.slug || (gold === "verify" && v.catalog.slug === "gold-reset")} />
+                  <CardAction v={v} gold={gold === v.catalog.slug || (gold === "verify" && v.catalog.slug === "gold-reset")} explorer={t.tier === "explorer"} />
                 </div>
               </article>
             </li>

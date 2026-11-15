@@ -82,8 +82,11 @@ await t("/system/join + /en/system/join: one gold at a time (login CTA logged ou
 });
 await t("member home: one gold (Ituloy →), two exclusive branches", async () => {
   const tr = read("src/app/training/page.tsx");
-  assert.equal(golds(tr), 2, "lesson branch + finished branch, never both");
-  assert.match(tr, /current && lesson \? \([\s\S]*?\) : finished \? \([\s\S]*?\) : null/);
+  // Sprint 3: one gold class, used by exclusive branches of one ternary on homeGold().gold.kind (lesson / finished /
+  // consent / link). The outline Link is never gold.
+  assert.equal(golds(tr), 1, "one gold class");
+  assert.match(tr, /gold\.kind === "lesson"[\s\S]*?\) : gold\.kind === "finished"[\s\S]*?\) : gold\.kind === "consent" \?[\s\S]*?\) : gold\.kind === "link" \?[\s\S]*?\) : null/);
+  assert.match(tr, /variant: "outline"[\s\S]*?\{H\.linkCta\}/, "Link button is outline");
   assert.equal(ME.heroCta, "Ituloy →");
 });
 
@@ -194,9 +197,10 @@ await t("P3-4: J4 FAQ on /accm + /en/accm says the template is there after you l
   assert.equal(j4(ACCM_COPY), PH_OLD.replace("nasa Join the Trading System (May problema?).", 'nasa "May problema?" sa Join the Trading System page, pagka-log in mo.'));
   assert.equal(j4(ACCM_COPY_EN), EN_OLD.replace("on Join the Trading System (Having trouble?).", 'under "Having trouble?" on the Join the Trading System page, after you log in.'));
 });
-await t("Design (2): EN min deposit = PH facts; 'Long-press to copy' kept with the visible Copy chip; sr-only ' (opens in a new tab)' leading space", async () => {
-  const facts = (x) => x.match(/^Min deposit \$50 · GCash, Maya, other e-wallets\./)?.[0];
-  assert.ok(facts(SELF_CHECK_UI.tl.minDeposit) && facts(SELF_CHECK_UI.en.minDeposit) === facts(SELF_CHECK_UI.tl.minDeposit));
+await t("Sprint 3: no min deposit / wallet list under the /accm self-check; 'Long-press to copy' kept with the visible Copy chip; sr-only ' (opens in a new tab)' leading space", async () => {
+  // explorer-linked-tiers-spec §2.3: the ACCM funding facts moved into the app (src/content/deposit-info.ts).
+  assert.ok(!("minDeposit" in SELF_CHECK_UI.tl) && !("minDeposit" in SELF_CHECK_UI.en));
+  assert.ok(!/minDeposit|\$50|Maya/.test(read("src/app/accm/accm-self-check.tsx")));
   assert.equal(SELF_CHECK_UI.en.manual, "Long-press to copy");
   assert.match(read("src/app/accm/accm-self-check.tsx"), /aria-label=\{`Copy invitation code \$\{CODE\}`\}[\s\S]*?Code: \{CODE\} ⧉/);
   assert.ok(read("src/components/funnel/discord-apply-link.tsx").includes('lang === "en" ? " (opens in a new tab)" :'));
@@ -319,7 +323,10 @@ await t("EN J4 caption, EN reuse verbatim, JOIN_COPY_EN keys match JOIN_COPY", a
   assert.deepEqual(Object.keys(JOIN_COPY_EN).sort(), Object.keys(JOIN_COPY).sort());
   assert.deepEqual(Object.keys(REQUEST_COPY_EN).sort(), Object.keys(REQUEST_COPY).sort());
   assert.deepEqual(Object.keys(TRANSFER_COPY_EN).sort(), Object.keys(TRANSFER_COPY).sort());
-  for (const k of ["loginCta", "signupLink", "submit"]) assert.equal(JOIN_COPY_EN[k], JOIN_COPY[k], k);
+  for (const k of ["loginCta", "signupLink"]) assert.equal(JOIN_COPY_EN[k], JOIN_COPY[k], k);
+  // Sprint 3 (explorer-linked-tiers-spec §3): join gold is "I-link ang ACCM account mo" / "Link your ACCM account".
+  assert.equal(JOIN_COPY.submit, "I-link ang ACCM account mo"); assert.equal(JOIN_COPY_EN.submit, "Link your ACCM account");
+  assert.equal(JOIN_COPY.continueGoldReset, "Ituloy ang Gold Reset"); assert.equal(JOIN_COPY_EN.continueGoldReset, "Continue Gold Reset");
   assert.equal(JOIN_COPY_EN.title, "Join the Trading System"); assert.equal(JOIN_COPY.title, "Join the Trading System");
   assert.equal(JOIN_COPY_EN.loggedOutIntro, "Log in with your Academy account to verify your membership.");
   assert.equal(JOIN_COPY.loggedOutIntro, "Log in with your Academy account para ma-verify ang membership mo.");
@@ -426,7 +433,10 @@ await t("P2.6 /courses: compact cards (title, chip, price, action); notes under 
   }
   assert.ok(!read("src/app/courses/page.tsx").includes("COURSES_LEDE.en"), "PH /courses uses the PH lede");
   assert.equal(c.match(/COMING_LATER_COURSE_NOTE\}/g)?.length, 1, "coming-later line once");
-  assert.equal(main("src/app/courses/page.tsx").match(/function pickGold[\s\S]*?\n\}/)[0], c.match(/function pickGold[\s\S]*?\n\}/)[0], "pickGold unchanged");
+  // Sprint 3 (explorer-linked-tiers-spec §2.4): the only pickGold change is the Explorer-without-consent clause.
+  const sprint3 = c.match(/function pickGold[\s\S]*?\n\}/)[0]
+    .replace(/  \/\/ Not signed in[^\n]*\n  if \(!member \|\| views\.some\(\(v\) => isExplorerCourse\(v\.catalog\.slug\) && v\.state === "verify"\)\) return "verify";/, '  if (!member) return "verify";');
+  assert.equal(main("src/app/courses/page.tsx").match(/function pickGold[\s\S]*?\n\}/)[0], sprint3, "pickGold unchanged apart from the Explorer clause");
 });
 await t("P2.6 /account: Delete copy + form in a closed <details>, wording unchanged; risk line once (MembersFooter for members, own line otherwise)", async () => {
   const a = read("src/app/account/page.tsx");
@@ -437,7 +447,7 @@ await t("P2.6 /account: Delete copy + form in a closed <details>, wording unchan
     assert.ok(words(main("src/app/account/page.tsx")).includes(frag) && words(a).includes(frag), frag.slice(0, 40));
   }
   assert.equal(a.match(/data-testid="risk-line">\{RISK_LINE\}/g)?.length, 2, "logged-out view + non-member view");
-  assert.match(a, /\{showMembersNav\(membership\) \? null : \(\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/, "own line only when MembersFooter is not shown");
+  assert.match(a, /\{showMembersNav\(membership, explorer\) \? null : \(\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/, "own line only when MembersFooter is not shown");
 });
 await t("P3 type/spacing pass (Appendix G): H1 24px inner / 30px landing, H2 18px, 24px page padding, 16px card padding, 12px radius", async () => {
   const gs = read("src/app/academy/gold-starter/page.tsx");
@@ -690,6 +700,19 @@ await t("OpenOnHash (P3-16): focuses the native <summary> only when the fragment
   assert.equal(o.match(/\.focus\(/g)?.length, 1, "the only focus call sits after the hash guard");
   assert.ok(!/keydown|tabindex|tabIndex|inert|aria-modal/.test(o), "no focus trap");
   assert.match(o, /addEventListener\("hashchange", sync\)/); assert.match(o, /removeEventListener\("hashchange", sync\)/);
+});
+
+await t("amendment v1.2 (1): logged-out /courses + paid pages keep main's Members-only copy; Link copy only for signed-in Explorers", async () => {
+  const c = read("src/app/courses/page.tsx"), d = read("src/app/courses/[slug]/page.tsx");
+  assert.equal(ME.membersOnlyCourses, "Members-only ang courses. I-verify muna ang member email mo.");
+  assert.equal(ME.membersOnlyCourse, "Members-only ito. I-verify ang member email mo.");
+  assert.equal(ME.verifyCta, "Verify membership →");
+  for (const k of ["membersOnlyCourses", "membersOnlyCourse", "verifyCta"]) assert.ok(!/ACCM/i.test(ME[k]), `${k}: no ACCM`);
+  assert.ok(main("src/app/courses/page.tsx").includes(ME.membersOnlyCourses) && main("src/app/courses/[slug]/page.tsx").includes(ME.membersOnlyCourse), "same strings as main");
+  assert.match(c, /\) : explorer \? \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.lockedExplorer\}<\/p>\s*<Link href="\/system\/join" className=\{style\(false\)\}>\{ME\.home\.linkCta\}<\/Link>\s*<\/>\s*\) : \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.membersOnlyCourses\}<\/p>\s*<Link href="\/system\/join" className=\{style\(false\)\}>\{ME\.verifyCta\}<\/Link>/);
+  assert.match(c, /explorer=\{t\.tier === "explorer"\}/);
+  assert.match(d, /v\.state === "verify" && !isExplorerCourse\(slug\) && t\.tier === "explorer" && \(\s*<>\s*<p[^>]*>\{ME\.lockedExplorer\}/);
+  assert.match(d, /v\.state === "verify" && !isExplorerCourse\(slug\) && t\.tier !== "explorer" && \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.membersOnlyCourse\}<\/p>\s*<Link href="\/system\/join" className=\{gold\}>\{ME\.verifyCta\}<\/Link>/);
 });
 
 console.log(`ALL PASS simplicity (${n})`);

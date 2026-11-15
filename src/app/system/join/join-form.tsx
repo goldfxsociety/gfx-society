@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { DepositInfo } from "@/components/members/deposit-info";
+import { markExplorerSeen } from "@/components/members/flip-banner";
 import { Input } from "@/components/ui/input";
 import { Expander } from "@/components/layout/expander";
 import { REQUEST_COPY, REQUEST_COPY_EN } from "@/content/access-request";
@@ -23,8 +25,12 @@ type Props = {
   academyEmail: string;
   /** The user's active request, if any (pending / awaiting_email_confirm). */
   request: JoinRequestView | null;
-  /** "Dec 1, 2026": the next 1st in Asia/Manila, computed on the server. */
-  nextFirst: string;
+  /** Sprint 3: where "Ituloy ang Gold Reset" goes (the safe Gold Reset `next`, else the course page). */
+  goldResetHref: string;
+  /** Sprint 3: `next` is a Gold Reset page, so the consent submit reads "Ituloy ang Gold Reset" (spec §2.2). */
+  forGoldReset?: boolean;
+  /** Amendment v1.2 (3): server presence check (flag + secrets). Only then may the copy say a link was sent. */
+  mailerCanSend?: boolean;
   /** "en" on /en/system/join: same logic and actions, English copy (simplicity spec v2). */
   lang?: "tl" | "en";
 };
@@ -37,12 +43,14 @@ const copyFor = (lang: "tl" | "en") =>
 const link = "inline-flex min-h-11 items-center self-start py-2 text-left text-sm underline";
 
 /** Logged-in, not-yet-member: consent + verify, then (no_match) the request form and the optional help. */
-export function JoinForm({ next, consentRecorded, academyEmail, request, nextFirst, lang = "tl" }: Props) {
+export function JoinForm({ next, consentRecorded, academyEmail, request, goldResetHref, forGoldReset = false, mailerCanSend = false, lang = "tl" }: Props) {
   const { C, R, base, accm } = copyFor(lang);
   const [verify, verifyAction, verifying] = useActionState<JoinState, FormData>(joinConsent, { result: "idle" });
   const [sent, requestAction, sending] = useActionState<RequestState, FormData>(submitAccessRequest, { result: "idle" });
   const [consent, setConsent] = useState(consentRecorded);
   const [formOpen, setFormOpen] = useState(false);
+  // Sprint 3: remember this device saw the Explorer side, for the one-time "Linked na" banner on /training.
+  useEffect(() => markExplorerSeen(), []);
 
   const submitted = sent.result === "pending" || sent.result === "awaiting_email_confirm";
   const active = !submitted && request && request.status !== "matched" ? request : null;
@@ -89,7 +97,7 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
             </p>
           )}
           <Button type="submit" className="h-11 w-full" disabled={verifying || !consent}>
-            {C.submit}
+            {forGoldReset ? C.continueGoldReset : C.submit}
           </Button>
         </form>
       )}
@@ -99,10 +107,14 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
           {!active && !submitted && <p className="text-sm">{C.notVerified}</p>}
           <div role="status" className="text-sm empty:hidden">
             {sent.result === "pending" ? R.submittedPending
-              : sent.result === "awaiting_email_confirm" ? R.submittedAwaiting
-              : active && !formOpen ? (active.status === "awaiting_email_confirm" ? R.submittedAwaiting : R.activeRequest(active.submitted, nextFirst))
+              : sent.result === "awaiting_email_confirm" ? R.submittedAwaiting /* only returned after the link was actually sent */
+              : active && !formOpen ? (active.status === "awaiting_email_confirm" ? (mailerCanSend ? R.submittedAwaiting : R.submittedAwaitingSaved) : R.activeRequest(active.submitted))
               : ""}
           </div>
+          {/* Sprint 3 (spec §2.2): consent is on file, so Gold Reset is open while they wait. Outline, never gold. */}
+          <Link href={goldResetHref} className={`${buttonVariants({ variant: "outline" })} h-11 w-full`} data-testid="join-continue-gold-reset">
+            {C.continueGoldReset}
+          </Link>
           {/* All muted help under one "May problema?" / "Having trouble?" (simplicity spec P2.5); opens on no_match. */}
           <Expander summary={C.helpSummary} open testId="join-help">
             {!submitted && (
@@ -130,6 +142,7 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
             <Link href={accm} className={`${link} text-muted-foreground`}>
               {R.noAccmLink}
             </Link>
+            <DepositInfo lang={lang} />
             <TransferHelp lang={lang} />
             <Link href="/academy" className={link}>
               {C.notVerifiedAcademyLink}
@@ -145,6 +158,7 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, nextFir
           <Link href={accm} className={`${link} text-xs text-muted-foreground`}>
             {C.accmLink}
           </Link>
+          <DepositInfo lang={lang} />
         </Expander>
       )}
     </div>

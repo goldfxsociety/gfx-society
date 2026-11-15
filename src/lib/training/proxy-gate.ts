@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Membership } from "@/lib/members/membership";
 import { MEMBERS_HOME, joinPath } from "@/lib/members/routes";
+import { courseRouteAccess, isExplorerCourse, trainingRouteAccess } from "@/lib/members/tier";
 
 /**
  * HTTP-level gate for slice 2 (QA #55 P3): real 307s for members-only paths and a real 404 for
  * /admin/payments, decided before any streaming (app/loading.tsx makes page-level redirects a 200).
+ * Sprint 3: /training and Gold Reset lessons/capstone are also open to Explorers (rules: src/lib/members/tier.ts).
  * Pages and the DB (RLS, my_membership, is_admin) still enforce the same rules.
  */
 const MEMBERS_ONLY = [/^\/training\/?$/, /^\/courses\/[^/]+\/[^/]+\/?$/];
@@ -38,16 +41,33 @@ export async function trainingGate(request: NextRequest, response: NextResponse)
   if (!loggedIn) return go(`/login?next=${encodeURIComponent(legacyHome ? MEMBERS_HOME : path)}`);
   // Any logged-in session (Academy password /login included); the DB decides membership.
   const { data: ms, error } = await supabase.rpc("my_membership");
-  const member = !error && (ms === "active" || ms === "grace");
-  if (!member && !legacyHome) {
-    // S8 = A: a removed member keeps lessons + capstone of a bought course (not /pay or /placement).
+  const membership: Membership = !error && (ms === "active" || ms === "grace") ? ms : "none";
+  const member = membership !== "none";
+  if (legacyHome) return go(member ? MEMBERS_HOME : joinPath(null));
+  if (member) return null;
+
+  // Sprint 3 (explorer-linked-tiers-spec §2.1): /training is the home for confirmed Explorers too.
+  if (path !== "/training" && path !== "/training/") {
     const m = path.match(/^\/courses\/([^/]+)\/([^/]+)\/?$/);
-    if (m && m[2] !== "pay" && m[2] !== "placement") {
-      const { data: info } = await supabase.rpc("my_payment_info", { p_course_slug: decodeURIComponent(m[1]) });
+    const slug = m ? decodeURIComponent(m[1]) : "";
+    const sub = m ? decodeURIComponent(m[2]) : "";
+    // Gold Reset lessons + capstone: free for a consented Explorer (§6.2). Consent comes from my_join_state (own row).
+    if (isExplorerCourse(slug) && sub !== "pay" && sub !== "placement") {
+      const { data: js, error: jsErr } = await supabase.rpc("my_join_state");
+      const consented = !jsErr && (js as { consent?: unknown } | null)?.consent === true;
+      if (courseRouteAccess({ loggedIn, membership, consented }, slug, sub) === "allow") return null;
+    }
+    // S8 = A: a removed member keeps lessons + capstone of a bought course (not /pay or /placement).
+    if (m && sub !== "pay" && sub !== "placement") {
+      const { data: info } = await supabase.rpc("my_payment_info", { p_course_slug: slug });
       if ((info as { state?: string } | null)?.state === "approved") return null;
     }
+    // Journey 1 (spec §4.1): keep the deep link through /system/join so verify / consent lands back here.
+    return go(joinPath(path));
   }
-  // Journey 1 (spec §4.1): keep the deep link through /system/join so verify lands back here.
-  if (!member) return go(joinPath(legacyHome ? null : path));
-  return legacyHome ? go(MEMBERS_HOME) : null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const confirmed = Boolean(user?.email && user.email_confirmed_at);
+  return trainingRouteAccess({ loggedIn, confirmed, membership }) === "allow" ? null : go(joinPath(null));
 }

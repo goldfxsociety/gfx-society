@@ -113,10 +113,11 @@ await t("nextFirstManila: next month's 1st in Asia/Manila", async () => {
   assert.equal(AR.manilaDate("2026-11-10T17:00:00Z"), "Nov 11, 2026");
 });
 await t("active-request copy uses the dates verbatim", async () => {
-  assert.equal(REQUEST_COPY.activeRequest("Nov 11, 2026", "Dec 1, 2026"),
-    "May active request ka na, submitted Nov 11, 2026. Iche-check ito sa Dec 1, 2026, at sa bawat monthly update hanggang ma-match.");
-  assert.equal(REQUEST_COPY_EN.activeRequest("Nov 11, 2026", "Dec 1, 2026"),
-    "You already have an active request (submitted Nov 11, 2026). It'll be checked on Dec 1, 2026, and at every monthly update until it matches.");
+  // Sprint 3 (explorer-linked-tiers-spec §2.2): neutral, no date / cadence promise.
+  assert.equal(REQUEST_COPY.activeRequest("Nov 11, 2026"),
+    "May active request ka na, submitted Nov 11, 2026. Iche-check namin at iu-update ka.");
+  assert.equal(REQUEST_COPY_EN.activeRequest("Nov 11, 2026"),
+    "You already have an active request, submitted Nov 11, 2026. We'll check and update you.");
 });
 await t("confirm link: pinned to site URL, 64-hex token only, token in the fragment (never sent to a server)", async () => {
   const tok = "a".repeat(64);
@@ -184,16 +185,26 @@ const ALL = JSON.stringify([REQUEST_COPY, REQUEST_COPY_EN, TRANSFER_COPY, TRANSF
 await t("copy rules: no VIP / PDE / income / profit / win-rate / guarantee / free bot / demo first / deposit requirement", async () => {
   for (const re of [/\bVIP\b/i, /\bPDE\b/, /win[- ]?rate/i, /\bprofit/i, /\bincome\b/i, /free bot/i, /demo first/i, /guarantee/i, /minimum deposit|min deposit/i]) assert.ok(!re.test(ALL), String(re));
 });
-await t("waiting copy promises only the monthly update / next 1st (no same-day, no faster check)", async () => {
+await t("waiting copy makes no timing promise (no same-day, no date, no cadence)", async () => {
   assert.ok(!/same[- ]day|today|ngayon|within \d+ (hour|day)|24 ?h|oras/i.test(ALL));
-  for (const s of [REQUEST_COPY.intro, REQUEST_COPY.submittedPending, TRANSFER_COPY.step2]) assert.match(s, /every 1st of the month/);
+  const waiting = [REQUEST_COPY, REQUEST_COPY_EN].flatMap((c) => [c.intro, c.submittedPending, c.confirmedLanding, c.activeRequest("x")])
+    .concat([TRANSFER_COPY.step2, TRANSFER_COPY_EN.step2]);
+  for (const s of waiting) assert.ok(!/1st of the month|every 1st|bawat 1|monthly|Dec 1|buwan/i.test(s), s);
 });
 await t("no transfer-timing promise; no deletion promise; consent says data is saved", async () => {
   assert.match(TRANSFER_COPY.timing, /Hindi namin ma-promise/);
   assert.ok(!/30 days|30-day|auto-delete|expire/i.test(REQUEST_COPY.consent + REQUEST_COPY_EN.consent));
   assert.match(REQUEST_COPY.consent, /mag-email sa goldfx\.society@gmail\.com/);
-  assert.equal(REQUEST_CONSENT_VERSION, "request-v1");
-  assert.match(read("supabase/migrations/20261111120000_access_requests.sql"), /p_consent_version is distinct from 'request-v1'/);
+  // Privacy v1.6: new consents store request-v2 (cadence wording only); the Sprint 3 migration accepts v1 + v2.
+  assert.equal(REQUEST_CONSENT_VERSION, "request-v2");
+  assert.match(read("supabase/migrations/20261111130000_accm_confirm_mailer.sql"), /p_consent_version is distinct from 'request-v1'/, "live body (history)");
+  assert.match(read("supabase/migrations/20261115120000_explorer_linked_tiers.sql"), /if p_consent_version is null or p_consent_version not in \('request-v1', 'request-v2'\) then/);
+});
+await t("request-v2 consent: same data + purpose as request-v1, cadence from the Privacy v1.6 line (no 'monthly update')", async () => {
+  assert.equal(REQUEST_COPY.consent, "Pumapayag ako na i-check ng GFX Society ang email(s) na ito sa ACCM member data sa bawat import (puwede anytime, kasama ang existing monthly refresh). Email at IB name lang ang sine-save namin, para i-check ang membership sa bawat import. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com.");
+  assert.equal(REQUEST_COPY_EN.consent, "I agree that GFX Society may check these email(s) against ACCM member data at each import (this can happen any time, including the existing monthly refresh). We only save the email(s) and IB name, so we can check membership at each import. To ask us to delete this data, email goldfx.society@gmail.com.");
+  for (const c of [REQUEST_COPY.consent, REQUEST_COPY_EN.consent]) assert.ok(!/monthly update|bawat refresh|each refresh/.test(c), c);
+  assert.ok(!/User ID|account ID/i.test(REQUEST_COPY.consent + REQUEST_COPY_EN.consent));
 });
 await t("spec copy verbatim (spot checks)", async () => {
   assert.equal(REQUEST_COPY.openLink, "Hindi pa naka-verify? I-request dito.");
@@ -263,10 +274,21 @@ await t("privacy: request-data line (TL + EN), no deletion promise for requests,
   // v1.4 is kept as history and is what /privacy serves again on rollback (flag false): no ACCM-email promise in it.
   assert.ok(!/ACCM email|Different ACCM email|confirmation link we send/i.test(p), "no ACCM-email confirm copy while mailer is off");
 });
-await t("privacy page: live flag serves v1.5; v1.4 stays only as the rollback fallback", async () => {
-  assert.match(read("src/app/privacy/page.tsx"), /const PRIVACY_FILE = ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.5\.md" : "privacy-notice\.md";/);
+await t("privacy page: live flag serves v1.6; v1.5 kept as history; v1.4 stays only as the rollback fallback", async () => {
+  assert.match(read("src/app/privacy/page.tsx"), /const PRIVACY_FILE = ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.6\.md" : "privacy-notice\.md";/);
   assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   assert.match(read("src/content/legal/privacy-notice-v1.5.md"), /^Last updated: 11 Nov 2026 · Version: 1\.5$/m);
+  assert.match(read("src/content/legal/privacy-notice-v1.6.md"), /^Last updated: 15 Nov 2026 · Version: 1\.6$/m);
+});
+await t("privacy v1.6: spec §3 request line verbatim (TL), EN equivalent, no 'monthly update' for requests, no User ID", async () => {
+  const p = read("src/content/legal/privacy-notice-v1.6.md");
+  assert.ok(p.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo, ACCM email (kung binigay), at IB name (kung binigay) para i-check sa ACCM member data sa bawat import (puwede anytime, kasama ang existing monthly refresh). Hindi namin ito auto-dine-delete. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com."));
+  assert.ok(p.includes("so we can check them against ACCM member data at each import (this can happen any time, including the existing monthly refresh). We don't delete this data automatically."));
+  assert.match(p, /\*\*What changed in v1\.6 \(15 Nov 2026\):\*\*/);
+  assert.ok(p.indexOf("What changed in v1.6") < p.indexOf("What changed in v1.5"), "newest change note first");
+  assert.ok(!/monthly update/.test(p), "no 'monthly update' cadence left");
+  const req = p.split("\n").find((l) => l.startsWith("- **Access request (optional):**"));
+  assert.ok(req && !/User ID/i.test(req), "no ACCM User ID on the request line (spec §3)");
 });
 await t("F2: no stale member_code_reserve comment in admin.ts", async () => {
   assert.ok(!read("src/lib/supabase/admin.ts").includes("member_code_reserve"));

@@ -61,12 +61,17 @@ await t("RPC error / unexpected -> generic error (no enumeration)", async () => 
 // ---- proxy gates without OTP ----
 // Fake Supabase: claims (no amr at all = password session), my_membership, my_payment_info, is_admin.
 const fake = (o) => () => ({
-  auth: { getClaims: async () => ({ data: o.sub ? { claims: { sub: o.sub, amr: [{ method: "password" }] } } : null }) },
+  auth: {
+    getClaims: async () => ({ data: o.sub ? { claims: { sub: o.sub, amr: [{ method: "password" }] } } : null }),
+    // Sprint 3: /training checks the confirmed email of a non-member (Explorer home). Fake ids / example.test only.
+    getUser: async () => ({ data: { user: o.sub ? { id: o.sub, email: "learner@example.test", email_confirmed_at: o.unconfirmed ? null : "2026-11-01T00:00:00Z" } : null } }),
+  },
   rpc: async (fn, args) => {
     (o.calls ??= []).push(fn);
     if (fn === "my_membership") return { data: o.membership ?? "none", error: null };
     if (fn === "my_payment_info") return { data: { state: o.owned?.includes(args.p_course_slug) ? "approved" : "not_member" }, error: null };
     if (fn === "is_admin") return { data: false, error: null };
+    if (fn === "my_join_state") return { data: { consent: o.consent === true, request: null }, error: null };
     return { data: null, error: { code: "x" } };
   },
 });
@@ -82,7 +87,24 @@ await t("training: logged out -> /login?next=/training", async () => assert.equa
 await t("training: logged out lesson -> /login?next=<lesson>", async () => assert.equal(await gate("/courses/gold-strategy-basics/l1", {}), "307 /login?next=%2Fcourses%2Fgold-strategy-basics%2Fl1"));
 await t("training: password session + active -> allowed (no OTP needed)", async () => assert.equal(await gate("/training", { sub: U, membership: "active" }), "pass"));
 await t("training: password session + grace -> allowed", async () => assert.equal(await gate("/training", { sub: U, membership: "grace" }), "pass"));
-await t("training: password session non-member -> /system/join (next=/training is the default, so omitted)", async () => assert.equal(await gate("/training", { sub: U }), "307 /system/join"));
+// Sprint 3 (explorer-linked-tiers-spec §2.1): /training is the Explorer home too; unconfirmed email -> join door copy.
+await t("training: confirmed non-member (Explorer) -> allowed", async () => assert.equal(await gate("/training", { sub: U }), "pass"));
+await t("training: unconfirmed non-member -> /system/join (next=/training is the default, so omitted)", async () => assert.equal(await gate("/training", { sub: U, unconfirmed: true }), "307 /system/join"));
+await t("Explorer + join-v2 consent: Gold Reset lesson + capstone allowed; /pay + /placement not", async () => {
+  assert.equal(await gate("/courses/gold-reset/l1", { sub: U, consent: true }), "pass");
+  assert.equal(await gate("/courses/gold-reset/capstone", { sub: U, consent: true }), "pass");
+  assert.equal(await gate("/courses/gold-reset/pay", { sub: U, consent: true }), "307 /system/join?next=%2Fcourses%2Fgold-reset%2Fpay");
+  assert.equal(await gate("/courses/gold-reset/placement", { sub: U, consent: true }), "307 /system/join?next=%2Fcourses%2Fgold-reset%2Fplacement");
+});
+await t("Explorer without consent: Gold Reset lesson -> consent first, deep link kept", async () =>
+  assert.equal(await gate("/courses/gold-reset/l1", { sub: U }), "307 /system/join?next=%2Fcourses%2Fgold-reset%2Fl1"));
+await t("Explorer + consent: Strategy Basics / Advanced Setups lessons stay Linked-only", async () => {
+  assert.equal(await gate("/courses/gold-strategy-basics/l1", { sub: U, consent: true }), "307 /system/join?next=%2Fcourses%2Fgold-strategy-basics%2Fl1");
+  assert.equal(await gate("/courses/gold-advanced-setups/l1", { sub: U, consent: true }), "307 /system/join?next=%2Fcourses%2Fgold-advanced-setups%2Fl1");
+});
+await t("Linked: all three courses pass the route gate (the DB still needs a purchase for paid lessons)", async () => {
+  for (const c of ["gold-reset", "gold-strategy-basics", "gold-advanced-setups"]) assert.equal(await gate(`/courses/${c}/l1`, { sub: U, membership: "active" }), "pass", c);
+});
 await t("journey 1: non-member lesson deep link kept through /system/join?next=", async () => assert.equal(await gate("/courses/gold-strategy-basics/l1", { sub: U }), "307 /system/join?next=%2Fcourses%2Fgold-strategy-basics%2Fl1"));
 await t("S8: delisted owner (password session) keeps bought lesson + capstone", async () => {
   assert.equal(await gate("/courses/gold-strategy-basics/l1", { sub: U, owned: ["gold-strategy-basics"] }), "pass");

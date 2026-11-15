@@ -8,6 +8,7 @@ import { ACCM_CONFIRM_MAIL_LIVE, submitRequest, type RequestDeps, type RequestRe
 import { sendAccmConfirmForUser } from "@/lib/members/accm-confirm-send";
 import { submitConsent, type ConsentDeps, type ConsentResult } from "@/lib/members/consent-flow";
 import { joinBaseFrom, joinLoginPath, memberNext } from "@/lib/members/routes";
+import { isGoldResetPath } from "@/lib/members/tier";
 import { createClient } from "@/lib/supabase/server";
 
 export type JoinState = { result: "idle" | Exclude<ConsentResult, "active" | "login_required"> };
@@ -45,6 +46,9 @@ export async function joinConsent(_prev: JoinState, formData: FormData): Promise
   const ticked = formData.get("consent") === "on" || (await d.consentRecorded());
   const r = await submitConsent(d, ticked);
   if (r === "active") redirect(memberNext(next));
+  // Sprint 3 (explorer-linked-tiers-spec §2.2): after join-v2 consent a no_match does not block Gold Reset. A safe
+  // `next` into Gold Reset lands there as an Explorer; anyone who came to link stays here for the request form.
+  if (r === "no_match" && isGoldResetPath(memberNext(next))) redirect(memberNext(next));
   if (r === "login_required") redirect(joinLoginPath(next, joinBaseFrom(formData.get("join_base"))));
   return { result: r };
 }
