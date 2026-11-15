@@ -242,7 +242,14 @@ try {
   // ---- QA Q2: awaiting vs. after the 7-day purge of an unconfirmed ACCM email ----
   p = await open("/system/join", "awaiting");
   tx = await text(p);
-  check(tx.includes("Halos tapos na. I-click ang confirmation link") && !tx.includes("May active request ka na"), "awaiting: pending-confirmation copy", tx.slice(0, 300));
+  // Amendment v1.2 (3): this local server has no mailer secrets, so it cannot send -> neutral saved copy, no "link sent".
+  check(tx.includes("Halos tapos na. Na-save na ang request mo. Iche-check namin at iu-update ka.") && !tx.includes("confirmation link") && !tx.includes("May active request ka na"),
+    "awaiting (mailer cannot send): neutral saved copy, no 'link sent'", tx.slice(0, 300));
+  await p.close();
+  p = await open("/en/system/join", "awaiting");
+  tx = await text(p);
+  check(tx.includes("Almost done. Your request is saved. We'll check and update you.") && !tx.includes("confirmation link"),
+    "/en awaiting (mailer cannot send): neutral saved copy", tx.slice(0, 300));
   await p.close();
   p = await open("/system/join", "purged");
   await layout(p, "join after Q2 purge", { gold: 0 });

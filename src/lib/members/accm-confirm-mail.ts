@@ -28,6 +28,15 @@ export function readMailConfig(env: Record<string, string | undefined>): MailCon
   return { user, pass, from };
 }
 
+/**
+ * Amendment v1.2 (3): can the confirm mailer actually send? The flag AND every secret it needs are present (SMTP
+ * user / app password / from, plus the service-role key for the token RPC). Presence only: returns a boolean and never
+ * exposes a value. Flag off: no env is read at all.
+ */
+export function mailerCanSend(live: boolean, env: Record<string, string | undefined>): boolean {
+  return live && readMailConfig(env) !== null && Boolean(env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
+
 /** Answer of public.issue_accm_confirm_token (service role): {email, token} or {error: 'none' | 'rate_limited'}. */
 export type IssueResult = { email?: unknown; token?: unknown; error?: unknown } | null;
 

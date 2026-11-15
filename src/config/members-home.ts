@@ -24,6 +24,10 @@ export const ME = {
   lockedUnpaid: "🔒 Bilhin para mabuksan ang course na ito.",
   /** Paid course seen by an Explorer (spec §3): Link, never Buy. */
   lockedExplorer: "Available 'pag naka-link na ang ACCM account mo.",
+  /** Logged out / unconfirmed on paid courses (amendment v1.2 (1)): main's copy, verbatim. No ACCM mention. */
+  membersOnlyCourses: "Members-only ang courses. I-verify muna ang member email mo.",
+  membersOnlyCourse: "Members-only ito. I-verify ang member email mo.",
+  verifyCta: "Verify membership →",
   lockedNoContent: "🔒 Inaayos pa ang lessons nito.",
   prereq: (course: string) => `Tapusin muna ang ${course} o ipasa ang placement quiz.`,
   quizTag: "Quiz",

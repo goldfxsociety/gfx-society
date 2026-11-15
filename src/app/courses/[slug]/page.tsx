@@ -111,10 +111,17 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
         {v.state === "verify" && isExplorerCourse(slug) && (
           <Link href={joinPath(`/courses/${slug}`)} className={gold}>{ME.heroEmpty}</Link>
         )}
-        {v.state === "verify" && !isExplorerCourse(slug) && (
+        {v.state === "verify" && !isExplorerCourse(slug) && t.tier === "explorer" && (
           <>
             <p className="text-sm text-muted-foreground">{ME.lockedExplorer}</p>
             <Link href="/system/join" className={secondary}>{ME.home.linkCta}</Link>
+          </>
+        )}
+        {/* Amendment v1.2 (1): logged out / unconfirmed keep main's copy and sign-in path (no ACCM mention). */}
+        {v.state === "verify" && !isExplorerCourse(slug) && t.tier !== "explorer" && (
+          <>
+            <p className="text-sm text-muted-foreground">{ME.membersOnlyCourse}</p>
+            <Link href="/system/join" className={gold}>{ME.verifyCta}</Link>
           </>
         )}
         {v.state === "not_owned" &&

@@ -31,6 +31,8 @@ export const REQUEST_COPY = {
     "Natanggap na ang request mo. Iche-check namin at iu-update ka. Pag na-link, makikita mo na ang iba pang Trading System courses pag nag-log in ka o nag-refresh. Wala ka nang kailangang gawin.",
   submittedAwaiting:
     "Halos tapos na. I-click ang confirmation link na pinadala namin sa ACCM email mo (check din ang Spam o Promotions). Iche-check lang namin ang request pag na-confirm na ito.",
+  /** Amendment v1.2 (3): awaiting_email_confirm while the mailer cannot send. Verbatim; no mailer mention. */
+  submittedAwaitingSaved: "Halos tapos na. Na-save na ang request mo. Iche-check namin at iu-update ka.",
   confirmedLanding: "Na-confirm na ang ACCM email mo. Iche-check namin at iu-update ka.", // [Builder] Sprint 3: no cadence; Design check
   // Confirm step (QA N1: POST button + signed-in requester). GFX Design approved 11 Nov.
   confirmPrompt: "Isang click na lang: pindutin ang button para i-confirm ang ACCM email sa request mo.",
@@ -64,6 +66,7 @@ export const REQUEST_COPY_EN = {
     "We've received your request. We'll check and update you. Once you're linked, the other Trading System courses will be there when you log in or refresh. You don't need to do anything else.",
   submittedAwaiting:
     "Almost done. Click the confirmation link we sent to your ACCM email (check Spam or Promotions too). We'll check your request once it's confirmed.",
+  submittedAwaitingSaved: "Almost done. Your request is saved. We'll check and update you.",
   confirmedLanding: "Your ACCM email is confirmed. We'll check and update you.", // [Builder] Sprint 3; Design check
   confirmPrompt: "One last click: press the button to confirm the ACCM email on your request.",
   confirmButton: "Confirm ACCM email",

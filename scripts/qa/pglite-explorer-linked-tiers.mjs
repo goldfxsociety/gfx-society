@@ -213,6 +213,14 @@ check((await sval(`select count(*)::int from private.member_allowlist`)) === bef
 await expectVal('upsert #2: Linked member missing from the partial file is still Linked', 'authenticated', U.link, 'select public.my_membership()', 'active');
 const r3 = await up([{ email: 'new1@example.test', role: 'IB' }]);
 expectSub('upsert #3: role change counts as updated', r3, { added: 0, updated: 1, unchanged: 0 });
+// P3-2 (amendment v1.2 (5)): a row with no role never overwrites an existing role; it is not skipped either.
+const r3b = await up([{ email: 'new1@example.test' }, { email: 'new2@example.test', role: '' }, { email: 'new3@example.test' }]);
+expectSub('upsert role-less rows: existing ib kept (unchanged), new one added, none skipped', r3b, { added: 1, updated: 0, unchanged: 2, skipped: 0, conflicts: 0 });
+check((await sval(`select string_agg(role, ',' order by email_hash = private.email_hash('new3@example.test'), email_hash) from private.member_allowlist
+  where email_hash in (private.email_hash('new1@example.test'), private.email_hash('new2@example.test'), private.email_hash('new3@example.test'))`)) === 'ib,ib,client',
+  'upsert role-less rows: new1/new2 stay ib, new3 inserted as client');
+const r3c = await up([{ email: 'new1@example.test', role: 'client' }, { email: 'new3@example.test', role: 'client' }]);
+expectSub('upsert: an explicit role still updates (ib -> client), same role unchanged', r3c, { added: 0, updated: 1, unchanged: 1 });
 
 // ---- monthly snapshot stays the only downgrade; upsert restores ----
 const fullRows = [E.linkNoBuy, E.expC, E.req, 'new1@example.test', 'new2@example.test'].map((email) => ({ email, role: 'client' }));
@@ -233,6 +241,27 @@ await x(`select private.import_allowlist('${JSON.stringify(fullRows.concat([{ em
 check((await sval(`select mode from private.allowlist_refresh_log order by id desc limit 1`)) === 'full', 'plain import_allowlist still logs (mode defaults to full)');
 check((await sval(`select count(*)::int from private.allowlist_refresh_log where source_file ~ '[/\\\\]' or coalesce(source_file,'') ~ '@'`)) === 0, 'audit log: no paths or emails in source_file');
 
+// ---- P3-1 (QA's case, amendment v1.2 (4)): a two-owner hash ALREADY listed by the monthly file never links anyone ----
+const Q = { qx: '10000000-0000-0000-0000-00000000000b', qy: '10000000-0000-0000-0000-00000000000c' };
+await x(`insert into auth.users values ('${Q.qx}','qx@example.test',now()),('${Q.qy}','qy@example.test',now())`);
+for (const k of ['qx', 'qy']) await as('authenticated', Q[k], consent);
+// qx claims qy's Academy email as a CONFIRMED ACCM email -> the hash has two owners.
+await x(`insert into public.access_requests (user_id, academy_email_hash, accm_email_hash, accm_email_confirmed_at, consent_version, status)
+  values ('${Q.qx}', private.email_hash('qx@example.test'), private.email_hash('qy@example.test'), now(), 'request-v1', 'pending')`);
+const monthly2 = fullRows.concat([{ email: E.link, role: 'client' }, { email: 'qy@example.test', role: 'client' }]);
+const rq = (await db.query(`select private.import_allowlist_full($1::jsonb, 'monthly-2.csv') as r`, [JSON.stringify(monthly2)])).rows[0].r;
+check((await sval(`select count(*)::int from private.member_allowlist where email_hash = private.email_hash('qy@example.test')`)) === 1, 'P3-1 fixture: two-owner hash is on the allowlist from the monthly file');
+expectSub('P3-1 full path: two-owner hash skipped, counted in conflicts', rq, { consented_activated: 0, conflicts: 1 });
+check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'P3-1 full path: audit row conflicts = 1');
+await expectVal('P3-1 full path: Academy-email owner (qy) NOT linked', 'authenticated', Q.qy, 'select public.my_membership()', 'none');
+check(rq.consented_activated === 0, 'P3-1 full path: the activation linked nobody on the two-owner hash');
+// Residual (reported, not changed): the unchanged, md5-pinned private.match_access_requests() (called by the live
+// import_allowlist and by the upsert) still matches qx's PENDING request on its confirmed ACCM email. Not asserted.
+console.log(`INFO residual: qx after the monthly file = ${await val('authenticated', Q.qx, 'select public.my_membership()')} (request ${await sval(`select status || '/' || coalesce(matched_via, '-') from public.access_requests where user_id = '${Q.qx}'`)})`);
+const rqu = await up([{ email: 'unrelated@example.test', role: 'client' }], 'mid-cycle-2.csv');
+expectSub('P3-1 upsert path: listed two-owner hash skipped by the activation, counted in conflicts', rqu, { added: 1, consented_activated: 0, conflicts: 1 });
+check((await sval(`select conflicts from private.allowlist_refresh_log order by id desc limit 1`)) === 1, 'P3-1 upsert path: audit row conflicts = 1');
+await expectVal('P3-1 upsert path: Academy-email owner (qy) NOT linked by the activation', 'authenticated', Q.qy, 'select public.my_membership()', 'none');
 // ---- revert + re-apply ----
 const REV = fs.readFileSync(R + 'scripts/20261115_explorer_linked_tiers/revert.sql', 'utf8');
 try { await x(REV); await x(REV); check(true, 'revert applies twice (idempotent)'); } catch (e) { check(false, 'revert applies twice', e.message); }

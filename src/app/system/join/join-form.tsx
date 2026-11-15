@@ -29,6 +29,8 @@ type Props = {
   goldResetHref: string;
   /** Sprint 3: `next` is a Gold Reset page, so the consent submit reads "Ituloy ang Gold Reset" (spec §2.2). */
   forGoldReset?: boolean;
+  /** Amendment v1.2 (3): server presence check (flag + secrets). Only then may the copy say a link was sent. */
+  mailerCanSend?: boolean;
   /** "en" on /en/system/join: same logic and actions, English copy (simplicity spec v2). */
   lang?: "tl" | "en";
 };
@@ -41,7 +43,7 @@ const copyFor = (lang: "tl" | "en") =>
 const link = "inline-flex min-h-11 items-center self-start py-2 text-left text-sm underline";
 
 /** Logged-in, not-yet-member: consent + verify, then (no_match) the request form and the optional help. */
-export function JoinForm({ next, consentRecorded, academyEmail, request, goldResetHref, forGoldReset = false, lang = "tl" }: Props) {
+export function JoinForm({ next, consentRecorded, academyEmail, request, goldResetHref, forGoldReset = false, mailerCanSend = false, lang = "tl" }: Props) {
   const { C, R, base, accm } = copyFor(lang);
   const [verify, verifyAction, verifying] = useActionState<JoinState, FormData>(joinConsent, { result: "idle" });
   const [sent, requestAction, sending] = useActionState<RequestState, FormData>(submitAccessRequest, { result: "idle" });
@@ -105,8 +107,8 @@ export function JoinForm({ next, consentRecorded, academyEmail, request, goldRes
           {!active && !submitted && <p className="text-sm">{C.notVerified}</p>}
           <div role="status" className="text-sm empty:hidden">
             {sent.result === "pending" ? R.submittedPending
-              : sent.result === "awaiting_email_confirm" ? R.submittedAwaiting
-              : active && !formOpen ? (active.status === "awaiting_email_confirm" ? R.submittedAwaiting : R.activeRequest(active.submitted))
+              : sent.result === "awaiting_email_confirm" ? R.submittedAwaiting /* only returned after the link was actually sent */
+              : active && !formOpen ? (active.status === "awaiting_email_confirm" ? (mailerCanSend ? R.submittedAwaiting : R.submittedAwaitingSaved) : R.activeRequest(active.submitted))
               : ""}
           </div>
           {/* Sprint 3 (spec §2.2): consent is on file, so Gold Reset is open while they wait. Outline, never gold. */}

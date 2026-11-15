@@ -5,10 +5,12 @@
 --  * public.has_course_access and public.my_payment_info go back to the exact live 15 Nov 2026 bodies (copied verbatim
 --    from 20261102140000_courses_payments.sql; md5 5c19835b884faeb0743116d75cb287a9 / 96bbcf2c9095dd4fb99aa6016a2c2081,
 --    checked by the verify file's 'revert:' rows). Same grants as before (authenticated only).
---  * Drops the 7 new private functions. Explorers lose Gold Reset again (their progress rows stay, unreadable via RLS).
+--  * Drops the 8 new private functions. Explorers lose Gold Reset again (their progress rows stay, unreadable via RLS).
 --  * Drops the 7 audit columns added to private.allowlist_refresh_log (counts/labels of upsert runs are lost; the
 --    original columns and rows stay). private.member_allowlist rows added by upserts STAY (that is member data, not
 --    schema); the next monthly import_allowlist run reconciles them as usual.
+--  * Members linked by private.activate_consented_members() (member_status rows set 'active') STAY active: the
+--    revert only restores schema and function bodies, it never undoes data. Remove one by hand only if needed.
 --  * private.import_allowlist(jsonb) and private.match_access_requests() were never changed, so nothing to restore.
 -- Afterwards run supabase/verification/20261115120000_explorer_linked_tiers_verify.sql: the 6 always rows ('pre:',
 -- 'unchanged:', no prefix) and the 3 'revert:' rows are true (9 rows); every 'apply:' row is false.
@@ -165,6 +167,7 @@ grant execute on function public.submit_access_request(text, text, text, text) t
 drop function if exists private.import_allowlist_full(jsonb, text, text);
 drop function if exists private.upsert_allowlist(jsonb, text, text);
 drop function if exists private.activate_consented_members();
+drop function if exists private.hash_owners();
 drop function if exists private.import_actor(text);
 drop function if exists private.clean_source_file(text);
 drop function if exists private.join_consented(uuid);

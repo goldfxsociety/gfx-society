@@ -7,6 +7,7 @@ import { IB_DISCLOSURE_TEXT, IB_DISCLOSURE_TEXT_EN } from "@/config/partners";
 import { RISK_LINE_EN_SHORT } from "@/config/training";
 import { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY } from "@/content/members-gate";
 import { manilaDate } from "@/lib/members/access-request";
+import { accmConfirmMailCanSend } from "@/lib/members/accm-confirm-send";
 import { getMembership } from "@/lib/members/membership";
 import { MEMBERS_HOME, joinLoginPath, joinSignupPath, memberNext, type JoinBase } from "@/lib/members/routes";
 import { GOLD_RESET_PATH, isGoldResetPath } from "@/lib/members/tier";
@@ -89,6 +90,7 @@ export async function JoinView({ lang, nextParam }: { lang: "tl" | "en"; nextPar
           request={request}
           goldResetHref={isGoldResetPath(next) ? next : GOLD_RESET_PATH}
           forGoldReset={isGoldResetPath(next)}
+          mailerCanSend={accmConfirmMailCanSend()}
           lang={lang}
         />
       );

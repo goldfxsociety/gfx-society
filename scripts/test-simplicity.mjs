@@ -702,4 +702,17 @@ await t("OpenOnHash (P3-16): focuses the native <summary> only when the fragment
   assert.match(o, /addEventListener\("hashchange", sync\)/); assert.match(o, /removeEventListener\("hashchange", sync\)/);
 });
 
+await t("amendment v1.2 (1): logged-out /courses + paid pages keep main's Members-only copy; Link copy only for signed-in Explorers", async () => {
+  const c = read("src/app/courses/page.tsx"), d = read("src/app/courses/[slug]/page.tsx");
+  assert.equal(ME.membersOnlyCourses, "Members-only ang courses. I-verify muna ang member email mo.");
+  assert.equal(ME.membersOnlyCourse, "Members-only ito. I-verify ang member email mo.");
+  assert.equal(ME.verifyCta, "Verify membership →");
+  for (const k of ["membersOnlyCourses", "membersOnlyCourse", "verifyCta"]) assert.ok(!/ACCM/i.test(ME[k]), `${k}: no ACCM`);
+  assert.ok(main("src/app/courses/page.tsx").includes(ME.membersOnlyCourses) && main("src/app/courses/[slug]/page.tsx").includes(ME.membersOnlyCourse), "same strings as main");
+  assert.match(c, /\) : explorer \? \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.lockedExplorer\}<\/p>\s*<Link href="\/system\/join" className=\{style\(false\)\}>\{ME\.home\.linkCta\}<\/Link>\s*<\/>\s*\) : \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.membersOnlyCourses\}<\/p>\s*<Link href="\/system\/join" className=\{style\(false\)\}>\{ME\.verifyCta\}<\/Link>/);
+  assert.match(c, /explorer=\{t\.tier === "explorer"\}/);
+  assert.match(d, /v\.state === "verify" && !isExplorerCourse\(slug\) && t\.tier === "explorer" && \(\s*<>\s*<p[^>]*>\{ME\.lockedExplorer\}/);
+  assert.match(d, /v\.state === "verify" && !isExplorerCourse\(slug\) && t\.tier !== "explorer" && \(\s*<>\s*<p className="text-sm text-muted-foreground">\{ME\.membersOnlyCourse\}<\/p>\s*<Link href="\/system\/join" className=\{gold\}>\{ME\.verifyCta\}<\/Link>/);
+});
+
 console.log(`ALL PASS simplicity (${n})`);

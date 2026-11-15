@@ -15,6 +15,7 @@ with fn as (
      coalesce(to_regprocedure('private.upsert_allowlist(jsonb,text,text)'), 0)::oid,
      coalesce(to_regprocedure('private.import_allowlist_full(jsonb,text,text)'), 0)::oid,
      coalesce(to_regprocedure('private.activate_consented_members()'), 0)::oid,
+     coalesce(to_regprocedure('private.hash_owners()'), 0)::oid,
      coalesce(to_regprocedure('private.explorer_course(uuid)'), 0)::oid,
      coalesce(to_regprocedure('private.join_consented(uuid)'), 0)::oid,
      coalesce(to_regprocedure('private.import_actor(text)'), 0)::oid,
@@ -26,7 +27,8 @@ with fn as (
      coalesce(to_regprocedure('public.submit_access_request(text,text,text,text)'), 0)::oid)
 ), newfn as (
   select * from fn where name in ('private.upsert_allowlist', 'private.import_allowlist_full', 'private.activate_consented_members',
-                                  'private.explorer_course', 'private.join_consented', 'private.import_actor', 'private.clean_source_file')
+                                  'private.explorer_course', 'private.join_consented', 'private.import_actor', 'private.clean_source_file',
+                                  'private.hash_owners')
 ), logcols as (
   select array_agg(column_name::text order by column_name) as c from information_schema.columns
    where table_schema = 'private' and table_name = 'allowlist_refresh_log'
@@ -46,15 +48,15 @@ union all
 select 'private schema: anon/authenticated have no USAGE',
        not has_schema_privilege('anon', 'private', 'usage') and not has_schema_privilege('authenticated', 'private', 'usage')
 union all
-select 'apply: all 7 new private functions exist',
-       (select count(*) from newfn) = 7
+select 'apply: all 8 new private functions exist',
+       (select count(*) from newfn) = 8
 union all
 select 'apply: no new function is executable by anon or authenticated',
-       (select count(*) from newfn) = 7
+       (select count(*) from newfn) = 8
        and not exists (select 1 from newfn where has_function_privilege('anon', oid, 'execute') or has_function_privilege('authenticated', oid, 'execute'))
 union all
 select 'apply: new SECURITY DEFINER functions pin search_path',
-       (select count(*) from newfn) = 7
+       (select count(*) from newfn) = 8
        and not exists (select 1 from newfn where prosecdef and cfg not like 'search_path=%')
 union all
 select 'apply: upsert_allowlist never deletes from the allowlist and never starts grace',

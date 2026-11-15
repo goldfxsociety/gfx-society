@@ -428,6 +428,31 @@ try {
       if (OUT) await p.screenshot({ path: `${OUT}/${width}-tiers-courses-${scn}.png`, fullPage: true });
       await p.close();
     }
+    // Amendment v1.2 (1): logged out -> main's "Members-only" copy + sign-in path, 0 ACCM mentions, no IB line.
+    for (const path of ["/courses", "/courses/gold-strategy-basics", "/courses/gold-advanced-setups"]) {
+      const p = await open(path, width);
+      const c = await p.evaluate(() => ({
+        text: document.body.innerText, html: document.documentElement.outerHTML,
+        gold: [...document.querySelectorAll("main a, main button")].filter((e) => getComputedStyle(e).backgroundColor === "rgb(212, 160, 23)").map((e) => e.textContent.trim()),
+        verify: [...document.querySelectorAll("main a")].filter((a) => a.textContent.trim() === "Verify membership →").map((a) => a.getAttribute("href")),
+      }));
+      const n = (c.text.match(/ACCM/g) ?? []).length;
+      check(n === 0 && !c.html.includes("I-link ang ACCM") && !c.text.includes("Partner broker ng GFX ang ACCM."), `${width} ${path} (logged out): 0 ACCM mentions, no Link copy, no IB line`, `ACCM x${n}`);
+      const want = path === "/courses" ? "Members-only ang courses. I-verify muna ang member email mo." : "Members-only ito. I-verify ang member email mo.";
+      check(c.text.includes(want) && c.verify.length >= 1 && c.verify.every((h) => h === "/system/join"), `${width} ${path} (logged out): main's Members-only copy + Verify membership -> /system/join`, JSON.stringify(c.verify));
+      check(c.gold.length <= 1, `${width} ${path} (logged out): at most one gold button`, JSON.stringify(c.gold));
+      if (OUT) await p.screenshot({ path: `${OUT}/${width}-tiers-loggedout${path.replace(/\//g, "-")}.png`, fullPage: true });
+      await p.close();
+    }
+    // Signed-in Explorer on a paid course page: the Link copy (outline), no Members-only copy.
+    for (const path of ["/courses/gold-strategy-basics", "/courses/gold-advanced-setups"]) {
+      const p = await open(path, width, "explorer");
+      const c = await p.evaluate(() => ({ text: document.querySelector("main").innerText,
+        link: [...document.querySelectorAll("main a")].filter((a) => /I-link ang ACCM account mo/.test(a.textContent)).map((a) => [a.getAttribute("href"), getComputedStyle(a).backgroundColor]) }));
+      check(c.text.includes("Available 'pag naka-link na ang ACCM account mo.") && c.link.length === 1 && c.link[0][1] !== "rgb(212, 160, 23)" && !c.text.includes("Members-only ito."),
+        `${width} ${path} (explorer): Link copy (outline), no Members-only copy`, JSON.stringify(c.link));
+      await p.close();
+    }
   }
   {
     // Route gate (proxy): consented Explorer opens Gold Reset; paid courses stay Linked-only; no consent -> consent first.
