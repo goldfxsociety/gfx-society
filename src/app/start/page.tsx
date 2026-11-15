@@ -4,9 +4,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { getLessonMinutes } from "@/lib/academy/lesson-minutes";
 import { FIRST_LESSON_PATH } from "@/config/academy";
-import { NEXT_STEP_HREF } from "@/config/journey";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
-import { NextStepLink } from "@/components/funnel/next-step-link";
+import { RISK_LINE } from "@/config/training";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 
 export const metadata: Metadata = {
   title: "Start here",
@@ -44,11 +44,12 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Optional next step: guided training sa partner community namin",
-    body: "Hindi kailangan para matuto. Pero kung ready ka na, puwede kang sumali sa Discord community namin pagka-register mo sa ACCM.",
-    href: NEXT_STEP_HREF,
-    cta: "Tingnan ang steps →",
+    title: "Optional next step: Join the Trading System",
+    body: "Hindi kailangan para matuto. Kapag ready ka na, join the Trading System.",
+    href: "/system/join",
+    cta: JOIN_SYSTEM_CTA,
     note: IB_DISCLOSURE_TEXT,
+    risk: RISK_LINE,
   },
 ];
 
@@ -57,7 +58,7 @@ export const revalidate = 3600;
 export default async function StartPage() {
   const l1Minutes = await getLessonMinutes(FIRST_LESSON_PATH.split("/").pop()!);
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
+    <div lang="fil" className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-1">
         <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           Start here
@@ -76,22 +77,15 @@ export default async function StartPage() {
               {s.n === 1 && l1Minutes ? ` (~${l1Minutes} min)` : ""}
             </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.body}</p>
-            {s.href === NEXT_STEP_HREF ? (
-              <NextStepLink location="start" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
-                {s.cta}
-              </NextStepLink>
-            ) : (
-              <Link
-                href={s.href}
-                className={cn(
-                  buttonVariants({ variant: s.n === 1 ? "default" : "outline" }),
-                  "mt-3 h-11 w-full",
-                )}
-              >
-                {s.cta}
-              </Link>
-            )}
+            {/* One gold per screen (simplicity spec v2, Ben's decision 1): step 4 Join; Lesson 1 is outline. */}
+            <Link
+              href={s.href}
+              className={cn(buttonVariants({ variant: s.n === 4 ? "default" : "outline" }), "mt-3 h-11 w-full")}
+            >
+              {s.cta}
+            </Link>
             {"note" in s && s.note ? <p className="mt-2 text-xs text-muted-foreground">{s.note}</p> : null}
+            {"risk" in s && s.risk ? <p className="mt-1 text-xs text-muted-foreground" data-testid="risk-line">{s.risk}</p> : null}
           </li>
         ))}
       </ol>
@@ -104,7 +98,7 @@ export default async function StartPage() {
         </Link>
       </div>
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-        Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
+        Real risk of loss. Start small, laging may stop loss.
       </p>
     </div>
   );

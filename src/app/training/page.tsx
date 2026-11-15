@@ -3,43 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { COMING_LATER_COURSE_NOTE } from "@/config/training";
+import { Play, BookOpen, Zap, UserRound } from "lucide-react";
 import { ME } from "@/config/members-home";
 import { createClient } from "@/lib/supabase/server";
 import { formatPhtDate } from "@/lib/training/time";
-import { findCatalog, getAllCourseViews, groupByModule, type CourseView } from "@/lib/training/courses";
+import { getAllCourseViews, groupByModule } from "@/lib/training/courses";
 import { CONTINUE_ACTION_CLASS, continueHref, continueLabel, resolveContinue, showCurriculumCapstone } from "@/lib/training/continue";
-import { Chip } from "@/components/training/chip";
 import { MembersFooter } from "@/components/training/members-footer";
 import { Curriculum } from "@/components/members-home/curriculum";
 import { MembersNav } from "@/components/members-home/members-nav";
-import { ProgressBar } from "@/components/members-home/progress-bar";
 
 export const metadata: Metadata = { title: "Training | GFX Trading System", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
-
-/** Course-list status line (spec §5 locked/prereq strings). Text + icon, never color alone. */
-function courseStatus(v: CourseView) {
-  switch (v.state) {
-    case "not_owned":
-    case "sales_closed":
-      return <p className="text-sm text-muted-foreground">{ME.lockedUnpaid}</p>;
-    case "coming_soon":
-      return <p className="text-sm text-muted-foreground">{ME.lockedNoContent}</p>;
-    case "locked": {
-      const pre = v.catalog.prereqSlug ? findCatalog(v.catalog.prereqSlug)?.title : undefined;
-      return <p className="text-sm text-muted-foreground">🔒 {pre ? ME.prereq(pre) : v.catalog.lockLine}</p>;
-    }
-    case "pending":
-      return <Chip tone="amber">Pending review</Chip>;
-    case "rejected":
-      return <Chip tone="red">Needs re-upload</Chip>;
-    default:
-      return v.lessons.length > 0 ? (
-        <ProgressBar value={v.done} max={v.lessons.length} label={ME.railDone(v.done, v.lessons.length)} />
-      ) : null;
-  }
-}
 
 export default async function TrainingPage() {
   const { loggedIn, membership, views } = await getAllCourseViews();
@@ -70,7 +45,6 @@ export default async function TrainingPage() {
   const action = current ? resolveContinue(current.lessons, current.capstone) : ({ kind: "empty" } as const);
   const lesson = action.kind === "lesson" ? action.lesson : undefined;
   const capVisible = current ? showCurriculumCapstone(current.lessons.length, current.capstone) : false;
-  const capDone = current?.capstone.state === "completed";
   const finished =
     current && (action.kind === "capstone" || action.kind === "review")
       ? {
@@ -80,9 +54,10 @@ export default async function TrainingPage() {
         }
       : null;
   const modules = current ? groupByModule(current.lessons) : [];
-  const mod = modules.find((m) => m.sort === lesson?.moduleSort);
-  const checkpoints = mod && lesson ? mod.lessons.filter((l) => !l.completed && l.id !== lesson.id).slice(0, 3) : [];
-  const quizDone = current ? current.lessons.filter((l) => l.quizDone).length : 0;
+
+  const H = ME.home;
+  const card = "flex min-w-0 gap-3 rounded-lg border border-border bg-card p-4";
+  const icon = "inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-primary";
 
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-1 gap-8 px-4 lg:max-w-6xl">
@@ -90,121 +65,89 @@ export default async function TrainingPage() {
         active="home"
         course={current ? { slug: current.catalog.slug, title: current.catalog.title, modules } : undefined}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-5 pt-10 pb-24">
+      <div lang="fil" className="flex min-w-0 flex-1 flex-col gap-4 pt-8 pb-24">
         <header className="flex flex-col gap-1">
           <p className="text-xs font-semibold tracking-widest text-primary uppercase">{ME.eyebrow}</p>
-          <h1 className="text-2xl font-bold tracking-tight">Training</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{ME.welcome(first)}</h1>
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {H.lead}
+            <span className="flex items-center gap-1.5 text-xs font-medium" data-testid="member-badge">
+              <span aria-hidden className={cn("size-2 rounded-full", membership === "active" ? "bg-green-400" : "bg-amber-400")} />
+              {membership === "grace" && graceDate ? ME.badgeGrace(graceDate) : ME.badgeActive}
+            </span>
+          </p>
         </header>
 
-        {/* 1. Welcome bar */}
-        <section aria-label="Membership" className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
-          <span className="flex items-center gap-2 text-sm">
-            <span aria-hidden className="inline-flex size-7 items-center justify-center rounded-full bg-muted font-semibold">
-              {(first ?? "G").charAt(0).toUpperCase()}
-            </span>
-            {ME.welcome(first)}
-          </span>
-          <span className="flex items-center gap-1.5 text-xs font-medium" data-testid="member-badge">
-            <span aria-hidden className={cn("size-2 rounded-full", membership === "active" ? "bg-green-400" : "bg-amber-400")} />
-            {membership === "grace" && graceDate ? ME.badgeGrace(graceDate) : ME.badgeActive}
-          </span>
-        </section>
-
-        {/* 2. Continue card: the one gold CTA. Finished courses use an explicit capstone or review action. */}
-        {current && lesson ? (
-          <section aria-labelledby="hero-h" className="flex min-w-0 flex-col gap-3 rounded-lg border-2 border-primary p-4">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs font-semibold tracking-widest text-primary uppercase">{ME.heroLabel}</p>
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs break-words text-muted-foreground">{lesson.moduleTitle}</span>
-            </div>
-            {fresh && <p className="text-sm">{ME.heroEmpty}</p>}
-            <h2 id="hero-h" className="text-lg font-bold break-words">
-              {lesson.title}
-            </h2>
-            <p className="text-xs text-muted-foreground">{current.catalog.title}</p>
-            {/* Goal line: module learning goal. No minutes column exists, so minutes are omitted (§4.4). */}
-            {lesson.moduleGoal && <p className="text-sm text-muted-foreground">{lesson.moduleGoal}</p>}
-            {checkpoints.length > 0 && (
-              <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                {checkpoints.map((c) => (
-                  <li key={c.id}>{c.title}</li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href={`/courses/${current.catalog.slug}/${lesson.slug}`}
-              className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}
-            >
-              {ME.heroCta}
-            </Link>
-          </section>
-        ) : finished ? (
-          <section className="flex min-w-0 flex-col gap-3 rounded-lg border-2 border-primary p-4">
-            <p className="text-xs text-muted-foreground">{finished.title}</p>
-            <Link href={finished.href} className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}>
-              {finished.label}
-            </Link>
-          </section>
-        ) : (
-          <p className="rounded-lg border border-border p-4 text-sm">{ME.heroEmpty}</p>
-        )}
-
-        {/* 3. Program card + stat chips (counts only) */}
-        {current && (
-          <section aria-label={`${current.catalog.title} progress`} className="flex flex-col gap-2 rounded-lg border border-border p-4">
-            <h2 className="font-semibold">{current.catalog.title}</h2>
-            <p className="text-sm text-muted-foreground">{current.catalog.forWho}</p>
-            <ul className="grid grid-cols-2 gap-2 text-sm sm:flex sm:flex-wrap sm:divide-x sm:divide-border sm:gap-0">
-              <li className="rounded-md border border-border px-3 py-2 sm:rounded-none sm:border-0 sm:py-0">
-                {ME.chipLessons(current.done, current.lessons.length)}
-              </li>
-              <li className="rounded-md border border-border px-3 py-2 sm:rounded-none sm:border-0 sm:py-0">{ME.chipQuiz(quizDone)}</li>
-              {capVisible && (
-                <li className="rounded-md border border-border px-3 py-2 sm:rounded-none sm:border-0 sm:py-0">
-                  {capDone ? "✓ " : "○ "}
-                  {ME.chipCapstone(capDone)}
-                </li>
-              )}
-            </ul>
-          </section>
-        )}
-
-        {/* 360px: curriculum accordion, collapsed. Desktop shows the right rail instead. */}
-        {current && (
-          <div className="lg:hidden">
-            <Curriculum
-              slug={current.catalog.slug}
-              lessons={current.lessons}
-              hasCapstone={capVisible}
-              currentLessonId={lesson?.id}
-              capstoneCurrent={action.kind === "capstone"}
-              collapsed
-            />
-          </div>
-        )}
-
-        {/* 4. Course list */}
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">Courses</h2>
-          <ul className="flex flex-col gap-2">
-            {views.map((v) => (
-              <li key={v.catalog.slug}>
-                <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                  <Link href={`/courses/${v.catalog.slug}`} className="inline-flex min-h-11 items-center text-sm font-medium underline">
-                    {v.catalog.title}
-                  </Link>
-                  {courseStatus(v)}
+        {/* 4 cards (simplicity spec v2 P1.3): Continue training (the one gold), Courses, Signals (coming soon), Account. */}
+        <ul className="flex flex-col gap-3" aria-label="Member home">
+          {/* 1. Continue training: the one gold CTA. Finished courses use an explicit capstone or review action. */}
+          <li>
+            <section aria-labelledby="hero-h" className={cn(card, "flex-col border-primary/60")} data-testid="card-continue">
+              <div className="flex gap-3">
+                <span aria-hidden className={icon}>
+                  <Play className="size-5" />
+                </span>
+                <div className="min-w-0">
+                  <h2 id="hero-h" className="text-lg font-semibold">{H.continueTitle}</h2>
+                  <p className="text-sm break-words text-muted-foreground">
+                    {current && lesson ? lesson.title : finished ? finished.title : ME.heroEmpty}
+                  </p>
+                  {current && lesson && fresh && <p className="text-xs text-muted-foreground">{ME.heroEmpty}</p>}
                 </div>
-              </li>
-            ))}
-          </ul>
-          <Link href="/academy" className="inline-flex min-h-11 items-center self-start text-sm underline">
-            Free Academy lessons →
-          </Link>
-        </section>
+              </div>
+              {current && lesson ? (
+                <Link
+                  href={`/courses/${current.catalog.slug}/${lesson.slug}`}
+                  className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}
+                >
+                  {ME.heroCta}
+                </Link>
+              ) : finished ? (
+                <Link href={finished.href} className={cn(buttonVariants({ variant: "default" }), CONTINUE_ACTION_CLASS)}>
+                  {finished.label}
+                </Link>
+              ) : null}
+            </section>
+          </li>
+          {/* 2. Courses */}
+          <li>
+            <Link href="/courses" className={cn(card, "hover:bg-muted/40")} data-testid="card-courses">
+              <span aria-hidden className={icon}>
+                <BookOpen className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-lg font-semibold">{H.coursesTitle}</span>
+                <span className="block text-sm text-muted-foreground">{H.coursesLine}</span>
+              </span>
+            </Link>
+          </li>
+          {/* 3. Signals: placeholder only. Not a link or button, not focusable, no hover, no gold, no dates, no claims. */}
+          <li>
+            <div aria-disabled="true" className={cn(card, "items-center opacity-60")} data-testid="card-signals">
+              <span aria-hidden className={cn(icon, "text-muted-foreground")}>
+                <Zap className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-lg font-semibold">{H.signalsTitle}</span>
+                <span className="block text-sm text-muted-foreground">{H.signalsLine}</span>
+              </span>
+              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">{H.signalsBadge}</span>
+            </div>
+          </li>
+          {/* 4. Account */}
+          <li>
+            <Link href="/account" className={cn(card, "hover:bg-muted/40")} data-testid="card-account">
+              <span aria-hidden className={icon}>
+                <UserRound className="size-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-lg font-semibold">{H.accountTitle}</span>
+                <span className="block text-sm text-muted-foreground">{H.accountLine}</span>
+              </span>
+            </Link>
+          </li>
+        </ul>
 
-        {/* Ideas + Chat: one muted "Paparating pa" line, not in the nav (decision 4). Existing E3 line, once per page. */}
-        <p className="text-sm text-muted-foreground">{COMING_LATER_COURSE_NOTE}</p>
         <MembersFooter />
       </div>
 

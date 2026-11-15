@@ -116,7 +116,7 @@ than these four versions; never use `db push --include-all`; don't run `db push`
 through MCP has the same issue: either repair it the same way, or apply it with `supabase db push` instead. Nothing
 here was run as part of the PRs.
 
-## Unconfirmed addresses are purged after 7 days
+## Unconfirmed addresses are purged within (up to) 8 days
 A raw ACCM email that is never confirmed is deleted once no unexpired link remains and the request was last submitted
 more than 7 days ago (`private.purge_stale_accm_emails()`). The request keeps its hash and goes back to `pending`, so it
 is checked on the Academy email only, and the user can update the request to enter an ACCM email again. The purge runs on
@@ -126,7 +126,25 @@ the monthly refresh.
 **Latency (QA R2): up to about 7 days + 1 day.** The 7 days count from the last submit (`updated_at`). The read path
 (`my_join_state`) is read-only and doesn't purge, so if nobody submits, the row goes when the next daily cron runs
 (`30 19 * * *` UTC = 03:30 Asia/Manila, and Vercel may start it later within that hour). Until then the join page keeps
-showing the "check your inbox" copy. The privacy notice's "after 7 days" means this bound.
+showing the "check your inbox" copy. Privacy v1.5 states this bound as "within 8 days" (members section) and "up to 8
+days" (retention table): 7 days from the last submit, plus up to 1 day until the next daily cron. Keep the doc and the
+notice on that same 8-day bound; if the purge timing changes, update both.
+
+### Monitoring the purge cron (`purge_member_gate_logs`)
+The 8-day bound depends on the daily cron succeeding when nobody submits. A failed run is not retried until the next day,
+so check it rather than assume it:
+
+- **Where to look:** Vercel → project → Logs (or Cron Jobs → `/api/cron/members-cleanup` → View logs) for the 19:30 UTC
+  (03:30 Asia/Manila) run. A healthy run returns `200 {"ok":true,"deleted":…}`.
+- **Failure signals:** `401` (cron auth header didn't match), `503 {"reason":"not_configured"}` (admin client
+  unavailable), or `500` with the log line `[cron/members-cleanup] purge failed` and a Postgres `code` (the RPC failed).
+  The route logs only the error code, never emails or tokens.
+- **What to do:** fix the cause, then trigger the job once from Vercel's Cron Jobs page ("Run") so the backlog is
+  purged the same day. One missed run stretches the bound by a day; two or more missed runs in a row break the "up to 8
+  days" promise in Privacy v1.5, so treat that as a privacy incident to review.
+- **Cadence:** check the cron log at least weekly (and the day after any deploy that touches `vercel.json`, the cron
+  route, or the purge SQL). Vercel Hobby doesn't alert on cron failures by itself; set a log drain or alert if one
+  becomes available on the plan.
 
 ## Rollback (reverse order, each step with Jarvis's go)
 1. Merge a revert PR that sets `ACCM_CONFIRM_MAIL_LIVE` back to `false`, and let it deploy (the ACCM field disappears,

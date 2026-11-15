@@ -1,7 +1,7 @@
 /**
  * Access journey v2 copy (GFX Design spec access-journey-spec.md §5, §7, §9; v2 final, 11 Nov 2026). Verbatim.
- * PH routes use REQUEST_COPY / TRANSFER_COPY (Taglish). The *_EN objects are the spec's EN strings for /en only;
- * there is no /en join route yet, so they are not rendered in this build.
+ * PH routes use REQUEST_COPY / TRANSFER_COPY (Taglish). The *_EN objects are the spec's EN strings, rendered on
+ * /en/system/join (simplicity spec v2) by the same components.
  * Waiting copy names only the next 1st (§12.1 option A: monthly refresh only, no faster check is live).
  */
 
@@ -72,7 +72,9 @@ export const REQUEST_COPY_EN = {
   sameEmail: "That's your Academy email. Leave this blank if they're the same.",
   consentRequired: "Please tick the consent box first.",
   rateLimited: "Too many tries. Please wait a bit and try again.",
-} as const;
+  // [Builder] added 12 Nov for /en/system/join (the only REQUEST_COPY key the EN object lacked); for Design check.
+  noAccmLink: "Don't have an ACCM account yet?",
+} as const satisfies Record<keyof typeof REQUEST_COPY, unknown>;
 
 /** Journey 4: ACCM client under a different IB. Template from Ben (via Jarvis, 11 Nov 2026), exactly. */
 export const TRANSFER_TEMPLATE = {

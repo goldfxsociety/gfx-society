@@ -14,7 +14,8 @@
     "test:members-consent": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-members-consent.mjs",
     "test:signup-confirm": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-signup-confirm.mjs",
     "test:access-request": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-access-request.mjs",
-    "test:accm-confirm-mail": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-accm-confirm-mail.mjs"
+    "test:accm-confirm-mail": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-accm-confirm-mail.mjs",
+    "test:simplicity": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-simplicity.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

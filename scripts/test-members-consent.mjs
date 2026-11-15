@@ -122,12 +122,15 @@ await t("join action: user server client + record_member_consent only (no servic
   assert.equal(a.match(/headers\(\)/g)?.length ?? 0, 1);
 });
 await t("join UI: no email field / code input; logged-out CTA to /login?next=/system/join", async () => {
-  const ui = read("src/app/system/join/page.tsx") + read("src/app/system/join/join-form.tsx");
+  const ui = read("src/app/system/join/page.tsx") + read("src/app/system/join/join-view.tsx") + read("src/app/system/join/join-form.tsx");
   // Only the optional ACCM email (request form, behind ACCM_CONFIRM_MAIL_LIVE) is an email input; never on the logged-out screen.
   assert.ok(!/name="email"|name="code"|one-time-code/.test(ui));
-  assert.ok(!read("src/app/system/join/page.tsx").includes('type="email"'));
+  assert.ok(!read("src/app/system/join/join-view.tsx").includes('type="email"'));
   assert.match(read("src/lib/members/routes.ts"), /JOIN_LOGIN_PATH = "\/login\?next=%2Fsystem%2Fjoin"/);
-  assert.match(read("src/app/system/join/page.tsx"), /href=\{joinLoginPath\(next\)\}/);
+  // PH and EN doors share JoinView (simplicity spec v2); `base` is "/system/join" or "/en/system/join".
+  const view = read("src/app/system/join/join-view.tsx");
+  assert.match(view, /href=\{joinLoginPath\(next, base\)\}/);
+  assert.match(view, /const base: JoinBase = en \? "\/en\/system\/join" : "\/system\/join";/);
 });
 await t("consent version unchanged and matches SQL", async () => {
   assert.match(read("src/content/members-gate.ts"), /MEMBERS_CONSENT_VERSION = "join-v2"/);
@@ -136,7 +139,7 @@ await t("consent version unchanged and matches SQL", async () => {
 await t("copy rules: no VIP / PDE / income or win-rate claims / free bot / demo first", async () => {
   const copy = read("src/content/members-gate.ts") + read("src/content/signup-confirm.ts");
   for (const re of [/\bVIP\b/i, /\bPDE\b/, /win[- ]?rate/i, /\bprofit/i, /\bincome\b/i, /free bot/i, /demo first/i, /guarantee/i]) assert.ok(!re.test(copy), String(re));
-  const page = read("src/app/system/join/page.tsx");
+  const page = read("src/app/system/join/join-view.tsx");
   assert.equal(page.match(/SYSTEM_COPY\.risk/g)?.length, 1, "risk line once");
   assert.equal(page.match(/IB_DISCLOSURE_TEXT\}/g)?.length, 1, "IB disclosure once");
 });

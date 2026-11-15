@@ -3,6 +3,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { cn } from "cn";
 import { buttonVariants } from "@/components/ui/button";
 import { AccmLink } from "@/components/partners/accm-link";
+import { SELF_CHECK_EN, SELF_CHECK_UI } from "@/content/accm-guide";
 
 const KEY = "gfx_accm_selfcheck";
 const DAYS_30 = 30 * 24 * 60 * 60 * 1000;
@@ -17,7 +18,8 @@ export const SELF_CHECK = [
 ];
 
 /** `duplicate`: a second, visual-only copy of the chip; hidden from screen readers and keyboard so the code is announced once. */
-export function CodeChip({ duplicate = false }: { duplicate?: boolean }) {
+export function CodeChip({ duplicate = false, lang = "tl" }: { duplicate?: boolean; lang?: "tl" | "en" }) {
+  const ui = SELF_CHECK_UI[lang];
   const [copied, setCopied] = useState<"" | "ok" | "manual">("");
   const copy = async () => {
     try {
@@ -40,7 +42,7 @@ export function CodeChip({ duplicate = false }: { duplicate?: boolean }) {
         Code: {CODE} ⧉
       </button>
       <span aria-live={duplicate ? undefined : "polite"} className="text-xs text-muted-foreground">
-        {copied === "ok" ? "Copied! ✓" : copied === "manual" ? "Long-press para i-copy" : ""}
+        {copied === "ok" ? ui.copied : copied === "manual" ? ui.manual : ""}
       </span>
     </span>
   );
@@ -77,7 +79,10 @@ function saveTicks(t: boolean[]) {
   }
 }
 
-export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: string }) {
+/** `lang="en"` (/en/accm): same five meanings in English (simplicity spec Appendix H); same storage key and logic. */
+export function AccmSelfCheck({ href, disclosure, lang = "tl" }: { href: string; disclosure: string; lang?: "tl" | "en" }) {
+  const labels = lang === "en" ? SELF_CHECK_EN : SELF_CHECK;
+  const ui = SELF_CHECK_UI[lang];
   const raw = useSyncExternalStore(noop, readRaw, () => null);
   const stored = useMemo(() => parseStored(raw), [raw]);
   const [local, setLocal] = useState<boolean[] | null>(null);
@@ -98,7 +103,7 @@ export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: 
     <div className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-1">
         <legend className="sr-only">Quick self-check</legend>
-        {SELF_CHECK.map((label, i) => (
+        {labels.map((label, i) => (
           <label key={i} className="flex min-h-12 cursor-pointer items-start gap-3 py-2 text-sm">
             <input
               type="checkbox"
@@ -117,12 +122,10 @@ export function AccmSelfCheck({ href, disclosure }: { href: string; disclosure: 
         <AccmLink href={href} disabled={!ready} className={cn(btn, !ready && "cursor-not-allowed opacity-50")}>
           Open cents account →
         </AccmLink>
-        <CodeChip duplicate />
+        <CodeChip duplicate lang={lang} />
       </div>
-      {!ready && <p className="text-xs text-muted-foreground">I-tick muna ang 5 sa taas.</p>}
-      <p className="text-xs text-muted-foreground">
-        Min deposit $50 · GCash, Maya, other e-wallets. Hindi kailangang lampasan.
-      </p>
+      {!ready && <p className="text-xs text-muted-foreground">{ui.tickFirst}</p>}
+      <p className="text-xs text-muted-foreground">{ui.minDeposit}</p>
       <p className="text-xs text-muted-foreground">{disclosure}</p>
     </div>
   );

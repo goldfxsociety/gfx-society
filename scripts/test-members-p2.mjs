@@ -65,10 +65,10 @@ const coursesLib = read("src/lib/training/courses.ts");
 assert.match(coursesLib, /pay\.state === "approved" \|\| pay\.state === "free"/);
 assert.equal(coursesLib.includes("getLessons"), true);
 
+// Member home is 4 cards now (simplicity spec v2 P1.3); the course list and its locked/closed statuses live on /courses.
 const training = read("src/app/training/page.tsx");
-assert.match(training, /case "sales_closed":/);
-assert.match(training, /ME\.lockedUnpaid/);
-assert.match(training, /ME\.lockedNoContent/);
+assert.equal(training.includes("courseStatus"), false);
+assert.match(read("src/app/courses/page.tsx"), /ME\.lockedUnpaid/);
 
 for (const path of ["src/app/courses/page.tsx", "src/app/account/page.tsx"]) {
   const text = read(path);

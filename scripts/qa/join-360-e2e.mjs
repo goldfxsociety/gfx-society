@@ -107,6 +107,8 @@ const text = (page) => page.evaluate(() => (document.querySelector("main") ?? do
 const clickText = async (page, sel, t) => {
   const h = await page.evaluateHandle((sel, t) => [...document.querySelectorAll(sel)].find((e) => e.textContent.trim().startsWith(t)), sel, t);
   if (!h.asElement()) throw new Error("not found: " + t);
+  // Centre it first: a target at the viewport edge can sit under the fixed bottom nav.
+  await h.asElement().evaluate((e) => e.scrollIntoView({ block: "center" }));
   await h.asElement().click();
 };
 
@@ -115,7 +117,7 @@ try {
   let p = await open("/system/join?next=%2Fcourses%2Fgold-reset%2Fl1");
   await layout(p, "join logged out");
   let tx = await text(p);
-  check(tx.includes("Log in muna gamit ang Academy account mo.") && !tx.includes("Request access"), "logged out: login copy, no request form");
+  check(tx.includes("Log in with your Academy account para ma-verify ang membership mo.") && !tx.includes("Request access"), "logged out: one-line login intro (simplicity spec App. C), no request form");
   check(!(await p.$('input[type="email"], input[name="accm_email"], input[name="ib_name"]')), "logged out: no email / request fields");
   const href = await p.$eval('a[href^="/login"]', (a) => a.getAttribute("href"));
   check(href === "/login?next=%2Fsystem%2Fjoin%3Fnext%3D%252Fcourses%252Fgold-reset%252Fl1", "logged out: login keeps the deep link", href);

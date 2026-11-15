@@ -2,6 +2,8 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE } from "@/config/training";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 
 /**
  * Optional ACCM step (copy approved Oct 27, recruitment/accm-bridge.md, site/DM section).
@@ -22,10 +24,10 @@ export function AccmBridge() {
         mag-practice live, pwede kang mag-open ng <strong>cents account</strong> with small money na kaya mong mawala,
         max 1% risk per trade, laging may stop loss.
       </p>
-      <p className="text-sm text-muted-foreground">
-        Kung pipiliin mo ang ACCM through our link, makakasali ka rin sa GFX Society Discord para sa trainings at
-        Q&amp;A with the community. Optional ito.
-      </p>
+      {/* The /academy page's one gold CTA (simplicity spec v2, Ben's decision 1). Discord-promise paragraph removed. */}
+      <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
+        {JOIN_SYSTEM_CTA}
+      </Link>
       <Link
         href="/accm"
         className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 w-full whitespace-normal py-2 text-sm")}
@@ -33,10 +35,7 @@ export function AccmBridge() {
         Open ACCM account (optional)
       </Link>
       <p className="text-sm text-muted-foreground">{ACCM_BRIDGE_DISCLOSURE}</p>
-      <p className="text-sm text-muted-foreground">
-        Max 1% risk, laging may stop loss. Cents account? Pera lang na kaya mong mawala. Education lang, not financial
-        advice.
-      </p>
+      <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
     </section>
   );
 }

@@ -4,8 +4,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { cn } from "cn";
 import { FIRST_LESSON_PATH } from "@/config/academy";
-import { IB_DISCLOSURE_TEXT } from "@/config/partners";
-import { NextStepLink } from "@/components/funnel/next-step-link";
+import { RISK_LINE } from "@/config/training";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { Expander } from "@/components/layout/expander";
+import { IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 
 function academyBody(lessons: number | null, levels: number | null) {
   const size =
@@ -27,7 +29,7 @@ const OFFERS = [
   {
     icon: "🎓",
     title: "Aral muna, walang pressure",
-    body: "Libre ang Academy, at puwede kang mag-aral dito hangga't kailangan mo. Kapag ready ka na, may next step para sa'yo (see below).",
+    body: "Libre ang Academy, at puwede kang mag-aral dito hangga't kailangan mo. Kapag ready ka na, join the Trading System.",
   },
 ];
 
@@ -80,92 +82,53 @@ export default async function Home({
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-8">
       {justDeleted && (
         <p role="status" className="rounded-lg border border-border bg-card p-4 text-sm">
           Na-delete na ang account mo. Salamat sa pag-aaral with GFX Society. Pwede ka pa ring mag-aral sa
           Academy kahit walang account.
         </p>
       )}
-      <section className="flex flex-col gap-4">
-        <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-          GFX Society · Free gold trading education
-        </span>
+      {/* Simplicity spec v2 (Ben, decision 1): gold = Join the Trading System; Lesson 1 is the outline second door. */}
+      <section lang="fil" className="flex flex-col gap-4">
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary">GFX Society · Free education</span>
         <h1 className="text-3xl font-bold tracking-tight">
           {user
             ? isNewAccount
               ? `Welcome${profileName ? `, ${profileName}` : ""}! Simulan na natin ang Lesson 1.`
               : `Welcome back${profileName ? `, ${profileName}` : ""}!`
-            : "Learn gold trading step by step — risk first, libre."}
+            : "Learn gold trading, step by step."}
         </h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          GFX Society is a free, beginner-friendly Academy for Filipinos who are
-          curious about trading gold (XAUUSD). Short lessons in plain language,
-          practice tools, and a community — with risk management first, not
-          quick profits.
-        </p>
+        <p className="text-sm leading-6 text-muted-foreground">Libre, risk-first lessons para sa beginners.</p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href={FIRST_LESSON_PATH}
-            className={cn(buttonVariants({ variant: "default" }), "h-11 px-5")}
-          >
-            Start Lesson 1 →
+          <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "h-11 px-5")}>
+            {JOIN_SYSTEM_CTA}
           </Link>
-          <Link
-            href="/start"
-            className={cn(buttonVariants({ variant: "outline" }), "h-11 px-5")}
-          >
-            New here? See the Start-here path
+          <Link href={FIRST_LESSON_PATH} className={cn(buttonVariants({ variant: "outline" }), "h-11 px-5")}>
+            Start Lesson 1 →
           </Link>
         </div>
         <p className="text-sm text-muted-foreground">
-          {user
-            ? "Naka-save na ang progress mo sa account mo."
-            : "No signup needed to learn. A free account just saves your progress."}
+          {user ? "Naka-save na ang progress mo sa account mo." : "No signup needed to learn."}
         </p>
-      </section>
-
-      <section aria-labelledby="offers" className="flex flex-col gap-3">
-        <h2 id="offers" className="text-lg font-semibold">
-          What you get
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Expander summary="Learn more" testId="learn-more">
           {offers.map((o) => (
-            <div key={o.title} className="rounded-lg border border-border bg-card p-4">
-              <p className="text-sm font-semibold">
-                <span aria-hidden="true">{o.icon}</span> {o.title}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">{o.body}</p>
-            </div>
+            <p key={o.title}>
+              <span className="font-semibold text-foreground">
+                <span aria-hidden="true">{o.icon}</span> {o.title}.
+              </span>{" "}
+              {o.body}
+            </p>
           ))}
-        </div>
+          <p>
+            <Link href="/start" className="inline-flex min-h-11 items-center text-foreground underline">
+              New here? See the Start-here path
+            </Link>
+          </p>
+        </Expander>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Next step: guided training sa partner community namin</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tuloy lang sa lessons. Kapag kabisado mo na ang basics (max 1% risk, laging may stop loss), puwede kang
-          sumali sa Discord community namin pagka-register mo sa ACCM.
-        </p>
-        <NextStepLink location="home" className={cn(buttonVariants({ variant: "outline" }), "mt-3 h-11 w-full")}>
-          Tingnan kung paano →
-        </NextStepLink>
-        <p className="mt-2 text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT} Education lang, not financial advice.</p>
-      </section>
-
-      <section
-        aria-label="Risk warning"
-        className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm leading-relaxed"
-      >
-        <p>
-          <strong>Start small.</strong> Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.
-        </p>
-        <p className="mt-1 text-muted-foreground">
-          Education only, not financial advice. Trading gold, forex and CFDs with leverage carries a high risk of losing money quickly. Never trade money you can&apos;t afford to lose. Education lang, hindi financial advice, at walang profit promises.
-        </p>
-      </section>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         {user ? (
           <>
             <Link href="/dashboard" className="inline-flex min-h-11 items-center underline">
@@ -175,7 +138,7 @@ export default async function Home({
           </>
         ) : (
           <>
-            <Link href="/signup" className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full text-sm sm:w-auto")}>
+            <Link href="/signup" className="inline-flex min-h-11 items-center underline">
               Create a free account
             </Link>
             <Link href="/login" className="inline-flex min-h-11 items-center underline">
@@ -183,13 +146,12 @@ export default async function Home({
             </Link>
           </>
         )}
-        <Link href="/resources" className="inline-flex min-h-11 items-center underline">
-          Resources
-        </Link>
-        <Link href="/broker" className="inline-flex min-h-11 items-center underline">
-          Broker info
-        </Link>
       </div>
+
+      <footer className="flex flex-col gap-1" data-testid="home-footer">
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
+        <IbDisclosureShort />
+      </footer>
     </div>
   );
 }

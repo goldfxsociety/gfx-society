@@ -235,7 +235,7 @@ export default function SignupPage() {
             <Link href="/privacy" className="-my-3.5 inline-block py-3.5 underline">Privacy Notice</Link>. We
             never sell your data or share it with brokers without your consent.
             Education only — not financial advice.{" "}
-            <Link href="/risk" className="underline">Risk warning</Link>.
+            <Link href="/risk" className="-my-3.5 inline-block py-3.5 underline">Risk warning</Link>.
           </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}

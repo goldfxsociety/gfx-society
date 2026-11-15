@@ -7,7 +7,7 @@ import { MEMBERS_CONSENT_VERSION } from "@/content/members-gate";
 import { ACCM_CONFIRM_MAIL_LIVE, submitRequest, type RequestDeps, type RequestResult } from "@/lib/members/access-request";
 import { sendAccmConfirmForUser } from "@/lib/members/accm-confirm-send";
 import { submitConsent, type ConsentDeps, type ConsentResult } from "@/lib/members/consent-flow";
-import { joinLoginPath, memberNext } from "@/lib/members/routes";
+import { joinBaseFrom, joinLoginPath, memberNext } from "@/lib/members/routes";
 import { createClient } from "@/lib/supabase/server";
 
 export type JoinState = { result: "idle" | Exclude<ConsentResult, "active" | "login_required"> };
@@ -45,7 +45,7 @@ export async function joinConsent(_prev: JoinState, formData: FormData): Promise
   const ticked = formData.get("consent") === "on" || (await d.consentRecorded());
   const r = await submitConsent(d, ticked);
   if (r === "active") redirect(memberNext(next));
-  if (r === "login_required") redirect(joinLoginPath(next));
+  if (r === "login_required") redirect(joinLoginPath(next, joinBaseFrom(formData.get("join_base"))));
   return { result: r };
 }
 
@@ -91,6 +91,6 @@ export async function submitAccessRequest(_prev: RequestState, formData: FormDat
     user?.email ?? null,
   );
   if (r === "matched" || r === "already_member") redirect(memberNext(next));
-  if (r === "login_required") redirect(joinLoginPath(next));
+  if (r === "login_required") redirect(joinLoginPath(next, joinBaseFrom(formData.get("join_base"))));
   return { result: r };
 }

@@ -46,7 +46,7 @@ export default async function AcademyPage() {
       <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4">
         <p className="text-base font-semibold">New here? Start here.</p>
         <p className="text-sm text-muted-foreground">Your first steps, no signup needed.</p>
-        <Link href="/start" className={cn(buttonVariants({ variant: "default" }), "h-12 w-full text-base")}>
+        <Link href="/start" className={cn(buttonVariants({ variant: "outline" }), "h-12 w-full text-base")}>
           Start here →
         </Link>
         <Link href="/academy/gold-starter" className="inline-flex min-h-11 items-center text-sm underline">

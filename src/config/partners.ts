@@ -26,7 +26,8 @@ export type Partner = {
  * (Ben-approved 2 Nov 2026, via Jarvis; Design Addendum D, D3).
  */
 export const IB_DISCLOSURE_TEXT = "Partner broker ng GFX ang ACCM.";
-// EN variant ("ACCM is GFX's partner broker.") is added when an /en page links to ACCM.
+/** EN variant for /en pages that link to ACCM (ib-disclosure.md short disclosure, verbatim). */
+export const IB_DISCLOSURE_TEXT_EN = "ACCM is GFX's partner broker.";
 
 /**
  * The single full explanation of the commission, used only in /broker

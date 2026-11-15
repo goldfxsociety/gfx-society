@@ -23,5 +23,11 @@ await t("after the WikiFX migration no row text mentions ACCM, so a text-driven 
   const after = { title: "WikiFX — Broker Checker", description: null };
   assert.equal(/ACCM/i.test(`${after.title} ${after.description ?? ""}`), false);
 });
-await t("standard line still present", () => assert.match(page, /Education lang, not financial advice\. Max 1% risk per trade\./));
+// PR70 (QA P2-1): the old local line duplicated RISK_LINE word for word, so the page now renders the shared constant once.
+await t("standard line still present (shared RISK_LINE, rendered once)", () => {
+  assert.match(page, /import \{ RISK_LINE \} from "@\/config\/training";/);
+  assert.equal(page.match(/\{RISK_LINE\}/g)?.length, 1);
+  assert.match(fs.readFileSync("src/config/training.ts", "utf8"), /export const RISK_LINE = "Max 1% risk per trade\. Education lang, not financial advice\.";/);
+  assert.ok(!/Max 1% risk per trade|not financial advice/.test(page.replace(/\{RISK_LINE\}/g, "")), "no second local copy");
+});
 console.log(`ALL PASS (${n})`);
