@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { ME } from "@/config/members-home";
-import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
+import { cardPriceLine, COMING_LATER_COURSE_NOTE, COURSES_LEDE, INCLUDED_NOTE } from "@/config/training";
 import { MembersNav } from "@/components/members-home/members-nav";
 import { getAllCourseViews, type CourseView } from "@/lib/training/courses";
 import { showMembersNav } from "@/lib/training/member-surface";
@@ -12,6 +12,7 @@ import { formatPht } from "@/lib/training/time";
 import { Chip } from "@/components/training/chip";
 import { GraceBanner } from "@/components/training/grace-banner";
 import { MembersFooter } from "@/components/training/members-footer";
+import { Expander } from "@/components/layout/expander";
 
 export const metadata: Metadata = { title: "Courses | GFX Trading System" };
 export const dynamic = "force-dynamic";
@@ -116,21 +117,16 @@ export default async function CoursesPage() {
   const gold = pickGold(views, member);
 
   const page = (
-    <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-6 px-4 pt-10 pb-24">
+    <div className="mx-auto flex w-full max-w-[640px] flex-1 flex-col gap-6 px-6 pt-10 pb-24">
       <header className="flex flex-col gap-2">
         <p className="text-xs font-semibold tracking-widest text-primary uppercase">GFX Trading System · Courses</p>
         <h1 className="text-2xl font-bold tracking-tight">Gold courses, step by step</h1>
-        <p className="leading-relaxed">Self-paced, Taglish. Aralin sa sarili mong oras.</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{COURSES_LEDE.ph}</p>
       </header>
 
       {membership === "grace" && (
         <GraceBanner />
       )}
-
-      <section className="rounded-lg border border-border bg-card p-4 text-sm leading-relaxed">
-        <p>{INCLUDED_NOTE}</p>
-        <p className="mt-1 text-muted-foreground">{COMING_LATER_COURSE_NOTE}</p>
-      </section>
 
       <ul className="flex flex-col gap-4">
         {views.map((v) => {
@@ -142,18 +138,12 @@ export default async function CoursesPage() {
                 className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-bold">
+                  <h2 className="text-lg font-semibold">
                     <Link href={`/courses/${v.catalog.slug}`} className="inline-flex min-h-11 items-center hover:underline">{v.catalog.title}</Link>
                   </h2>
                   {chip && <Chip tone={chip[1]}>{chip[0]}</Chip>}
                 </div>
                 <p className="text-sm font-semibold">{v.pricePhp > 0 ? cardPriceLine(v.pricePhp) : v.catalog.priceLine}</p>
-                <p className="text-sm">{v.catalog.forWho}</p>
-                <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                  {v.catalog.included.map((i) => (
-                    <li key={i}>{i}</li>
-                  ))}
-                </ul>
                 <div className="flex flex-col gap-2">
                   <CardAction v={v} gold={gold === v.catalog.slug || (gold === "verify" && v.catalog.slug === "gold-reset")} />
                 </div>
@@ -162,6 +152,12 @@ export default async function CoursesPage() {
           );
         })}
       </ul>
+      {/* Simplicity spec v2 P2.6 / training-after mockup: notes under "Learn more"; who-it's-for and the included
+          list stay on each /courses/<slug> page ("View course"). */}
+      <Expander summary="Learn more" testId="courses-learn-more">
+        <p>{INCLUDED_NOTE}</p>
+        <p>{COMING_LATER_COURSE_NOTE}</p>
+      </Expander>
       <MembersFooter />
     </div>
   );

@@ -15,18 +15,24 @@ export type NextStepLocation =
   | "community"
   | "go";
 
-/** Internal link to the Academy next step (/accm, or /broker as fallback). Never links straight to Discord. */
+/**
+ * Internal next-step link that logs `next_step_click` with a fixed `location` label (no personal data). Default target
+ * is the Academy next step (/accm, or /broker as fallback); `href` overrides it with another internal path (e.g. the
+ * Join the Trading System door on /go). Never links straight to Discord.
+ */
 export function NextStepLink({
   location,
   className,
   children,
+  href = NEXT_STEP_HREF,
 }: {
   location: NextStepLocation;
   className?: string;
   children: ReactNode;
+  href?: `/${string}`;
 }) {
   return (
-    <Link href={NEXT_STEP_HREF} className={className} onClick={() => gfxEvent("next_step_click", { location })}>
+    <Link href={href} className={className} onClick={() => gfxEvent("next_step_click", { location })}>
       {children}
     </Link>
   );

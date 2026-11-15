@@ -2,7 +2,7 @@
 // one gold CTA per page (incl. /en/accm, /en/broker, /en/system/join), disclosures + risk line byte-identical to their
 // sources on main, long /accm risk text inside the "Risk warning" expander, Signals card not a link and claim/date-free,
 // EN J4 caption, copy rules, docs G6/G7. No network, no Supabase, no env reads.
-// Run: node --experimental-strip-types scripts/test-simplicity.mjs   (Node >= 22.15; needs `git` with origin/main)
+// Run: node --experimental-strip-types scripts/test-simplicity.mjs   (Node >= 22.15; needs `git` with the pre-sprint base commit)
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -24,7 +24,9 @@ registerHooks({
 let n = 0;
 const t = async (name, fn) => { await fn(); n++; console.log("PASS", name); };
 const read = (f) => fs.readFileSync(path.join(root, f), "utf8");
-const main = (f) => execFileSync("git", ["show", `origin/main:${f}`], { cwd: root, encoding: "utf8" });
+// "main" = the pre-sprint base (93117d5, main before PR #70): disclosures and risk texts must stay byte-identical to it.
+const BASE_REF = "93117d5e1b0ca29efa00876b6ab2b48bca149701";
+const main = (f) => execFileSync("git", ["show", `${BASE_REF}:${f}`], { cwd: root, encoding: "utf8" });
 const golds = (s) => s.match(/variant: (?:[^,}"]*\? )?"default"/g)?.length ?? 0;
 // JSX text as rendered: collapse whitespace runs, decode the two entities used in these files.
 const jsxText = (s) => s.replace(/\s+/g, " ").replace(/&apos;/g, "'").replace(/&amp;/g, "&").trim();
@@ -36,7 +38,9 @@ const { BROKER_COPY, BROKER_COPY_EN } = await import("../src/content/broker-guid
 const { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY, SYSTEM_UNDER_CTA_EN } = await import("../src/content/members-gate.ts");
 const { TRANSFER_COPY, TRANSFER_COPY_EN, REQUEST_COPY, REQUEST_COPY_EN, JOIN_SYSTEM_CTA } = await import("../src/content/access-request.ts");
 const { ME } = await import("../src/config/members-home.ts");
-const ACCM_BRIDGE_DISCLOSURE_SRC = execFileSync("git", ["show", "origin/main:src/components/academy/accm-bridge.tsx"], { cwd: root, encoding: "utf8" }).match(/export const ACCM_BRIDGE_DISCLOSURE =\s*`[^`]+`;/)[0];
+const { INCLUDED_NOTE, COMING_LATER_COURSE_NOTE, COURSES_LEDE } = await import("../src/config/training.ts");
+const { MEMBERS_ONLY_HINT, SYSTEM_ROWS_SUMMARY } = await import("../src/content/members-gate.ts");
+const ACCM_BRIDGE_DISCLOSURE_SRC = main("src/components/academy/accm-bridge.tsx").match(/export const ACCM_BRIDGE_DISCLOSURE =\s*`[^`]+`;/)[0];
 const { joinPath, joinLoginPath, joinSignupPath, joinBaseFrom, memberNext, MEMBERS_HOME } = await import("../src/lib/members/routes.ts");
 
 // ---- one gold per page (source: page + the layout/components it renders) ----
@@ -121,6 +125,9 @@ const RISK_PAGES = [
   { route: "/en/broker", files: ["src/app/broker/broker-guide.tsx"], extra: () => Object.values(BROKER_COPY_EN).filter((v) => typeof v === "string").join("\n"), shared: null },
   // Has its own 1% line (local RISK_LINE) and the Disclaimer's education line; adding the shared line would double both.
   { route: "/academy/gold-starter", files: ["src/app/academy/gold-starter/page.tsx"], shared: null },
+  // Follow-up PR (P2.6): /system renders SYSTEM_COPY.risk (=== RISK_LINE); /courses gets it from MembersFooter.
+  { route: "/system", files: ["src/app/system/page.tsx"], extra: () => Object.values(SYSTEM_COPY).filter((v) => typeof v === "string").join("\n"), shared: null },
+  { route: "/courses", files: ["src/app/courses/page.tsx", "src/components/training/members-footer.tsx"], extra: () => [INCLUDED_NOTE, COMING_LATER_COURSE_NOTE].join("\n"), shared: /\{RISK_LINE\}/g },
 ];
 for (const pg of RISK_PAGES) {
   await t(`${pg.route}: "Max 1% risk per trade" once, "not financial advice" once${pg.shared ? ", shared RISK_LINE rendered" : ""}`, async () => {
@@ -171,8 +178,9 @@ await t("/go/<code>: one gold (Start learning), outline Join the Trading System 
   const g = read("src/app/go/[code]/page.tsx");
   assert.equal(golds(g), 1);
   assert.match(g, /variant: "default" \}\)\} min-h-11`\}>\s*Start learning →/);
-  assert.match(g, /<Link\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/Link>/);
-  assert.ok(!/NextStepLink|partner community|GO_NEXT_STEP_HREF/.test(g), "Discord-first next step removed");
+  // Follow-up (QA P3-8): the Join link is a NextStepLink again, so next_step_click (location "go") fires.
+  assert.match(g, /<NextStepLink\s+location="go"\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/NextStepLink>/);
+  assert.ok(!/partner community|GO_NEXT_STEP_HREF/.test(g), "Discord-first next step removed");
   assert.match(g, /\{IB_DISCLOSURE_TEXT\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
 });
 await t("P3-4: J4 FAQ on /accm + /en/accm says the template is there after you log in; rest of each answer byte-identical", async () => {
@@ -380,6 +388,109 @@ await t("docs G6: purge bound says within / up to 8 days (Privacy v1.5), not 'af
   assert.match(d, /### Monitoring the purge cron \(`purge_member_gate_logs`\)/);
   assert.match(d, /\[cron\/members-cleanup\] purge failed/);
   assert.ok(read("src/app/api/cron/members-cleanup/route.ts").includes('"[cron/members-cleanup] purge failed"'), "log line named in the doc exists");
+});
+
+// ======== Follow-up PR (simplicity-followup): P2.6, P3, /broker link, P3-8, gold-starter, P3-6 ========
+await t("P2.6 /system: compact; one gold = Join the Trading System; rows in one closed expander; members-only line, RISK_LINE x1, IB line", async () => {
+  const s = read("src/app/system/page.tsx");
+  assert.equal(golds(s), 1);
+  assert.match(s, /<Link href="\/system\/join" className=\{cn\(buttonVariants\(\{ variant: "default" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}/);
+  assert.match(s, /<Expander summary=\{SYSTEM_ROWS_SUMMARY\} testId="system-rows">[\s\S]*C\.rows\.map[\s\S]*<\/Expander>/);
+  assert.ok(!/<Expander[^>]*open/.test(s), "rows closed by default");
+  assert.match(s, /\{C\.underCta\}/); assert.equal(s.match(/\{C\.risk\}/g)?.length, 1); assert.match(s, /\{IB_DISCLOSURE_TEXT\}/);
+  assert.equal(SYSTEM_COPY.risk, RISK_LINE);
+  assert.ok(!("joinCta" in SYSTEM_COPY), "old 'Join as member' CTA retired (Design: swap to JOIN_SYSTEM_CTA)");
+  const m = main("src/content/members-gate.ts");
+  for (const k of ["title", "intro", "underCta"]) assert.ok(m.includes(JSON.stringify(SYSTEM_COPY[k]).slice(1, -1)), `SYSTEM_COPY.${k} unchanged`);
+  for (const row of SYSTEM_COPY.rows) assert.ok(m.includes(row.body), "row copy unchanged");
+  assert.equal(SYSTEM_ROWS_SUMMARY, "Ano ang kasama?");
+});
+await t("P2.6 /courses: compact cards (title, chip, price, action); notes under a closed Learn more; 24px padding; gold logic unchanged", async () => {
+  const c = read("src/app/courses/page.tsx");
+  assert.ok(!/catalog\.forWho|catalog\.included/.test(c), "who-it's-for + included list only on /courses/<slug>");
+  assert.match(read("src/app/courses/[slug]/page.tsx"), /catalog\.forWho[\s\S]*catalog\.included\.map/);
+  assert.match(c, /<Expander summary="Learn more" testId="courses-learn-more">\s*<p>\{INCLUDED_NOTE\}<\/p>\s*<p>\{COMING_LATER_COURSE_NOTE\}<\/p>\s*<\/Expander>\s*<MembersFooter \/>/);
+  assert.match(c, /max-w-\[640px\] flex-1 flex-col gap-6 px-6/);
+  assert.match(c, /text-muted-foreground">\{COURSES_LEDE\.ph\}<\/p>/);
+  assert.equal(COURSES_LEDE.ph, "Self-paced, Taglish.");
+  assert.equal(COURSES_LEDE.en, "Self-paced. Lessons in Taglish for now.");
+  // PH line on PH pages only: nothing under src/app/en (or EN copy files) uses the PH lede or COURSES_LEDE.ph.
+  const enFiles = execFileSync("git", ["ls-files", "src/app/en", "src/content"], { cwd: root, encoding: "utf8" }).split("\n").filter((f) => /\.(tsx?|mjs)$/.test(f));
+  for (const f of enFiles) {
+    const src = read(f);
+    if (f.startsWith("src/app/en/") || /_EN\b|\ben\b/.test(f)) assert.ok(!src.includes("Self-paced, Taglish.") && !src.includes("COURSES_LEDE.ph"), `${f}: no PH lede on /en`);
+  }
+  assert.ok(!read("src/app/courses/page.tsx").includes("COURSES_LEDE.en"), "PH /courses uses the PH lede");
+  assert.equal(c.match(/COMING_LATER_COURSE_NOTE\}/g)?.length, 1, "coming-later line once");
+  assert.equal(main("src/app/courses/page.tsx").match(/function pickGold[\s\S]*?\n\}/)[0], c.match(/function pickGold[\s\S]*?\n\}/)[0], "pickGold unchanged");
+});
+await t("P2.6 /account: Delete copy + form in a closed <details>, wording unchanged; risk line once (MembersFooter for members, own line otherwise)", async () => {
+  const a = read("src/app/account/page.tsx");
+  assert.match(a, /<Expander summary="Delete my account" testId="delete-account"[^>]*>[\s\S]*<DeleteAccountForm \/>\s*<\/Expander>/);
+  const words = (x) => x.replace(/<[^>]+>|\{" "\}/g, " ").replace(/\s+/g, " ");
+  for (const frag of ["Ide-delete nito agad ang account mo at ang Academy data mo: profile, lesson progress, quiz attempts, diagnostic results at activity events. Hindi na ito maibabalik.",
+    "Itatago lang namin ang consent record mo (anong boxes ang na-tick mo at kailan) nang 3 years, naka-link lang sa one-way hash ng email mo, bilang proof of consent, as described in the"]) {
+    assert.ok(words(main("src/app/account/page.tsx")).includes(frag) && words(a).includes(frag), frag.slice(0, 40));
+  }
+  assert.equal(a.match(/data-testid="risk-line">\{RISK_LINE\}/g)?.length, 2, "logged-out view + non-member view");
+  assert.match(a, /\{showMembersNav\(membership\) \? null : \(\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/, "own line only when MembersFooter is not shown");
+});
+await t("P3 type/spacing pass (Appendix G): H1 24px inner / 30px landing, H2 18px, 24px page padding, 16px card padding, 12px radius", async () => {
+  const gs = read("src/app/academy/gold-starter/page.tsx");
+  assert.match(gs, /flex-col gap-8 px-6 py-6/); assert.ok(!/text-xl font-semibold/.test(gs), "gold-starter H2 18px");
+  assert.match(read("src/app/go/[code]/page.tsx"), /<h1 className="text-2xl font-bold tracking-tight">Welcome to GFX Society<\/h1>/);
+  assert.match(read("src/app/start/page.tsx"), /bg-amber-500\/10 p-4 text-sm/);
+  assert.match(read("src/app/accm/accm-guide.tsx"), /<details key=\{f\.q\} className="rounded-lg border border-border px-4">/);
+  assert.match(read("src/app/courses/page.tsx"), /<h2 className="text-lg font-semibold">/);
+  assert.equal(read("src/components/compliance/ib-disclosure.tsx"), read_at("a141f8f4d09dbf677cc86c3d13924c566649e744", "src/components/compliance/ib-disclosure.tsx"), "IB disclosure file byte-identical (not part of the type pass)");
+  assert.equal(read("src/app/signup/page.tsx"), read_at("a141f8f4d09dbf677cc86c3d13924c566649e744", "src/app/signup/page.tsx"), "/signup (required consent) untouched");
+});
+function read_at(ref, f) { return execFileSync("git", ["show", `${ref}:${f}`], { cwd: root, encoding: "utf8" }); }
+await t("/broker link: muted text link on /resources, /accm and /en/accm (Design P2 note); never gold, not in the bottom nav", async () => {
+  const res = read("src/app/resources/page.tsx");
+  assert.match(res, /<Link href="\/broker" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline" data-testid="broker-link">\s*Choosing a broker →\s*<\/Link>/);
+  assert.match(read("src/app/accm/accm-guide.tsx"), /<Link href=\{c\.brokerHref\} className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline" data-testid="broker-link">\s*\{c\.brokerLink\}/);
+  assert.equal(ACCM_COPY.brokerHref, "/broker"); assert.equal(ACCM_COPY_EN.brokerHref, "/en/broker");
+  assert.equal(ACCM_COPY.brokerLink, "Choosing a broker →"); assert.equal(ACCM_COPY_EN.brokerLink, "Choosing a broker →");
+  assert.ok(!/broker/i.test(read("src/components/layout/bottom-nav.tsx")), "bottom nav unchanged (5 items at 360px)");
+  assert.equal(golds(res), 0);
+});
+await t("P3-8: next_step_click restored on /go Join (NextStepLink, fixed location label); event props carry no PII", async () => {
+  const n = read("src/components/funnel/next-step-link.tsx");
+  assert.match(n, /onClick=\{\(\) => gfxEvent\("next_step_click", \{ location \}\)\}/);
+  assert.match(n, /href = NEXT_STEP_HREF,/);
+  const { safeProps } = await import("../src/lib/analytics/events.ts");
+  assert.deepEqual(safeProps({ location: "go", utm_source: "instagram", utm_content: "fb261012_lotsize", a: "me@example.test", b: "09171234567" }),
+    { location: "go", utm_source: "instagram", utm_content: "fb261012_lotsize" });
+  assert.match(read("src/lib/analytics/events.ts"), /track\(name, safeProps\(\{ \.\.\.firstTouch\(\), \.\.\.props \}\)\)/);
+  assert.ok(!/GO_NEXT_STEP_HREF|NEXT_STEP_HREF/.test(read("src/lib/links/go-codes.ts")), "unused GO_NEXT_STEP_HREF removed");
+});
+await t("/academy/gold-starter: next-step copy (Design PR71) is Join-first (outline Join -> /system/join, then the ACCM steps link); one gold (Lesson 1)", async () => {
+  const gs = read("src/app/academy/gold-starter/page.tsx");
+  const sec = gs.match(/data-testid="gold-starter-next">([\s\S]*?)<\/section>/)[1];
+  assert.match(sec, /<p data-testid="gold-starter-next-copy">\s*Kapag ready ka na, puwede kang mag-join sa Trading System\. Sa ngayon, focus muna sa Starter Kit at Lesson 1\.\s*<\/p>/);
+  assert.ok(!/Para sa later/.test(sec), "old 'Para sa later' copy gone");
+  const iJoin = sec.indexOf('href="/system/join"'), iSteps = sec.indexOf("Tingnan ang steps →");
+  assert.ok(iJoin > 0 && iSteps > iJoin, "Join before the steps link");
+  assert.match(sec, /variant: "outline"/); assert.ok(!/variant: "default"/.test(sec), "not gold");
+  assert.ok(!/partner community|Discord/i.test(sec), "not Discord-first");
+  assert.match(sec, /\{IB_DISCLOSURE_TEXT\}/);
+  const implicitGold = gs.match(/buttonVariants\(\{ size: "lg" \}\)/g)?.length ?? 0; // default variant = gold
+  assert.equal(golds(gs) + implicitGold, 1);
+});
+await t("P3-6: members-only hint before the Join click on Home (minimal), /start step 4, /community, gold-starter", async () => {
+  assert.equal(MEMBERS_ONLY_HINT, "Members-only ang Trading System.");
+  const home = read("src/app/page.tsx");
+  assert.ok(home.indexOf("{MEMBERS_ONLY_HINT}") > home.indexOf("{JOIN_SYSTEM_CTA}") && home.indexOf("{MEMBERS_ONLY_HINT}") < home.indexOf("No signup needed to learn."), "Home: one short line right under the buttons");
+  assert.equal(home.match(/MEMBERS_ONLY_HINT\}/g)?.length, 1);
+  assert.match(read("src/app/start/page.tsx"), /\{s\.n === 4 \? <p className="mt-1 text-xs text-muted-foreground" data-testid="members-only-hint">\{MEMBERS_ONLY_HINT\}<\/p> : null\}/);
+  const c = read("src/app/community/page.tsx");
+  assert.ok(c.indexOf("{MEMBERS_ONLY_HINT}") > 0 && c.indexOf("{MEMBERS_ONLY_HINT}") < c.indexOf("{JOIN_SYSTEM_CTA}"), "/community: before the gold Join");
+  assert.ok(read("src/app/academy/gold-starter/page.tsx").includes("{MEMBERS_ONLY_HINT}"));
+});
+await t("QA P3-5 stays closed: /community risk line asserted here and in simplicity-e2e", async () => {
+  assert.ok(RISK_PAGES.some((p) => p.route === "/community" && p.shared));
+  assert.match(read("scripts/qa/simplicity-e2e.mjs"), /slug: "community", path: "\/community", gold: JOIN, risk: RISK_LINE/);
 });
 
 console.log(`ALL PASS simplicity (${n})`);

@@ -5,6 +5,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { MembersNav } from "@/components/members-home/members-nav";
 import { MembersFooter } from "@/components/training/members-footer";
+import { RISK_LINE } from "@/config/training";
+import { Expander } from "@/components/layout/expander";
 import { getMembership } from "@/lib/members/membership";
 import { showMembersNav } from "@/lib/training/member-surface";
 import { DeleteAccountForm } from "./delete-account-form";
@@ -30,6 +32,7 @@ export default async function AccountPage() {
         <Link href="/login?next=/account" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
           Log in
         </Link>
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       </div>
     );
   }
@@ -46,13 +49,13 @@ export default async function AccountPage() {
 
       <MyCourses />
 
-      <section aria-labelledby="delete-heading" className="flex flex-col gap-3 rounded-lg border border-destructive/50 p-4">
-        <h2 id="delete-heading" className="text-lg font-semibold">Delete my account</h2>
-        <p className="text-sm leading-relaxed">
+      {/* Simplicity spec v2 P2.6: the Delete copy and form sit in a closed <details>; wording unchanged. */}
+      <Expander summary="Delete my account" testId="delete-account" className="border-destructive/50">
+        <p className="leading-relaxed text-foreground">
           Ide-delete nito agad ang account mo at ang Academy data mo: profile, lesson progress, quiz attempts,
           diagnostic results at activity events. Hindi na ito maibabalik.
         </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="leading-relaxed">
           Itatago lang namin ang consent record mo (anong boxes ang na-tick mo at kailan) nang 3 years, naka-link
           lang sa one-way hash ng email mo, bilang proof of consent, as described in the{" "}
           <Link href="/privacy" className="underline">
@@ -61,7 +64,12 @@ export default async function AccountPage() {
           . Para mag-unsubscribe sa emails, gamitin ang Unsubscribe link sa email.
         </p>
         <DeleteAccountForm />
-      </section>
+      </Expander>
+
+      {/* Members get the risk line from MembersFooter; everyone else gets it here (once per page either way). */}
+      {showMembersNav(membership) ? null : (
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
+      )}
     </div>
   );
   if (!showMembersNav(membership)) return body;

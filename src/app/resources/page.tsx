@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { RISK_LINE } from "@/config/training";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -82,6 +83,10 @@ export default async function ResourcesPage() {
       {/* Always shown: the Broker Verification card links to ACCM's WikiFX page (post-launch fix 1). */}
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
       <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
+      {/* Design pr70-review P2 note: a muted /broker link from /resources. */}
+      <Link href="/broker" className="inline-flex min-h-11 items-center self-start text-sm text-muted-foreground underline" data-testid="broker-link">
+        Choosing a broker →
+      </Link>
 
 
       {resources.length === 0 && (

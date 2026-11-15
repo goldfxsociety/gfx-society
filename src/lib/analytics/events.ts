@@ -31,6 +31,12 @@ function firstTouch(): Record<string, string> {
   }
 }
 
+/** Values that could carry personal data (an email, a phone or other long digit run) are never sent. */
+const PII = /@|\d{7,}/;
+export function safeProps(props: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(props).filter(([, v]) => typeof v === "string" && !PII.test(v)));
+}
+
 /** Fire a Vercel Analytics custom event; optionally at most once per session. */
 export function gfxEvent(name: string, props: Record<string, string> = {}, oncePerSession = false) {
   try {
@@ -39,7 +45,7 @@ export function gfxEvent(name: string, props: Record<string, string> = {}, onceP
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, "1");
     }
-    track(name, { ...firstTouch(), ...props });
+    track(name, safeProps({ ...firstTouch(), ...props }));
   } catch {
     /* no-op */
   }

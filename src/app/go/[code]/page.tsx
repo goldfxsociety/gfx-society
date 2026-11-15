@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { resolveGoCode } from "@/lib/links/go-codes";
 import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { NextStepLink } from "@/components/funnel/next-step-link";
 import { GoRedirect } from "./go-redirect";
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-      <h1 className="text-xl font-bold">Welcome to GFX Society</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Welcome to GFX Society</h1>
       <p className="text-sm text-muted-foreground">
         Free gold trading education. Taking you to the Academy…
       </p>
@@ -33,12 +34,14 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
         Start learning →
       </Link>
       {/* Simplicity spec v2: the one next step is Join the Trading System (outline here; gold stays "Start learning →"). */}
-      <Link
+      {/* QA P3-8: same next_step_click event (location "go") the old next-step button logged. */}
+      <NextStepLink
+        location="go"
         href="/system/join"
         className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 whitespace-normal py-2 text-center")}
       >
         {JOIN_SYSTEM_CTA}
-      </Link>
+      </NextStepLink>
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
       <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       <p className="text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ import { cn } from "cn";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { MEMBERS_ONLY_HINT } from "@/content/members-gate";
 
 const DESC =
   "Ang GFX community: aral muna sa libreng Academy, then join the Trading System. Start small, max 1% risk, laging may stop loss.";
@@ -41,6 +42,8 @@ export default function CommunityPage() {
       </div>
 
       <div className="flex flex-col gap-2">
+        {/* QA P3-6: members-only before the Join click. */}
+        <p className="text-xs text-muted-foreground" data-testid="members-only-hint">{MEMBERS_ONLY_HINT}</p>
         <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "h-11 w-full")}>
           {JOIN_SYSTEM_CTA}
         </Link>

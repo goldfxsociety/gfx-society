@@ -7,6 +7,7 @@ import { FIRST_LESSON_PATH } from "@/config/academy";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
 import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { MEMBERS_ONLY_HINT } from "@/content/members-gate";
 
 export const metadata: Metadata = {
   title: "Start here",
@@ -77,6 +78,8 @@ export default async function StartPage() {
               {s.n === 1 && l1Minutes ? ` (~${l1Minutes} min)` : ""}
             </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.body}</p>
+            {/* QA P3-6: members-only before the Join click. */}
+            {s.n === 4 ? <p className="mt-1 text-xs text-muted-foreground" data-testid="members-only-hint">{MEMBERS_ONLY_HINT}</p> : null}
             {/* One gold per screen (simplicity spec v2, Ben's decision 1): step 4 Join; Lesson 1 is outline. */}
             <Link
               href={s.href}
@@ -97,7 +100,7 @@ export default async function StartPage() {
           GFX Diagnostic →
         </Link>
       </div>
-      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
         Real risk of loss. Start small, laging may stop loss.
       </p>
     </div>

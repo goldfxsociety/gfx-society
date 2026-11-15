@@ -1,5 +1,3 @@
-import { NEXT_STEP_HREF } from "@/config/journey";
-
 /**
  * /go/<code> attribution links — see GFX Intelligence "UTM convention + invite-link scheme".
  * Post codes: <platformcode><yymmdd>_<slug>, platform codes fb/ig/tt/x  (e.g. fb261012_lotsize)
@@ -7,9 +5,6 @@ import { NEXT_STEP_HREF } from "@/config/journey";
  * Referrals:  ref_<membercode>                                           (e.g. ref_m0042) — member codes, never names.
  */
 export const DEFAULT_CAMPAIGN = "gold_pilot_2026q4";
-
-/** Secondary /go button → the Academy next step (never straight to Discord). Null = hidden. */
-export const GO_NEXT_STEP_HREF: string | null = NEXT_STEP_HREF;
 
 const SOURCES: Record<string, string> = {
   fb: "facebook",

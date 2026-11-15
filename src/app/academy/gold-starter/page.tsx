@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { NextStepLink } from "@/components/funnel/next-step-link";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { MEMBERS_ONLY_HINT } from "@/content/members-gate";
 import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-checklist";
 import { LanguageSwitch } from "@/components/academy/language-switch";
@@ -180,7 +182,7 @@ async function lessonMinutes(): Promise<Record<string, number>> {
 export default async function GoldStarterPage() {
   const minutes = await lessonMinutes();
   return (
-    <div lang="fil" className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-10">
+    <div lang="fil" className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-6 sm:py-10">
       <FirstTouch />
 
       {/* 1. Hero */}
@@ -202,7 +204,7 @@ export default async function GoldStarterPage() {
 
       {/* 2. Para kanino */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">Para kanino ito</h2>
+        <h2 className="text-lg font-semibold">Para kanino ito</h2>
         <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
           <li>Nagsisimula ka pa lang at nalilito sa XAUUSD, pips, at lots.</li>
           <li>Napanood mo ang Gold sa TikTok/FB at gusto mong maintindihan kung paano talaga ito gumagana.</li>
@@ -218,7 +220,7 @@ export default async function GoldStarterPage() {
 
       {/* 3. 5-step path */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">Ang 5-step path mo</h2>
+        <h2 className="text-lg font-semibold">Ang 5-step path mo</h2>
         <ol className="flex flex-col gap-3">
           {PATH.map((p) => (
             <li key={p.slug}>
@@ -242,7 +244,7 @@ export default async function GoldStarterPage() {
 
       {/* 4. 7-day checklist */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">Unang 7 Araw: Gold Starter Checklist</h2>
+        <h2 className="text-lg font-semibold">Unang 7 Araw: Gold Starter Checklist</h2>
         <p className="text-sm italic text-muted-foreground">
           Mga 20–30 minuto lang bawat araw. Hindi kailangang perfect. Ang mahalaga, tuloy-tuloy.
         </p>
@@ -272,12 +274,20 @@ export default async function GoldStarterPage() {
         <p className="mt-1">Start small. Pera lang na kaya mong mawala ang gamitin.</p>
       </section>
 
-      {/* 6. Next step (secondary) */}
-      <section className="flex flex-col gap-1 text-sm">
-        <p>
-          <strong>Para sa later:</strong> may next step kapag ready ka na: guided training sa partner community namin. Sa
-          ngayon, focus muna sa Starter Kit at Lesson 1.
+      {/* 6. Next step (secondary). Join the Trading System first (outline, not gold: Lesson 1 keeps the page's one
+          gold); the ACCM steps link stays second. */}
+      <section className="flex flex-col gap-2 text-sm" data-testid="gold-starter-next">
+        <p data-testid="gold-starter-next-copy">
+          Kapag ready ka na, puwede kang mag-join sa Trading System. Sa ngayon, focus muna sa Starter Kit at Lesson 1.
         </p>
+        <p className="text-xs text-muted-foreground">{MEMBERS_ONLY_HINT}</p>
+        <NextStepLink
+          location="gold_starter"
+          href="/system/join"
+          className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full sm:w-auto")}
+        >
+          {JOIN_SYSTEM_CTA}
+        </NextStepLink>
         <NextStepLink location="gold_starter" className="inline-flex min-h-11 items-center self-start font-medium underline">
           Tingnan ang steps →
         </NextStepLink>
@@ -286,7 +296,7 @@ export default async function GoldStarterPage() {
 
       {/* 7. FAQ */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">FAQ</h2>
+        <h2 className="text-lg font-semibold">FAQ</h2>
         {FAQ.map((f) => (
           <details key={f.q} className="rounded-lg border px-4">
             <summary className="flex min-h-11 cursor-pointer items-center font-medium">{f.q}</summary>
