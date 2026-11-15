@@ -135,7 +135,7 @@ try {
   p = await open("/system/join", "unconfirmed");
   await layout(p, "join unconfirmed", { gold: 0 });
   tx = await text(p);
-  check(tx.includes("I-confirm muna ang email ng Academy account mo.") && !tx.includes("Verify membership"), "unconfirmed: unverifiedEmail copy, no form");
+  check(tx.includes("I-confirm muna ang email ng Academy account mo.") && !tx.includes("I-link ang ACCM account mo"), "unconfirmed: unverifiedEmail copy, no form");
   await p.close();
 
   // ---- fresh: consent -> no_match -> request -> J4 ----
@@ -143,7 +143,7 @@ try {
   await layout(p, "join verify (fresh)");
   check(!(await p.$eval('input[name="consent"]', (i) => i.checked)), "fresh: consent not pre-ticked");
   await p.click('input[name="consent"]');
-  await clickText(p, "button", "Verify membership");
+  await clickText(p, "button", "I-link ang ACCM account mo");
   await p.waitForFunction(() => document.body.innerText.includes("Hindi pa namin ma-verify"), { timeout: 15000 });
   await layout(p, "join no_match");
   tx = await text(p);
@@ -194,7 +194,7 @@ try {
   // ---- consent remembered ----
   p = await open("/system/join", "consented");
   check(await p.$eval('input[name="consent"]', (i) => i.checked && i.disabled), "returning: consent shown as already agreed (no re-tick)");
-  await clickText(p, "button", "Verify membership");
+  await clickText(p, "button", "I-link ang ACCM account mo");
   await p.waitForFunction(() => document.body.innerText.includes("Hindi pa namin ma-verify"), { timeout: 15000 });
   check(true, "returning: Verify works without ticking again");
   await p.close();
@@ -206,8 +206,9 @@ try {
   const nf = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", year: "numeric", month: "numeric" }).formatToParts(new Date());
   const y = +nf.find((x) => x.type === "year").value, m = +nf.find((x) => x.type === "month").value;
   const want = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric" }).format(new Date(Date.UTC(m === 12 ? y + 1 : y, m % 12, 1, 12)));
-  check(tx.includes(`May active request ka na, submitted Nov 11, 2026. Iche-check ito sa ${want}, at sa bawat monthly update hanggang ma-match.`), "C: active request copy with Manila dates", tx.slice(0, 300));
-  check(tx.includes("I-update ang request") && !tx.includes("Verify membership"), "C: update link, no verify / gold");
+  // Sprint 3 (explorer-linked-tiers-spec §2.2): neutral pending copy, no date or cadence promise.
+  check(tx.includes("May active request ka na, submitted Nov 11, 2026. Iche-check namin at iu-update ka.") && !tx.includes(want), "C: active request copy, neutral (no date / cadence)", tx.slice(0, 300));
+  check(tx.includes("I-update ang request") && !tx.includes("I-link ang ACCM account mo"), "C: update link, no verify / gold");
   await clickText(p, "button", "I-update ang request");
   await p.waitForSelector("#access-request-form");
   check((await p.$eval("#ar-ib", (i) => i.value)) === "Team Ana", "update: same request prefilled");
@@ -245,9 +246,9 @@ try {
   p = await open("/system/join", "purged");
   await layout(p, "join after Q2 purge", { gold: 0 });
   tx = await text(p);
-  check(tx.includes(`May active request ka na, submitted Nov 3, 2026. Iche-check ito sa ${want}, at sa bawat monthly update hanggang ma-match.`) && !tx.includes("Halos tapos na"),
+  check(tx.includes("May active request ka na, submitted Nov 3, 2026. Iche-check namin at iu-update ka.") && !tx.includes("Halos tapos na"),
     "Q2 purged: normal active-request copy, no awaiting copy", tx.slice(0, 300));
-  check(tx.includes("I-update ang request") && !tx.includes("Verify membership"), "Q2 purged: update link, no verify / gold");
+  check(tx.includes("I-update ang request") && !tx.includes("I-link ang ACCM account mo"), "Q2 purged: update link, no verify / gold");
   await clickText(p, "button", "I-update ang request");
   await p.waitForSelector("#access-request-form");
   if (FLAG_ON) check((await p.$eval('input[name="accm_email"]', (i) => i.value).catch(() => null)) === "", "Q2 purged + flag on: update form lets them re-enter the ACCM email (empty field)");

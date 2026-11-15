@@ -5,14 +5,16 @@ import { formatPht } from "@/lib/training/time";
 import { GraceBanner } from "@/components/training/grace-banner";
 import { Chip } from "@/components/training/chip";
 
-/** Payment status surface (no email updates yet). Members only; non-members see nothing. */
+/** Payment status surface (no email updates yet). Linked members, consented Explorers (Gold Reset) and S8 owners. */
 export async function MyCourses() {
   const { membership, views } = await getAllCourseViews();
-  const removed = membership === "none";
   const grace = membership === "grace";
   const rows = views.filter((v) => ["free_new", "free_progress", "free_done", "pending", "rejected", "owned"].includes(v.state));
   // S8 = A: a removed member with no bought course sees nothing here; with one, only the owned rows.
-  if (removed && rows.length === 0) return null;
+  // Sprint 3: a consented Explorer also sees Gold Reset here as a free course (not as a member perk), so the
+  // "bought courses stay open" note is only for someone who actually owns a course.
+  if (membership === "none" && rows.length === 0) return null;
+  const removed = membership === "none" && rows.some((v) => v.state === "owned");
   return (
     <>
     {grace && <GraceBanner />}

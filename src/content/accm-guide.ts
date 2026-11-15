@@ -47,7 +47,7 @@ export const ACCM_COPY: AccmCopy = {
   discordPrep:
     "Ihanda ang ACCM User ID mo. Hihingin sa join application: sino ang nag-invite sa'yo, kung registered ka na, ang ACCM User ID mo, at pag-agree sa rules. Hindi namin hihingin ang password, OTP o ID documents mo.",
   discordNote:
-    "Sa Discord: guided training para sa beginners. Mag-deposit lang pagkatapos ng training, small: min $50, pera na kaya mong mawala.",
+    "Sa Discord: guided training para sa beginners. Mag-deposit lang ng pera na kaya mong mawala, max 1% risk, laging may stop loss.",
   discordSoon: "Discord: coming soon.",
   s4: "4. FAQ",
   faq: [
@@ -68,7 +68,8 @@ export const ACCM_COPY: AccmCopy = {
     },
     {
       q: "Magkano ang minimum deposit?",
-      a: "$50, via GCash, Maya o ibang e-wallets. Pera lang na kaya mong mawala. Hindi mo kailangang lampasan ang minimum.",
+      // Sprint 3 (explorer-linked-tiers-spec §2.3): ACCM funding facts moved into the app (after login).
+      a: "Nasa app ang funding details after you log in. Start with a cents account, small money na kaya mong mawala, max 1% risk, laging may stop loss.",
     },
     { q: "Licensed ba ang ACCM?", a: NEUTRAL_LICENSING_TEXT },
     {
@@ -114,7 +115,7 @@ export const ACCM_COPY_EN: AccmCopy = {
   discordPrep:
     "Have your ACCM User ID ready. The join application asks who invited you, whether you're already registered, your ACCM User ID, and that you agree to the rules. We will never ask for your password, OTP or ID documents.",
   discordNote:
-    "On Discord: guided training for beginners. Only deposit after the training, and keep it small: min $50, money you can afford to lose.",
+    "On Discord: guided training for beginners. Only deposit money you can afford to lose, max 1% risk, always with a stop loss.",
   discordSoon: "Discord: coming soon.",
   s4: "4. FAQ",
   faq: [
@@ -135,7 +136,7 @@ export const ACCM_COPY_EN: AccmCopy = {
     },
     {
       q: "What is the minimum deposit?",
-      a: "$50, via GCash, Maya, or other e-wallets. Only money you can afford to lose. You don't have to deposit more than the minimum.",
+      a: "Funding details are in the app after you log in. Start with a cents account, small money you can afford to lose, max 1% risk, always with a stop loss.",
     },
     { q: "Is ACCM licensed?", a: NEUTRAL_LICENSING_TEXT },
     {
@@ -162,13 +163,11 @@ export const SELF_CHECK_EN = [
 export const SELF_CHECK_UI = {
   tl: {
     tickFirst: "I-tick muna ang 5 sa taas.",
-    minDeposit: "Min deposit $50 · GCash, Maya, other e-wallets. Hindi kailangang lampasan.",
     copied: "Copied! ✓",
     manual: "Long-press para i-copy",
   },
   en: {
     tickFirst: "Tick all 5 above first.",
-    minDeposit: "Min deposit $50 · GCash, Maya, other e-wallets. You don't have to deposit more than the minimum.",
     copied: "Copied! ✓",
     manual: "Long-press to copy",
   },

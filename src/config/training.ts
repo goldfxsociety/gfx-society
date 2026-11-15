@@ -54,7 +54,7 @@ export const CATALOG: CatalogCourse[] = [
   {
     slug: "gold-reset",
     title: "Gold Reset",
-    priceLine: "FREE para sa verified members",
+    priceLine: "Libre", // Sprint 3 (spec §3): free for Explorers after login + join-v2 consent
     forWho: "Para sa dating traders na gustong bumalik nang may disiplina.",
     included: ["4 short lessons + Reset Checklist", "Quiz at practice tasks", "Progress tracking"],
     modules: ["Gold Reset"],

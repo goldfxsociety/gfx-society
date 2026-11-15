@@ -113,10 +113,11 @@ await t("nextFirstManila: next month's 1st in Asia/Manila", async () => {
   assert.equal(AR.manilaDate("2026-11-10T17:00:00Z"), "Nov 11, 2026");
 });
 await t("active-request copy uses the dates verbatim", async () => {
-  assert.equal(REQUEST_COPY.activeRequest("Nov 11, 2026", "Dec 1, 2026"),
-    "May active request ka na, submitted Nov 11, 2026. Iche-check ito sa Dec 1, 2026, at sa bawat monthly update hanggang ma-match.");
-  assert.equal(REQUEST_COPY_EN.activeRequest("Nov 11, 2026", "Dec 1, 2026"),
-    "You already have an active request (submitted Nov 11, 2026). It'll be checked on Dec 1, 2026, and at every monthly update until it matches.");
+  // Sprint 3 (explorer-linked-tiers-spec §2.2): neutral, no date / cadence promise.
+  assert.equal(REQUEST_COPY.activeRequest("Nov 11, 2026"),
+    "May active request ka na, submitted Nov 11, 2026. Iche-check namin at iu-update ka.");
+  assert.equal(REQUEST_COPY_EN.activeRequest("Nov 11, 2026"),
+    "You already have an active request, submitted Nov 11, 2026. We'll check and update you.");
 });
 await t("confirm link: pinned to site URL, 64-hex token only, token in the fragment (never sent to a server)", async () => {
   const tok = "a".repeat(64);
@@ -184,9 +185,11 @@ const ALL = JSON.stringify([REQUEST_COPY, REQUEST_COPY_EN, TRANSFER_COPY, TRANSF
 await t("copy rules: no VIP / PDE / income / profit / win-rate / guarantee / free bot / demo first / deposit requirement", async () => {
   for (const re of [/\bVIP\b/i, /\bPDE\b/, /win[- ]?rate/i, /\bprofit/i, /\bincome\b/i, /free bot/i, /demo first/i, /guarantee/i, /minimum deposit|min deposit/i]) assert.ok(!re.test(ALL), String(re));
 });
-await t("waiting copy promises only the monthly update / next 1st (no same-day, no faster check)", async () => {
+await t("waiting copy makes no timing promise (no same-day, no date, no cadence)", async () => {
   assert.ok(!/same[- ]day|today|ngayon|within \d+ (hour|day)|24 ?h|oras/i.test(ALL));
-  for (const s of [REQUEST_COPY.intro, REQUEST_COPY.submittedPending, TRANSFER_COPY.step2]) assert.match(s, /every 1st of the month/);
+  const waiting = [REQUEST_COPY, REQUEST_COPY_EN].flatMap((c) => [c.intro, c.submittedPending, c.confirmedLanding, c.activeRequest("x")])
+    .concat([TRANSFER_COPY.step2, TRANSFER_COPY_EN.step2]);
+  for (const s of waiting) assert.ok(!/1st of the month|every 1st|bawat 1|monthly|Dec 1|buwan/i.test(s), s);
 });
 await t("no transfer-timing promise; no deletion promise; consent says data is saved", async () => {
   assert.match(TRANSFER_COPY.timing, /Hindi namin ma-promise/);

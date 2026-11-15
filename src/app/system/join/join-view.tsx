@@ -6,9 +6,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { IB_DISCLOSURE_TEXT, IB_DISCLOSURE_TEXT_EN } from "@/config/partners";
 import { RISK_LINE_EN_SHORT } from "@/config/training";
 import { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY } from "@/content/members-gate";
-import { manilaDate, nextFirstManila } from "@/lib/members/access-request";
+import { manilaDate } from "@/lib/members/access-request";
 import { getMembership } from "@/lib/members/membership";
 import { MEMBERS_HOME, joinLoginPath, joinSignupPath, memberNext, type JoinBase } from "@/lib/members/routes";
+import { GOLD_RESET_PATH, isGoldResetPath } from "@/lib/members/tier";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { JoinForm, type JoinRequestView } from "./join-form";
@@ -86,7 +87,8 @@ export async function JoinView({ lang, nextParam }: { lang: "tl" | "en"; nextPar
           consentRecorded={s?.consent === true}
           academyEmail={user.email}
           request={request}
-          nextFirst={nextFirstManila()}
+          goldResetHref={isGoldResetPath(next) ? next : GOLD_RESET_PATH}
+          forGoldReset={isGoldResetPath(next)}
           lang={lang}
         />
       );

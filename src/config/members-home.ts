@@ -5,8 +5,10 @@
 export const ME = {
   eyebrow: "GFX Trading System",
   welcome: (first: string | null) => (first ? `Welcome back, ${first}.` : "Welcome back."),
-  badgeActive: "Active member",
-  badgeGrace: (date: string) => `Member hanggang ${date}`,
+  // Sprint 3 tiers (explorer-linked-tiers-spec v1.1 §3). Badge text is the tier name; grace keeps its PHT date.
+  badgeExplorer: "Explorer",
+  badgeActive: "Linked",
+  badgeGrace: (date: string) => `Linked hanggang ${date}`,
   heroLabel: "Ituloy ang lesson mo",
   heroCta: "Ituloy →",
   heroEmpty: "Simulan sa Gold Reset. Libre ito.",
@@ -20,6 +22,8 @@ export const ME = {
   states: { done: "Tapos", in_progress: "Ginagawa pa", not_started: "Hindi pa nasisimulan" },
   legend: { done: "Tapos", in_progress: "Ginagawa", not_started: "Hindi pa" },
   lockedUnpaid: "🔒 Bilhin para mabuksan ang course na ito.",
+  /** Paid course seen by an Explorer (spec §3): Link, never Buy. */
+  lockedExplorer: "Available 'pag naka-link na ang ACCM account mo.",
   lockedNoContent: "🔒 Inaayos pa ang lessons nito.",
   prereq: (course: string) => `Tapusin muna ang ${course} o ipasa ang placement quiz.`,
   quizTag: "Quiz",
@@ -29,6 +33,15 @@ export const ME = {
   // no dates, no performance claims.
   home: {
     lead: "Ituloy ang training mo.",
+    // Sprint 3 (spec §3). Explorer = signed in, not linked yet. No IB line here (members area).
+    explorerLead: "Libre ang Academy at Gold Reset. I-link ang ACCM account mo para sa iba pang Trading System courses.",
+    linkCta: "I-link ang ACCM account mo →",
+    pendingStatus: "Iche-check namin ang ACCM account mo. I-refresh lang ang page anytime.",
+    pendingLink: "Tingnan ang request",
+    linkedStatus: "Naka-link na ang ACCM account mo.",
+    flipBanner: "Linked na ang ACCM account mo.",
+    loadError: "Hindi ma-load ang page. Subukan ulit.",
+    retry: "Subukan ulit",
     continueTitle: "Continue training",
     coursesTitle: "Courses",
     coursesLine: "Gold Reset at iba pang courses.",

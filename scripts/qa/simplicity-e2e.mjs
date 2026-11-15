@@ -26,7 +26,10 @@ const cnt = (t, re) => (t.replace(/\s+/g, " ").match(re) || []).length;
 
 // ---- fake Supabase (fake ids / example.test only) ----
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
-const SCN = { member: { member: true }, fresh: { member: false } };
+// Sprint 3 tiers: "fresh" = consented Explorer (join-v2 on file); "explorer" = signed in, confirmed, no consent yet.
+// Post-migration DB answers: Gold Reset is 'free' for members and consented Explorers only.
+const SCN = { member: { member: true }, fresh: { member: false, consent: true }, explorer: { member: false, consent: false } };
+const goldReset = (s) => Boolean(s && (s.member || s.consent));
 const LESSONS = [
   { id: "l1", slug: "lesson-1", title: "Example lesson 1", sort: 1, training_modules: { sort: 1, title: "Example module", slug: "m1", learning_goal: null } },
   { id: "l2", slug: "lesson-2", title: "Example lesson 2", sort: 2, training_modules: { sort: 1, title: "Example module", slug: "m1", learning_goal: null } },
@@ -46,17 +49,18 @@ const mock = http.createServer((req, res) => {
         email_confirmed_at: "2026-11-01T00:00:00Z", app_metadata: {}, user_metadata: {}, created_at: "2026-11-01T00:00:00Z" });
     }
     if (req.url.startsWith("/rest/v1/consent_records")) { res.writeHead(200, { "content-type": "application/json", "content-range": "0-0/1" }); return res.end("[]"); }
-    if (req.url.startsWith("/rest/v1/training_lessons")) return send(200, s?.member ? LESSONS : []);
-    if (req.url.startsWith("/rest/v1/training_progress")) return send(200, s?.member ? [{ lesson_id: "l1", completed_at: "2026-11-09T00:00:00Z", updated_at: "2026-11-09T00:00:00Z", quiz_score: null }] : []);
+    if (req.url.startsWith("/rest/v1/training_lessons")) return send(200, goldReset(s) ? LESSONS : []);
+    if (req.url.startsWith("/rest/v1/training_progress")) return send(200, goldReset(s) ? [{ lesson_id: "l1", completed_at: "2026-11-09T00:00:00Z", updated_at: "2026-11-09T00:00:00Z", quiz_score: null }] : []);
     if (/^\/rest\/v1\/(profiles|member_status|training_capstones|capstone_progress)/.test(req.url)) return send(200, []);
     const m = req.url.match(/^\/rest\/v1\/rpc\/(\w+)/);
     if (m) {
       if (m[1] === "my_membership") return send(200, s?.member ? "active" : "none");
       if (m[1] === "my_payment_info") {
         const slug = JSON.parse(body || "{}").p_course_slug;
-        return send(200, s?.member && slug === "gold-reset" ? { state: "free", course_id: "c-gold-reset", price_php: 0 } : { state: "not_found" });
+        if (slug === "gold-reset") return send(200, goldReset(s) ? { state: "free", course_id: "c-gold-reset", price_php: 0 } : { state: "not_member" });
+        return send(200, s?.member ? { state: "not_found" } : { state: "not_member" });
       }
-      if (m[1] === "my_join_state") return send(200, s ? { consent: true, request: null } : null);
+      if (m[1] === "my_join_state") return send(200, s ? { consent: s.member || s.consent, request: null } : null);
       if (m[1] === "record_member_consent") return send(200, "no_match");
     }
     send(404, {});
@@ -129,6 +133,11 @@ const PAGES = [
   { slug: "account", inlineOk: true, path: "/account", gold: null, risk: RISK_LINE },
   { slug: "account-member", inlineOk: true, path: "/account", scn: "member", gold: null, risk: RISK_LINE },
   { slug: "account-fresh", inlineOk: true, path: "/account", scn: "fresh", gold: null, risk: RISK_LINE },
+  // Sprint 3 (explorer-linked-tiers-spec v1.1): Explorer home + /courses, one gold each.
+  { slug: "explorer-home", path: "/training", scn: "explorer", gold: "Ituloy →", risk: RISK_LINE, noIb: true },
+  { slug: "explorer-home-consented", path: "/training", scn: "fresh", gold: "Ituloy →", risk: RISK_LINE, noIb: true },
+  { slug: "courses-explorer", path: "/courses", scn: "explorer", gold: null, risk: RISK_LINE, noIb: true },
+  { slug: "courses-explorer-consented", path: "/courses", scn: "fresh", gold: null, risk: RISK_LINE, noIb: true },
 ];
 
 try {
@@ -363,8 +372,8 @@ try {
   for (const width of [360, 414]) {
     const p = await open("/en/system/join", width, "fresh");
     let r = await measure(p);
-    check(r.gold.length === 1 && r.gold[0] === "Verify membership", `${width} /en/system/join logged in: one gold "Verify membership"`, JSON.stringify(r.gold));
-    const btn = await p.evaluateHandle(() => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Verify membership"));
+    check(r.gold.length === 1 && r.gold[0] === "Link your ACCM account", `${width} /en/system/join logged in: one gold "Link your ACCM account"`, JSON.stringify(r.gold));
+    const btn = await p.evaluateHandle(() => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Link your ACCM account"));
     await btn.asElement().evaluate((e) => e.scrollIntoView({ block: "center" }));
     await btn.asElement().click();
     await p.waitForFunction(() => document.body.innerText.includes("We couldn't verify your membership yet."), { timeout: 15000 });
@@ -378,6 +387,59 @@ try {
     check(!/[^\w](ang|lang|mo|namin|kung|hindi|laging|muna)[^\w]/i.test(r.text), `${width} /en/system/join no_match: no Taglish`, r.text.match(/.{0,30}[^\w](ang|lang|mo|namin|kung|hindi|laging|muna)[^\w].{0,30}/i)?.[0]);
     check(r.gold.length === 1, `${width} /en/system/join no_match: still one gold`, JSON.stringify(r.gold));
     if (OUT) await p.screenshot({ path: `${OUT}/${width}-en-system-join-no-match-j4.png`, fullPage: true });
+    await p.close();
+  }
+  // ---- Sprint 3 tiers: Explorer vs Linked (explorer-linked-tiers-spec v1.1 §2-§3) ----
+  for (const width of [360, 414]) {
+    const home = async (scn) => {
+      const p = await open("/training", width, scn);
+      const x = await p.evaluate(() => {
+        const q = (id) => document.querySelector(`[data-testid="${id}"]`);
+        const gold = [...document.querySelectorAll("main a")].filter((a) => getComputedStyle(a).backgroundColor === "rgb(212, 160, 23)").map((a) => [a.textContent.trim(), a.getAttribute("href")]);
+        return { url: location.pathname, badge: q("member-badge")?.textContent.trim(), outline: q("home-link-outline") ? [q("home-link-outline").textContent.trim(), q("home-link-outline").getAttribute("href")] : null,
+          linked: q("linked-status")?.textContent.trim() ?? null, text: document.querySelector("main").innerText, gold };
+      });
+      if (OUT) await p.screenshot({ path: `${OUT}/${width}-tiers-home-${scn}.png`, fullPage: true });
+      await p.close();
+      return x;
+    };
+    let x = await home("explorer");
+    check(x.url === "/training" && x.badge === "Explorer", `${width} /training (explorer): Explorer home, badge "Explorer"`, JSON.stringify({ url: x.url, badge: x.badge }));
+    check(x.gold.length === 1 && x.gold[0][1] === "/system/join?next=%2Fcourses%2Fgold-reset", `${width} /training (explorer, no consent): one gold -> consent, then Gold Reset`, JSON.stringify(x.gold));
+    check(x.outline?.[0] === "I-link ang ACCM account mo →" && x.outline[1] === "/system/join", `${width} /training (explorer): outline "I-link ang ACCM account mo →"`, JSON.stringify(x.outline));
+    check(x.text.includes("Libre ang Academy at Gold Reset.") && x.linked === null, `${width} /training (explorer): Explorer lead, no Linked status`);
+    x = await home("fresh");
+    check(x.gold.length === 1 && x.gold[0][1] === "/courses/gold-reset/lesson-2", `${width} /training (consented explorer): one gold -> next Gold Reset lesson`, JSON.stringify(x.gold));
+    check(x.outline?.[1] === "/system/join", `${width} /training (consented explorer): outline Link stays`, JSON.stringify(x.outline));
+    x = await home("member");
+    check(x.badge === "Linked" && x.outline === null && x.linked === "Naka-link na ang ACCM account mo.", `${width} /training (member): badge "Linked", status line, no Link button`, JSON.stringify({ badge: x.badge, outline: x.outline, linked: x.linked }));
+    check(!/Active member|VIP|PDE|profit|income|win.?rate|demo first/i.test(x.text), `${width} /training (member): no old badge / banned words`);
+    // /courses as an Explorer: Gold Reset "Libre"; paid courses show Link (outline), never Buy, never gold.
+    for (const scn of ["explorer", "fresh"]) {
+      const p = await open("/courses", width, scn);
+      const c = await p.evaluate(() => ({
+        text: document.querySelector("main").innerText,
+        links: [...document.querySelectorAll("main a")].map((a) => [a.textContent.trim(), a.getAttribute("href"), getComputedStyle(a).backgroundColor]),
+      }));
+      check(c.text.includes("Libre") && !/FREE para sa verified members/i.test(c.text), `${width} /courses (${scn}): Gold Reset "Libre", no "FREE para sa verified members"`);
+      const paidLink = c.links.filter((l) => /I-link ang ACCM account mo/.test(l[0]));
+      check(paidLink.length >= 1 && paidLink.every((l) => l[2] !== "rgb(212, 160, 23)" && l[1].startsWith("/system/join")), `${width} /courses (${scn}): paid courses -> outline Link`, JSON.stringify(paidLink));
+      check(!/\bBilhin\b|\bBuy\b/.test(c.text), `${width} /courses (${scn}): no Buy for Explorers`);
+      if (OUT) await p.screenshot({ path: `${OUT}/${width}-tiers-courses-${scn}.png`, fullPage: true });
+      await p.close();
+    }
+  }
+  {
+    // Route gate (proxy): consented Explorer opens Gold Reset; paid courses stay Linked-only; no consent -> consent first.
+    const go = async (path, scn) => { const p = await open(path, 360, scn); const u = new URL(p.url()); await p.close(); return u.pathname + u.search; };
+    check(!(await go("/courses/gold-reset/lesson-1", "fresh")).startsWith("/system/join"), "consented Explorer: Gold Reset lesson not sent to the join door");
+    check((await go("/courses/gold-strategy-basics/lesson-1", "fresh")) === "/system/join?next=%2Fcourses%2Fgold-strategy-basics%2Flesson-1", "consented Explorer: Strategy Basics lesson -> join (Linked-only)");
+    check((await go("/courses/gold-advanced-setups/lesson-1", "fresh")) === "/system/join?next=%2Fcourses%2Fgold-advanced-setups%2Flesson-1", "consented Explorer: Advanced Setups lesson -> join (Linked-only)");
+    check((await go("/courses/gold-reset/lesson-1", "explorer")) === "/system/join?next=%2Fcourses%2Fgold-reset%2Flesson-1", "Explorer without consent: Gold Reset lesson -> consent first");
+    // Join door with next=Gold Reset: the consent submit reads "Ituloy ang Gold Reset" (one gold).
+    const p = await open("/system/join?next=%2Fcourses%2Fgold-reset", 360, "explorer");
+    const r = await measure(p);
+    check(r.gold.length === 1 && r.gold[0] === "Ituloy ang Gold Reset", "/system/join?next=Gold Reset (explorer): one gold \"Ituloy ang Gold Reset\"", JSON.stringify(r.gold));
     await p.close();
   }
   // Language switch both ways keeps the query string.
