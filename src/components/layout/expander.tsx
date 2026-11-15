@@ -11,6 +11,7 @@ export function Expander({
   className,
   testId,
   open,
+  heading,
 }: {
   summary: string;
   children: ReactNode;
@@ -18,11 +19,13 @@ export function Expander({
   testId?: string;
   /** Initial state only (the visitor can still toggle it). */
   open?: boolean;
+  /** Render the summary text as an <h2> (valid inside <summary>) so heading navigation still finds the section. */
+  heading?: boolean;
 }) {
   return (
     <details open={open || undefined} data-testid={testId} className={cn("group rounded-lg border border-border bg-card", className)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-        {summary}
+        {heading ? <h2 className="text-sm font-medium">{summary}</h2> : summary}
         <span aria-hidden className="text-muted-foreground group-open:rotate-90">
           ▸
         </span>

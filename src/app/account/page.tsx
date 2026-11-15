@@ -50,7 +50,7 @@ export default async function AccountPage() {
       <MyCourses />
 
       {/* Simplicity spec v2 P2.6: the Delete copy and form sit in a closed <details>; wording unchanged. */}
-      <Expander summary="Delete my account" testId="delete-account" className="border-destructive/50">
+      <Expander summary="Delete my account" heading testId="delete-account" className="border-destructive/50">
         <p className="leading-relaxed text-foreground">
           Ide-delete nito agad ang account mo at ang Academy data mo: profile, lesson progress, quiz attempts,
           diagnostic results at activity events. Hindi na ito maibabalik.

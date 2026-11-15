@@ -282,13 +282,13 @@ export default async function GoldStarterPage() {
         </p>
         <p className="text-xs text-muted-foreground">{MEMBERS_ONLY_HINT}</p>
         <NextStepLink
-          location="gold_starter"
+          location="gold_starter_join"
           href="/system/join"
           className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full sm:w-auto")}
         >
           {JOIN_SYSTEM_CTA}
         </NextStepLink>
-        <NextStepLink location="gold_starter" className="inline-flex min-h-11 items-center self-start font-medium underline">
+        <NextStepLink location="gold_starter_steps" className="inline-flex min-h-11 items-center self-start font-medium underline">
           Tingnan ang steps →
         </NextStepLink>
         <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
