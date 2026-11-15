@@ -263,6 +263,18 @@ try {
     if (OUT) await p.screenshot({ path: `${OUT}/${width}-en-gold-starter-faq-open.png`, fullPage: true });
     await p.close();
   }
+  // ---- P3-13: /accm + /en/accm Discord step has id="discord" and opens on the #discord fragment ----
+  for (const path of ["/accm", "/en/accm"]) {
+    let p = await open(path, 360);
+    let x = await p.evaluate(() => { const d = document.getElementById("discord"); return { tag: d?.tagName, open: d?.open, testid: d?.dataset.testid, ids: document.querySelectorAll("#discord").length }; });
+    check(x.tag === "DETAILS" && !x.open && x.testid === "help" && x.ids === 1, `360 ${path}: one id="discord" on the Discord step (closed without the fragment)`, JSON.stringify(x));
+    await p.close();
+    p = await open(`${path}#discord`, 360);
+    await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
+    x = await p.evaluate(() => { const d = document.getElementById("discord"); return { open: d?.open, text: d?.innerText ?? "" }; });
+    check(x.open && (x.text.includes("Apply to join our Discord →") || x.text.includes("coming soon")), `360 ${path}#discord: Discord step opens; invite label unchanged`, JSON.stringify(x));
+    await p.close();
+  }
   // ---- Follow-up PR checks ----
   const MEMBERS_ONLY = "Members-only ang Trading System.";
   for (const width of [360, 414]) {

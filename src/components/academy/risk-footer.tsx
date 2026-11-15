@@ -3,7 +3,8 @@ import { RISK_LINE, RISK_LINE_EN_SHORT } from "@/config/training";
 /** RiskFooter wording, one source (tests compare these byte for byte). */
 export const RISK_START_SMALL =
   "Kung magte-trade ka, start small sa cents account: pera lang na kaya mong mawala. Max 1% risk per trade, laging may stop loss.";
-export const RISK_EDU_LINE = "Education only, not financial advice. Education lang, hindi financial advice, at walang profit promises.";
+// lesson-risk-dedupe spec: one NFA line (the bilingual line counted twice).
+export const RISK_EDU_LINE = "Education lang, not financial advice, at walang profit promises.";
 export const RISK_WARNING_LONG =
   "GFX Society provides trading education only — not financial advice. Trading forex, gold (XAUUSD) and CFDs with leverage carries a high risk of losing money quickly, and it is not suitable for everyone. Past results, on any account, do not guarantee future results. If you trade, start small (for example, a cents account), risk max 1% per trade with a stop-loss on every trade, and never trade money you cannot afford to lose.";
 

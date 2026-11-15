@@ -12,6 +12,7 @@ export function Expander({
   testId,
   open,
   heading,
+  id,
 }: {
   summary: string;
   children: ReactNode;
@@ -21,9 +22,11 @@ export function Expander({
   open?: boolean;
   /** Render the summary text as an <h2> (valid inside <summary>) so heading navigation still finds the section. */
   heading?: boolean;
+  /** Fragment target (e.g. /accm#discord); pair with <OpenOnHash id> so the link opens it. */
+  id?: string;
 }) {
   return (
-    <details open={open || undefined} data-testid={testId} className={cn("group rounded-lg border border-border bg-card", className)}>
+    <details id={id} open={open || undefined} data-testid={testId} className={cn("group rounded-lg border border-border bg-card", id && "scroll-mt-20", className)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
         {heading ? <h2 className="text-sm font-medium">{summary}</h2> : summary}
         <span aria-hidden className="text-muted-foreground group-open:rotate-90">

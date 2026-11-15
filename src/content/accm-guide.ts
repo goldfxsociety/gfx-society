@@ -173,3 +173,12 @@ export const SELF_CHECK_UI = {
     manual: "Long-press to copy",
   },
 } as const;
+
+/** id of the Discord step on /accm and /en/accm (the "May problema?" expander that holds the invite). */
+export const ACCM_DISCORD_ID = "discord";
+/**
+ * Academy lesson help link (P3-13, lesson-risk-dedupe amendment): same label on every lesson, deep-links to the Discord
+ * step on /accm (ACCM first, then Discord). /accm's own invite keeps ACCM_COPY.discordCta.
+ */
+export const LESSON_DISCORD_LINK = "Paano sumali sa Discord →";
+export const LESSON_DISCORD_HREF = `/accm#${ACCM_DISCORD_ID}` as const;
