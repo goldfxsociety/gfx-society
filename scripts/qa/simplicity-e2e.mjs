@@ -245,7 +245,7 @@ try {
     console.log(`INFO lede seen on: ${ledeSeen.join(", ") || "(none)"}`);
   }
 
-  // ---- /en/academy/gold-starter Variant B: IB line under "Where should I trade?", cents-first copy ----
+  // ---- /en/academy/gold-starter Variant B: cents-first copy; no ACCM mention, so no IB line (Design amendment 15 Nov) ----
   for (const width of [360, 414]) {
     const p = await open("/en/academy/gold-starter", width);
     const x = await p.evaluate(() => {
@@ -253,9 +253,9 @@ try {
       if (!d) return null;
       d.open = true;
       const ib = d.querySelector('[data-testid="faq-ib-line"]');
-      return { ib: ib?.textContent, visible: Boolean(ib && ib.getBoundingClientRect().height > 0), answer: d.querySelector("p")?.textContent, lines: document.querySelector("main").innerText.split("ACCM is GFX's partner broker.").length - 1 };
+      return { ib: ib?.textContent ?? null, answer: d.querySelector("p")?.textContent, accm: /ACCM/.test(document.querySelector("main").innerText) };
     });
-    check(x && x.ib === IB_EN && x.visible && x.lines === 1, `${width} /en/academy/gold-starter: IB line once, under the "Where should I trade?" answer`, JSON.stringify(x));
+    check(x && x.ib === null && x.accm === false, `${width} /en/academy/gold-starter: ACCM not named, no IB line`, JSON.stringify(x));
     check(x?.answer === "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself.", `${width} /en/academy/gold-starter: Variant B FAQ answer`, x?.answer);
     const t = await p.evaluate(() => document.querySelector("main").innerText);
     check(t.includes("If you trade, start small with a cents account: only money you can afford to lose. Max 1% risk per trade, always with a stop loss.") && t.includes("Start small with a cents account: real money, but only small amounts you can afford to lose, always with a stop loss."), `${width} /en/academy/gold-starter: Variant B risk line + box item`);

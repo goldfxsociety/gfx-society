@@ -513,18 +513,17 @@ await t("/en/academy/gold-starter Variant B: exact strings; Disclaimer byte-inta
   assert.ok(main("src/content/en-gold-starter.tsx").includes(`const DISCLAIMER_NO_DEMO =\n  "${DISC}";`), "same bytes as the pre-sprint live Disclaimer");
   const faq = G.FAQ.find((f) => f.q === "Where should I trade?");
   assert.equal(faq.a, "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself.");
-  assert.equal(faq.ib, true);
+  assert.ok(!("ib" in faq), "IB flag dropped (Design amendment 15 Nov)");
   assert.ok(!("RISK_MODE" in G), "demo_first switch removed");
   const pg = read("src/app/en/academy/gold-starter/page.tsx");
   assert.ok(!pg.includes("<p className=\"mt-1\">Education only, not financial advice.</p>"), "golden-rule NFA paragraph removed");
   assert.match(pg, /<strong>\{RISK_LINE_EN\}<\/strong>/);
   assert.match(pg, /<strong>Disclaimer:<\/strong> \{DISCLAIMER\}/);
 });
-await t("/en/academy/gold-starter: byte-identical IB line under the 'Where should I trade?' answer", async () => {
-  const pg = read("src/app/en/academy/gold-starter/page.tsx");
-  assert.match(pg, /\{"ib" in f && f\.ib \? \(\s*<p className="pb-3 text-xs text-muted-foreground" data-testid="faq-ib-line">\{IB_DISCLOSURE_TEXT_EN\}<\/p>/);
-  assert.match(pg, /import \{ IB_DISCLOSURE_TEXT_EN \} from "@\/config\/partners";/);
-  assert.equal(IB_DISCLOSURE_TEXT_EN, "ACCM is GFX's partner broker.");
+await t("/en/academy/gold-starter: no ACCM mention, so no IB line (en-gold-starter-risk-fix.md amendment 15 Nov)", async () => {
+  const pg = read("src/app/en/academy/gold-starter/page.tsx"), c = read("src/content/en-gold-starter.tsx");
+  assert.ok(!/IB_DISCLOSURE|faq-ib-line/.test(pg), "IB line removed from the FAQ");
+  assert.ok(!/ACCM/.test(stripC(pg) + stripC(c)), "ACCM not named on the page; if it ever is, one IB line goes right under that mention");
 });
 await t("No demo-first wording in EN site copy (/en pages, EN content, *_EN copy objects)", async () => {
   const DEMO_FIRST = /demo first|demo-first|start on a demo|practi[cs]e on a demo|on your demo|demo account first|demo muna/i;

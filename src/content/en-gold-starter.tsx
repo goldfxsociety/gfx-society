@@ -136,7 +136,7 @@ export const BOX = {
 export const FAQ = [
   { q: "Is it really free?", a: "Yes. All the lessons and this checklist are free to read." },
   { q: "Do I need to sign up?", a: "No, not to read. Sign-up is optional if you want to save your progress (the sign-up pages are in Taglish for now)." },
-  { q: "Where should I trade?", a: "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself.", ib: true },
+  { q: "Where should I trade?", a: "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself." },
   { q: "Will I make money?", a: "There's no guarantee. Trading carries a real risk of loss. The goal here is to learn a good process and risk management." },
   { q: "How much do I need to start?", a: FAQ_HOW_MUCH },
   { q: "Is this available in my country?", a: "This page is education only and open to everyone. Trading rules are different in each country. Check your local law before you open any trading account." },
