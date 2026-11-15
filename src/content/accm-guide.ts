@@ -1,8 +1,8 @@
 /**
  * /accm and /en/accm copy (simplicity spec v2 §3, Appendix C + H; Ben's decisions 12 Nov 2026).
  * PH strings are Taglish; EN strings are plain English, meaning identical. Same keys so one layout renders either.
- * EN strings not listed in Appendix H (registration steps, Discord helper, "not ready" link) are marked
- * [Builder EN] for a Design check: they are direct translations of the existing PH lines, no new claims.
+ * EN strings not listed in Appendix H (registration steps, Discord helper, "not ready" link) are direct translations
+ * of the existing PH lines, no new claims (approved by Design, PR #70 review, 15 Nov 2026).
  */
 import { IB_DISCLOSURE_TEXT, IB_DISCLOSURE_TEXT_EN, NEUTRAL_LICENSING_TEXT } from "@/config/partners";
 
@@ -88,27 +88,25 @@ export const ACCM_COPY_EN: AccmCopy = {
   joinHref: "/en/system/join",
   academyHref: "/academy",
   title: PH_TITLE,
-  description: "Step-by-step guide: start small with a cents account, max 1% risk, always with a stop loss. Education only.", // [Builder EN]
+  description: "Step-by-step guide: start small with a cents account, max 1% risk, always with a stop loss. Education only.",
   back: "← Back to Academy",
   eyebrow: "Start small",
   h1: "Start small, then join the Trading System",
   intro: "For people who are ready to start small with real money.",
   ib: IB_DISCLOSURE_TEXT_EN,
   s1: "1. Quick self-check",
-  notReady: "Not ready yet? Back to the lessons →", // [Builder EN]
+  notReady: "Not ready yet? Back to the lessons →",
   s2: "2. Registration steps",
   steps: {
-    // [Builder EN] (meaning identical to the PH steps)
     open: "① Tap \"Open cents account\". The ACCM site opens on the cents signup.",
     code: "② Invitation code:",
     verify: "③ Verify your email or phone.",
     kyc: "④ KYC: Follow the KYC steps on the ACCM site.",
     kycNote: "Your ID stays with ACCM only; GFX can't see it.",
   },
-  s3: "3. After you register: join the Trading System", // [Builder EN]
+  s3: "3. After you register: join the Trading System",
   help: "Having trouble?",
   discordCta: "Apply to join our Discord →",
-  // [Builder EN] (meaning identical to the PH Discord helper lines)
   discordPrep:
     "Have your ACCM User ID ready. The join application asks who invited you, whether you're already registered, your ACCM User ID, and that you agree to the rules. We will never ask for your password, OTP or ID documents.",
   discordNote:

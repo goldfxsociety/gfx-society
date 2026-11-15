@@ -1,7 +1,7 @@
 /**
  * /broker and /en/broker copy (simplicity spec v2 §3, Appendix C + H). The PH risk box is byte-identical to main;
- * the EN risk box is Appendix H's meaning-identical English. Strings marked [Builder EN] are direct translations of
- * existing PH lines that Appendix H does not list (for a Design check).
+ * the EN risk box is Appendix H's meaning-identical English. The EN demo line is a direct translation of the existing
+ * PH line that Appendix H does not list (approved by Design, PR #70 review, 15 Nov 2026).
  */
 import { IB_DISCLOSURE_TEXT, IB_DISCLOSURE_TEXT_EN } from "@/config/partners";
 
@@ -50,7 +50,6 @@ export const BROKER_COPY_EN: BrokerCopy = {
   openCta: "Open ACCM Cents Account →",
   ib: IB_DISCLOSURE_TEXT_EN,
   realMoney: "Real money, start small — max 1% risk per trade.",
-  // [Builder EN]
   demo: "Optional: there's a free demo inside the MT5 app if you just want to learn the buttons (Buy, Sell, SL/TP, Close). It isn't required, and it doesn't train your emotions.",
   back: "← Back to home",
 };
