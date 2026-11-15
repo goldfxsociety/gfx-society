@@ -6,6 +6,9 @@ import { findCatalog, getPaymentInfo } from "@/lib/training/courses";
 import { getMembership } from "@/lib/training/gate";
 import { ContentDisclaimerFooter } from "@/components/training/content-disclaimer-footer";
 import { CapstoneChecklist } from "./capstone-checklist";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 
 export const metadata: Metadata = { title: "Capstone | GFX", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -39,6 +42,10 @@ export default async function CapstonePage({ params }: { params: Promise<{ slug:
       ) : (
         <p className="text-sm text-muted-foreground">Inihahanda pa ang capstone. Balikan mo ito mamaya.</p>
       )}
+      {/* Course end (lesson-end-buttons spec): the page's only gold button. */}
+      <Link href="/system/join" className={cn(buttonVariants({ variant: "default" }), "min-h-11 w-full")} data-testid="capstone-join">
+        {JOIN_SYSTEM_CTA}
+      </Link>
       <ContentDisclaimerFooter disclaimer={cap?.disclaimer} />
     </div>
   );

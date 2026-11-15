@@ -5,6 +5,29 @@ import { buttonVariants } from "@/components/ui/button";
 import type { NavLesson } from "@/lib/academy/lesson-sequence";
 import { NextStepLink } from "@/components/funnel/next-step-link";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+import { ACCM_COPY } from "@/content/accm-guide";
+import { Expander } from "@/components/layout/expander";
+import { JOIN_COPY, MEMBERS_ONLY_HINT } from "@/content/members-gate";
+
+/** Gold "Next lesson →" with the next lesson's title as a muted subtitle (lesson-end-buttons spec: one label mid-course). */
+const NEXT_GOLD = cn(buttonVariants({ variant: "default" }), "h-auto min-h-12 w-full flex-col whitespace-normal py-2 text-center");
+
+/**
+ * Lesson-end help (lesson-end-buttons spec): Discord is never gold and never a card; it is a muted text link under a
+ * closed "May problema?" expander, reusing the approved /accm label. It goes to the ACCM next-step page (where the
+ * Discord application lives), so the IB line sits in the same expander.
+ */
+export function LessonHelp() {
+  return (
+    <Expander summary={JOIN_COPY.helpSummary} testId="lesson-help">
+      <NextStepLink location="lesson_help" className="inline-flex min-h-11 items-center self-start underline">
+        {ACCM_COPY.discordCta}
+      </NextStepLink>
+      <p className="text-xs">{IB_DISCLOSURE_TEXT}</p>
+    </Expander>
+  );
+}
 
 export function LessonNav({
   prev,
@@ -19,7 +42,7 @@ export function LessonNav({
   currentLevelTitle: string;
   nextLevelTitle: string | null;
   isLastInLevel: boolean;
-  /** Rendered right below the primary CTA (Next lesson / Start next level), above the Previous link. */
+  /** Rendered right below the primary CTA (Next lesson / Join the Trading System), above the Previous link. */
   afterPrimary?: ReactNode;
 }) {
   const levelComplete = isLastInLevel;
@@ -35,24 +58,24 @@ export function LessonNav({
               <p className="mt-1 text-xs text-muted-foreground">
                 Up next: {nextLevelTitle}. Tuloy lang sa plan mo: max 1% risk, laging may stop loss.
               </p>
-              <Link
-                href={`/academy/${next.levelSlug}/${next.slug}`}
-                className={cn(buttonVariants({ variant: "default" }), "mt-3 h-11 w-full")}
-              >
-                Start {nextLevelTitle} →
+              <Link href={`/academy/${next.levelSlug}/${next.slug}`} className={cn(NEXT_GOLD, "mt-3")} data-testid="lesson-next">
+                <span className="text-base font-semibold">Next lesson →</span>
+                <span className="text-sm opacity-80">{next.title}</span>
               </Link>
             </>
           ) : (
             <>
               <p className="mt-1 text-xs text-muted-foreground">
-                Natapos mo na ang GFX Academy! 🎉 Keep journaling every trade. Kapag ready ka na, puwede kang sumali sa
-                Discord community namin pagka-register mo sa ACCM.
+                Natapos mo na ang GFX Academy! 🎉 Keep journaling every trade.
               </p>
+              <p className="mt-1 text-xs text-muted-foreground" data-testid="members-only-hint">{MEMBERS_ONLY_HINT}</p>
+              {/* Last Academy lesson: gold Join the Trading System (lesson-end-buttons spec); Discord is in LessonHelp. */}
               <NextStepLink
                 location="academy_complete"
-                className={cn(buttonVariants({ variant: "default" }), "mt-3 h-auto min-h-11 w-full whitespace-normal py-2 text-center")}
+                href="/system/join"
+                className={cn(buttonVariants({ variant: "default" }), "mt-3 h-11 w-full")}
               >
-                Next step: guided training sa partner community namin →
+                {JOIN_SYSTEM_CTA}
               </NextStepLink>
               <p className="mt-2 text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
             </>
@@ -60,13 +83,7 @@ export function LessonNav({
         </div>
       )}
       {next && !levelComplete && (
-        <Link
-          href={`/academy/${next.levelSlug}/${next.slug}`}
-          className={cn(
-            buttonVariants({ variant: "default" }),
-            "h-auto min-h-12 w-full flex-col whitespace-normal py-2 text-center",
-          )}
-        >
+        <Link href={`/academy/${next.levelSlug}/${next.slug}`} className={NEXT_GOLD} data-testid="lesson-next">
           <span className="text-base font-semibold">Next lesson →</span>
           <span className="text-sm opacity-80">{next.title}</span>
         </Link>
