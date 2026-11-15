@@ -266,13 +266,25 @@ try {
   // ---- P3-13: /accm + /en/accm Discord step has id="discord" and opens on the #discord fragment ----
   for (const path of ["/accm", "/en/accm"]) {
     let p = await open(path, 360);
-    let x = await p.evaluate(() => { const d = document.getElementById("discord"); return { tag: d?.tagName, open: d?.open, testid: d?.dataset.testid, ids: document.querySelectorAll("#discord").length }; });
+    await new Promise((r) => setTimeout(r, 300));
+    let x = await p.evaluate(() => { const d = document.getElementById("discord"); return { tag: d?.tagName, open: d?.open, testid: d?.dataset.testid, ids: document.querySelectorAll("#discord").length, focus: document.activeElement?.tagName, y: Math.round(scrollY) }; });
     check(x.tag === "DETAILS" && !x.open && x.testid === "help" && x.ids === 1, `360 ${path}: one id="discord" on the Discord step (closed without the fragment)`, JSON.stringify(x));
+    check(x.focus === "BODY" && x.y === 0, `360 ${path}: normal load never moves focus or scroll`, JSON.stringify(x));
+    // Reached via #discord by hash change: opens and focuses the step's summary.
+    await p.evaluate(() => { location.hash = "discord"; });
+    await p.waitForFunction(() => document.activeElement === document.querySelector("#discord > summary"), { timeout: 5000 }).catch(() => {});
+    x = await p.evaluate(() => ({ open: document.getElementById("discord")?.open, focusIsSummary: document.activeElement === document.querySelector("#discord > summary") }));
+    check(x.open && x.focusIsSummary, `360 ${path}: hashchange to #discord opens the step and focuses its summary`, JSON.stringify(x));
     await p.close();
     p = await open(`${path}#discord`, 360);
     await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
-    x = await p.evaluate(() => { const d = document.getElementById("discord"); return { open: d?.open, text: d?.innerText ?? "" }; });
+    x = await p.evaluate(() => { const d = document.getElementById("discord"); return { open: d?.open, text: d?.innerText ?? "", focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
     check(x.open && (x.text.includes("Apply to join our Discord →") || x.text.includes("coming soon")), `360 ${path}#discord: Discord step opens; invite label unchanged`, JSON.stringify(x));
+    check(x.focusIsSummary, `360 ${path}#discord: keyboard focus on the step's summary`, JSON.stringify(x));
+    // Native details, no trap: Tab moves on to the invite link inside, Enter on the summary still toggles.
+    await p.keyboard.press("Tab");
+    x = await p.evaluate(() => ({ moved: document.activeElement !== document.querySelector("#discord > summary") && document.activeElement !== document.body, tag: document.activeElement?.tagName, text: document.activeElement?.textContent?.trim().slice(0, 40) }));
+    check(x.moved, `360 ${path}#discord: Tab moves on from the summary (no focus trap)`, JSON.stringify(x));
     await p.close();
   }
   // ---- Follow-up PR checks ----

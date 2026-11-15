@@ -202,8 +202,9 @@ try {
     await p.evaluate(() => { document.querySelector('[data-testid="lesson-help"]').open = true; });
     await Promise.all([p.waitForNavigation({ waitUntil: "networkidle0" }), p.evaluate((D) => [...document.querySelectorAll('[data-testid="lesson-help"] a')].find((a) => a.textContent.trim() === D).click(), DISCORD)]);
     await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
-    const x = await p.evaluate(() => { const d = document.getElementById("discord"); const b = d?.getBoundingClientRect(); return { url: location.pathname + location.hash, tag: d?.tagName, open: d?.open, inView: b ? b.top < innerHeight && b.bottom > 0 : false, invite: d?.innerText.includes("Apply to join our Discord →") || d?.innerText.includes("Discord: coming soon.") }; });
+    const x = await p.evaluate(() => { const d = document.getElementById("discord"); const b = d?.getBoundingClientRect(); return { url: location.pathname + location.hash, tag: d?.tagName, open: d?.open, inView: b ? b.top < innerHeight && b.bottom > 0 : false, invite: d?.innerText.includes("Apply to join our Discord →") || d?.innerText.includes("Discord: coming soon."), focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
     check(x.url === "/accm#discord" && x.tag === "DETAILS" && x.open && x.inView && x.invite, `${width} lesson help -> /accm#discord: Discord step open and in view`, JSON.stringify(x));
+    check(x.focusIsSummary, `${width} lesson help -> /accm#discord: keyboard focus on the step's summary`, JSON.stringify(x));
     if (OUT) await p.screenshot({ path: `${OUT}/${width}-accm-discord-landing.png` });
     await p.close();
   }
