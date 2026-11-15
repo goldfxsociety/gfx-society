@@ -7,6 +7,7 @@ import { FIRST_LESSON_PATH } from "@/config/academy";
 import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { Expander } from "@/components/layout/expander";
+import { IbDisclosureShort } from "@/components/compliance/ib-disclosure";
 
 function academyBody(lessons: number | null, levels: number | null) {
   const size =
@@ -147,7 +148,10 @@ export default async function Home({
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
+      <footer className="flex flex-col gap-1" data-testid="home-footer">
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
+        <IbDisclosureShort />
+      </footer>
     </div>
   );
 }

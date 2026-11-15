@@ -82,6 +82,22 @@ await t("member home: one gold (Ituloy →), two exclusive branches", async () =
   assert.equal(ME.heroCta, "Ituloy →");
 });
 
+await t("home: exactly one gold + byte-identical one-line IB disclosure, small/muted in the footer (not a button/link)", async () => {
+  const home = read("src/app/page.tsx");
+  assert.equal(golds(home), 1, "home: one gold");
+  assert.ok(!/<Button\b/.test(home));
+  assert.match(home, /import \{ IbDisclosureShort \} from "@\/components\/compliance\/ib-disclosure";/);
+  const footer = home.match(/<footer\b[^>]*data-testid="home-footer"[^>]*>([\s\S]*?)<\/footer>/)?.[1];
+  assert.ok(footer, "home footer present");
+  assert.match(footer, /<IbDisclosureShort \/>/, "default (PH) line, no text override");
+  assert.match(footer, /\{RISK_LINE\}/, "risk line stays in the footer");
+  assert.ok(!/buttonVariants|<Link\b|<a\b/.test(footer), "footer has no button or link");
+  assert.equal(home.match(/<IbDisclosureShort\b/g)?.length, 1, "IB line once");
+  const comp = read("src/components/compliance/ib-disclosure.tsx");
+  assert.match(comp, /export function IbDisclosureShort\(\{ text = IB_DISCLOSURE_TEXT \}/, "defaults to the partner-config line");
+  assert.match(comp, /<p className="text-xs text-muted-foreground">\s*<strong>Disclosure:<\/strong> \{text\}\s*<\/p>/, "small muted text");
+  assert.equal(IB_DISCLOSURE_TEXT, "Partner broker ng GFX ang ACCM.");
+});
 // ---- disclosures + risk line byte-identical ----
 await t("RISK_LINE, IB_DISCLOSURE_TEXT, EN disclosure, NEUTRAL_LICENSING_TEXT byte-identical to main / spec", async () => {
   const mt = main("src/config/training.ts"), mp = main("src/config/partners.ts");

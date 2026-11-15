@@ -98,7 +98,7 @@ async function measure(page) {
 }
 
 const PAGES = [
-  { slug: "home", path: "/", gold: JOIN, risk: RISK_LINE },
+  { slug: "home", path: "/", gold: JOIN, risk: RISK_LINE, ib: IB, ibMuted: true },
   { slug: "member-home", path: "/training", scn: "member", gold: "Ituloy →", risk: RISK_LINE, noIb: true },
   { slug: "accm", path: "/accm", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "en-accm", path: "/en/accm", gold: JOIN, risk: RISK_EN, ib: IB_EN, lang: "en" },
@@ -122,6 +122,15 @@ try {
       check(r.small.length === 0, `${L}: tap targets >= 44px`, JSON.stringify(r.small));
       if (pg.risk) check(r.text.split(pg.risk).length - 1 === 1, `${L}: risk line visible once`, r.text.slice(0, 200));
       if (pg.ib) check(r.text.includes(pg.ib), `${L}: IB line visible`);
+      if (pg.ibMuted) {
+        const m = await p.evaluate((ib) => {
+          const el = [...document.querySelectorAll("p")].find((e) => e.textContent.includes(ib));
+          if (!el) return null;
+          const cs = getComputedStyle(el);
+          return { size: parseFloat(cs.fontSize), color: cs.color, inCta: Boolean(el.closest("a, button")), inFooter: Boolean(el.closest('[data-testid="home-footer"]')), count: document.body.innerText.split(ib).length - 1 };
+        }, pg.ib);
+        check(m && m.size <= 12.5 && m.color !== "rgb(212, 160, 23)" && !m.inCta && m.inFooter && m.count === 1, `${L}: IB line once, small muted text in the footer (not a button/link)`, JSON.stringify(m));
+      }
       if (pg.noIb) check(!r.text.includes(IB), `${L}: no IB line in members area`);
       if (pg.lang) check(r.lang === pg.lang, `${L}: lang="${pg.lang}" wrapper`, String(r.lang));
       if (pg.path.startsWith("/en/")) check(!/[^\w](ang|lang|mo|namin|kung|hindi|laging|muna)[^\w]/i.test(r.text), `${L}: no Taglish in main`, r.text.match(/.{0,30}[^\w](ang|lang|mo|namin|kung|hindi|laging|muna)[^\w].{0,30}/i)?.[0]);
