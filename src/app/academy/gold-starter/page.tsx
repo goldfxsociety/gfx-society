@@ -277,9 +277,8 @@ export default async function GoldStarterPage() {
       {/* 6. Next step (secondary). Join the Trading System first (outline, not gold: Lesson 1 keeps the page's one
           gold); the ACCM steps link stays second. */}
       <section className="flex flex-col gap-2 text-sm" data-testid="gold-starter-next">
-        <p>
-          <strong>Para sa later:</strong> kapag ready ka na, join the Trading System. Sa ngayon, focus muna sa Starter
-          Kit at Lesson 1.
+        <p data-testid="gold-starter-next-copy">
+          Kapag ready ka na, puwede kang mag-join sa Trading System. Sa ngayon, focus muna sa Starter Kit at Lesson 1.
         </p>
         <p className="text-xs text-muted-foreground">{MEMBERS_ONLY_HINT}</p>
         <NextStepLink

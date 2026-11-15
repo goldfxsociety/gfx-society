@@ -208,6 +208,8 @@ try {
     const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
     const routes = [...new Set([...AUDIT, ...[...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)])];
     let audited = 0;
+    const LEDE_PH = "Self-paced, Taglish.", LEDE_EN = "Self-paced. Lessons in Taglish for now.";
+    const ledeSeen = [];
     // Legal documents (/privacy, /terms, /disclosure, /risk) quote the IB line inside legal text; they carry no Join CTA
     // and are the long-form disclosures themselves, so they are not page footers to audit.
     const LEGAL = new Set(["/privacy", "/terms", "/disclosure", "/risk"]);
@@ -219,6 +221,10 @@ try {
       const r = await measure(p);
       await p.close();
       const en = path.startsWith("/en/");
+      // Design PR71: "Self-paced, Taglish." on PH pages only; /en pages may only use the EN lede.
+      if (r.text.includes(LEDE_PH) || r.text.includes(LEDE_EN)) ledeSeen.push(`${path}=${r.text.includes(LEDE_PH) ? "ph" : "en"}`);
+      if (en) check(!r.text.includes(LEDE_PH), `audit 360 ${path}: no PH "Self-paced, Taglish." on /en`);
+      else check(!r.text.includes(LEDE_EN), `audit 360 ${path}: no EN lede on a PH page`);
       const ib = r.text.includes(IB) || r.text.includes(IB_EN);
       const join = r.gold.some((g) => g.startsWith(JOIN));
       if (!ib && !join && !r.accmCta) continue;
@@ -230,6 +236,7 @@ try {
       console.log(`INFO audit ${path}: visible risk=${rc} edu=${ec}; hidden risk=${cnt(r.hidden, RISK_RE)} edu=${cnt(r.hidden, EDU_RE)}`);
     }
     console.log(`INFO audit: ${audited} of ${routes.length} routes show gold Join or an IB line`);
+    console.log(`INFO lede seen on: ${ledeSeen.join(", ") || "(none)"}`);
   }
 
   // ---- Follow-up PR checks ----
@@ -243,7 +250,7 @@ try {
     // P2.6 /courses: notes under closed "Learn more"; no who-it's-for/included list on the cards.
     p = await open("/courses", width, "member");
     x = await p.evaluate(() => { const d = document.querySelector('[data-testid="courses-learn-more"]'); return { closed: d && !d.open, text: document.querySelector("main").innerText }; });
-    check(x.closed && !x.text.includes("Para sa dating traders na gustong bumalik nang may disiplina."), `${width} /courses: Learn more closed; cards compact`, JSON.stringify({ closed: x.closed }));
+    check(x.closed && !x.text.includes("Para sa dating traders na gustong bumalik nang may disiplina.") && x.text.includes("Self-paced, Taglish."), `${width} /courses: PH lede, Learn more closed, cards compact`, JSON.stringify({ closed: x.closed }));
     await p.close();
     // P2.6 /account (logged in): delete copy + form only after opening "Delete my account".
     for (const scn of ["member", "fresh"]) {
@@ -275,10 +282,11 @@ try {
       check(x.hint && x.count === 1 && x.size <= 12.5 && x.before, `${width} ${path}: one small "${MEMBERS_ONLY}" at the Join link (before it, or in the Home CTA group on the first screen)`, JSON.stringify(x));
       await p.close();
     }
-    // Gold-starter: Join the Trading System first in "Para sa later", ACCM steps second, one gold.
+    // Gold-starter: Design-approved next-step copy, then Join the Trading System first, ACCM steps second, one gold.
     p = await open("/academy/gold-starter", width);
-    x = await p.evaluate(() => { const s = document.querySelector('[data-testid="gold-starter-next"]'); const links = [...s.querySelectorAll("a")].map((a) => [a.textContent.trim(), a.getAttribute("href"), getComputedStyle(a).backgroundColor]); return { links, discord: /discord|partner community/i.test(s.innerText) }; });
-    check(x.links[0]?.[0] === JOIN && x.links[0][1] === "/system/join" && x.links[0][2] !== "rgb(212, 160, 23)" && x.links[1]?.[0].startsWith("Tingnan ang steps") && !x.discord, `${width} /academy/gold-starter: "Para sa later" Join first, steps second, no Discord`, JSON.stringify(x));
+    x = await p.evaluate(() => { const s = document.querySelector('[data-testid="gold-starter-next"]'); const links = [...s.querySelectorAll("a")].map((a) => [a.textContent.trim(), a.getAttribute("href"), getComputedStyle(a).backgroundColor]); return { links, discord: /discord|partner community/i.test(s.innerText), copy: s.querySelector('[data-testid="gold-starter-next-copy"]')?.innerText.trim(), old: /Para sa later/.test(s.innerText) }; });
+    check(x.copy === "Kapag ready ka na, puwede kang mag-join sa Trading System. Sa ngayon, focus muna sa Starter Kit at Lesson 1." && !x.old, `${width} /academy/gold-starter: Design-approved next-step copy`, JSON.stringify({ copy: x.copy, old: x.old }));
+    check(x.links[0]?.[0] === JOIN && x.links[0][1] === "/system/join" && x.links[0][2] !== "rgb(212, 160, 23)" && x.links[1]?.[0].startsWith("Tingnan ang steps") && !x.discord, `${width} /academy/gold-starter: Join first, steps second, no Discord`, JSON.stringify(x));
     if (OUT) await (await p.$('[data-testid="gold-starter-next"]')).screenshot({ path: `${OUT}/${width}-gold-starter-para-sa-later.png` });
     await p.close();
   }

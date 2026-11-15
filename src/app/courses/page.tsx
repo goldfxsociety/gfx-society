@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { ME } from "@/config/members-home";
-import { cardPriceLine, COMING_LATER_COURSE_NOTE, INCLUDED_NOTE } from "@/config/training";
+import { cardPriceLine, COMING_LATER_COURSE_NOTE, COURSES_LEDE, INCLUDED_NOTE } from "@/config/training";
 import { MembersNav } from "@/components/members-home/members-nav";
 import { getAllCourseViews, type CourseView } from "@/lib/training/courses";
 import { showMembersNav } from "@/lib/training/member-surface";
@@ -121,7 +121,7 @@ export default async function CoursesPage() {
       <header className="flex flex-col gap-2">
         <p className="text-xs font-semibold tracking-widest text-primary uppercase">GFX Trading System · Courses</p>
         <h1 className="text-2xl font-bold tracking-tight">Gold courses, step by step</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">Self-paced, Taglish.</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{COURSES_LEDE.ph}</p>
       </header>
 
       {membership === "grace" && (

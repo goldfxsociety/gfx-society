@@ -38,7 +38,7 @@ const { BROKER_COPY, BROKER_COPY_EN } = await import("../src/content/broker-guid
 const { JOIN_COPY, JOIN_COPY_EN, SYSTEM_COPY, SYSTEM_UNDER_CTA_EN } = await import("../src/content/members-gate.ts");
 const { TRANSFER_COPY, TRANSFER_COPY_EN, REQUEST_COPY, REQUEST_COPY_EN, JOIN_SYSTEM_CTA } = await import("../src/content/access-request.ts");
 const { ME } = await import("../src/config/members-home.ts");
-const { INCLUDED_NOTE, COMING_LATER_COURSE_NOTE } = await import("../src/config/training.ts");
+const { INCLUDED_NOTE, COMING_LATER_COURSE_NOTE, COURSES_LEDE } = await import("../src/config/training.ts");
 const { MEMBERS_ONLY_HINT, SYSTEM_ROWS_SUMMARY } = await import("../src/content/members-gate.ts");
 const ACCM_BRIDGE_DISCLOSURE_SRC = main("src/components/academy/accm-bridge.tsx").match(/export const ACCM_BRIDGE_DISCLOSURE =\s*`[^`]+`;/)[0];
 const { joinPath, joinLoginPath, joinSignupPath, joinBaseFrom, memberNext, MEMBERS_HOME } = await import("../src/lib/members/routes.ts");
@@ -411,7 +411,16 @@ await t("P2.6 /courses: compact cards (title, chip, price, action); notes under 
   assert.match(read("src/app/courses/[slug]/page.tsx"), /catalog\.forWho[\s\S]*catalog\.included\.map/);
   assert.match(c, /<Expander summary="Learn more" testId="courses-learn-more">\s*<p>\{INCLUDED_NOTE\}<\/p>\s*<p>\{COMING_LATER_COURSE_NOTE\}<\/p>\s*<\/Expander>\s*<MembersFooter \/>/);
   assert.match(c, /max-w-\[640px\] flex-1 flex-col gap-6 px-6/);
-  assert.match(c, /Self-paced, Taglish\.<\/p>/);
+  assert.match(c, /text-muted-foreground">\{COURSES_LEDE\.ph\}<\/p>/);
+  assert.equal(COURSES_LEDE.ph, "Self-paced, Taglish.");
+  assert.equal(COURSES_LEDE.en, "Self-paced. Lessons in Taglish for now.");
+  // PH line on PH pages only: nothing under src/app/en (or EN copy files) uses the PH lede or COURSES_LEDE.ph.
+  const enFiles = execFileSync("git", ["ls-files", "src/app/en", "src/content"], { cwd: root, encoding: "utf8" }).split("\n").filter((f) => /\.(tsx?|mjs)$/.test(f));
+  for (const f of enFiles) {
+    const src = read(f);
+    if (f.startsWith("src/app/en/") || /_EN\b|\ben\b/.test(f)) assert.ok(!src.includes("Self-paced, Taglish.") && !src.includes("COURSES_LEDE.ph"), `${f}: no PH lede on /en`);
+  }
+  assert.ok(!read("src/app/courses/page.tsx").includes("COURSES_LEDE.en"), "PH /courses uses the PH lede");
   assert.equal(c.match(/COMING_LATER_COURSE_NOTE\}/g)?.length, 1, "coming-later line once");
   assert.equal(main("src/app/courses/page.tsx").match(/function pickGold[\s\S]*?\n\}/)[0], c.match(/function pickGold[\s\S]*?\n\}/)[0], "pickGold unchanged");
 });
@@ -456,9 +465,11 @@ await t("P3-8: next_step_click restored on /go Join (NextStepLink, fixed locatio
   assert.match(read("src/lib/analytics/events.ts"), /track\(name, safeProps\(\{ \.\.\.firstTouch\(\), \.\.\.props \}\)\)/);
   assert.ok(!/GO_NEXT_STEP_HREF|NEXT_STEP_HREF/.test(read("src/lib/links/go-codes.ts")), "unused GO_NEXT_STEP_HREF removed");
 });
-await t("/academy/gold-starter: 'Para sa later' is Join-first (outline Join -> /system/join, then the ACCM steps link); one gold (Lesson 1)", async () => {
+await t("/academy/gold-starter: next-step copy (Design PR71) is Join-first (outline Join -> /system/join, then the ACCM steps link); one gold (Lesson 1)", async () => {
   const gs = read("src/app/academy/gold-starter/page.tsx");
   const sec = gs.match(/data-testid="gold-starter-next">([\s\S]*?)<\/section>/)[1];
+  assert.match(sec, /<p data-testid="gold-starter-next-copy">\s*Kapag ready ka na, puwede kang mag-join sa Trading System\. Sa ngayon, focus muna sa Starter Kit at Lesson 1\.\s*<\/p>/);
+  assert.ok(!/Para sa later/.test(sec), "old 'Para sa later' copy gone");
   const iJoin = sec.indexOf('href="/system/join"'), iSteps = sec.indexOf("Tingnan ang steps →");
   assert.ok(iJoin > 0 && iSteps > iJoin, "Join before the steps link");
   assert.match(sec, /variant: "outline"/); assert.ok(!/variant: "default"/.test(sec), "not gold");

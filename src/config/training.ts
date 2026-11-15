@@ -20,6 +20,8 @@ export const REFUND_COPY = {
 /** B12/B-AC6: Buy ships only when refund copy is filled in. */
 export const BUY_ENABLED = REFUND_COPY.tl.trim().length > 0;
 
+// /courses lede (Design, PR71): PH pages say "Self-paced, Taglish."; any /en page must use the EN line.
+export const COURSES_LEDE = { ph: "Self-paced, Taglish.", en: "Self-paced. Lessons in Taglish for now." } as const;
 export const INCLUDED_NOTE = "Paid courses: one-time payment, walang monthly fee. Kasama lang ang nakalista sa bawat course.";
 
 /** Design spec §E3 (Ben: "Kasama pagka launch"): the ONE coming-later line (TL; pages are Taglish). Max once per page;
