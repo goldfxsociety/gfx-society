@@ -111,7 +111,6 @@ export default async function EnGoldStarterPage() {
         <p className="mt-1">
           <strong>{RISK_LINE_EN}</strong>
         </p>
-        <p className="mt-1">Education only, not financial advice.</p>
       </section>
 
       <section className="flex flex-col gap-2">

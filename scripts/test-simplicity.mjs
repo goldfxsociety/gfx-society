@@ -128,6 +128,8 @@ const RISK_PAGES = [
   // Follow-up PR (P2.6): /system renders SYSTEM_COPY.risk (=== RISK_LINE); /courses gets it from MembersFooter.
   { route: "/system", files: ["src/app/system/page.tsx"], extra: () => Object.values(SYSTEM_COPY).filter((v) => typeof v === "string").join("\n"), shared: null },
   { route: "/courses", files: ["src/app/courses/page.tsx", "src/components/training/members-footer.tsx"], extra: () => [INCLUDED_NOTE, COMING_LATER_COURSE_NOTE].join("\n"), shared: /\{RISK_LINE\}/g },
+  // Variant B (en-gold-starter-risk-fix.md §1): one 1% sentence via RISK_LINE_EN, one NFA line in the Disclaimer.
+  { route: "/en/academy/gold-starter", files: ["src/app/en/academy/gold-starter/page.tsx", "src/content/en-gold-starter.tsx"], shared: null },
 ];
 for (const pg of RISK_PAGES) {
   await t(`${pg.route}: "Max 1% risk per trade" once, "not financial advice" once${pg.shared ? ", shared RISK_LINE rendered" : ""}`, async () => {
@@ -493,6 +495,47 @@ await t("QA P3-5 stays closed: /community risk line asserted here and in simplic
   assert.match(read("scripts/qa/simplicity-e2e.mjs"), /slug: "community", path: "\/community", gold: JOIN, risk: RISK_LINE/);
 });
 
+// ======== /en/academy/gold-starter Variant B (cents-first), en-gold-starter-risk-fix.md §1 ========
+// .tsx copy module: transpile with the same helper approach as RiskFooter above (JSX values -> React elements).
+const loadEnGs = () => {
+  const code = ts.transpileModule(read("src/content/en-gold-starter.tsx"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText
+    .replace(/require\("([^."/@][^"]*|@[^/"]+\/[^"]+)"\)/g, (_, m) => `require(${JSON.stringify(require.resolve(m))})`);
+  const f = path.join(tmp, "content/en-gold-starter.js");
+  fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, code);
+  return require(f);
+};
+await t("/en/academy/gold-starter Variant B: exact strings; Disclaimer byte-intact; extra NFA paragraph removed; one mode only", async () => {
+  const G = loadEnGs();
+  assert.equal(G.RISK_LINE_EN, "If you trade, start small with a cents account: only money you can afford to lose. Max 1% risk per trade, always with a stop loss.");
+  assert.equal(G.BOX.items[1], "Start small with a cents account: real money, but only small amounts you can afford to lose, always with a stop loss.");
+  const DISC = "Trading involves a real risk of loss. GoldFX Global is an education project of GFX Society. Education only, not financial advice. If you trade, start small (e.g. a cents account), max 1% risk per trade, always with a stop loss.";
+  assert.equal(G.DISCLAIMER, DISC);
+  assert.ok(main("src/content/en-gold-starter.tsx").includes(`const DISCLAIMER_NO_DEMO =\n  "${DISC}";`), "same bytes as the pre-sprint live Disclaimer");
+  const faq = G.FAQ.find((f) => f.q === "Where should I trade?");
+  assert.equal(faq.a, "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself.");
+  assert.ok(!("ib" in faq), "IB flag dropped (Design amendment 15 Nov)");
+  assert.ok(!("RISK_MODE" in G), "demo_first switch removed");
+  const pg = read("src/app/en/academy/gold-starter/page.tsx");
+  assert.ok(!pg.includes("<p className=\"mt-1\">Education only, not financial advice.</p>"), "golden-rule NFA paragraph removed");
+  assert.match(pg, /<strong>\{RISK_LINE_EN\}<\/strong>/);
+  assert.match(pg, /<strong>Disclaimer:<\/strong> \{DISCLAIMER\}/);
+});
+await t("/en/academy/gold-starter: no ACCM mention, so no IB line (en-gold-starter-risk-fix.md amendment 15 Nov)", async () => {
+  const pg = read("src/app/en/academy/gold-starter/page.tsx"), c = read("src/content/en-gold-starter.tsx");
+  assert.ok(!/IB_DISCLOSURE|faq-ib-line/.test(pg), "IB line removed from the FAQ");
+  assert.ok(!/ACCM/.test(stripC(pg) + stripC(c)), "ACCM not named on the page; if it ever is, one IB line goes right under that mention");
+});
+await t("No demo-first wording in EN site copy (/en pages, EN content, *_EN copy objects)", async () => {
+  const DEMO_FIRST = /demo first|demo-first|start on a demo|practi[cs]e on a demo|on your demo|demo account first|demo muna/i;
+  const files = execFileSync("git", ["ls-files", "src/app/en", "src/content", "src/config"], { cwd: root, encoding: "utf8" }).split("\n").filter((f) => /\.(tsx?|md)$/.test(f));
+  for (const f of files) {
+    const src = stripC(read(f)).replace(/^\s*\/\/.*$/gm, "");
+    assert.ok(!DEMO_FIRST.test(src), `${f}: ${src.match(new RegExp(`.{0,40}(${DEMO_FIRST.source}).{0,40}`, "i"))?.[0]}`);
+  }
+  const G = loadEnGs();
+  const all = JSON.stringify([G.RISK_LINE_EN, G.BOX.items.filter((x) => typeof x === "string"), G.FAQ, G.DISCLAIMER]);
+  assert.ok(!DEMO_FIRST.test(all));
+});
 // ======== lesson-end-buttons (en-gold-starter-risk-fix.md §2) + QA P3-10 / P3-12 ========
 await t("LessonNav: one mid-course label 'Next lesson →' (no 'Start {level} →'); last Academy lesson = gold Join -> /system/join", async () => {
   const n = read("src/components/academy/lesson-nav.tsx");

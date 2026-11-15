@@ -1,11 +1,8 @@
 // English Gold Starter Kit copy (Phase 1).
-// Source: /workspace/gfx/design/global/english-starter-kit-spec.md §2 + §D (no-demo-first, relayed 30 Oct 2026).
-// RISK_MODE selects the rendered variant. "no_demo" is live (Ben's no-demo-first rule since 18 Oct 2026).
-// The "demo_first" strings are the spec's §2 defaults, kept unused pending Ben's Q2 confirmation:
-// switching is a one-constant change below.
+// Source: /workspace/gfx/design/global/english-starter-kit-spec.md §D (no-demo-first, relayed 30 Oct 2026) and
+// /workspace/gfx/design/trading-system/en-gold-starter-risk-fix.md §1 Variant B (cents-first, one risk sentence via
+// RISK_LINE_EN, one NFA line in the Disclaimer). One mode only: the unused demo-first variant is removed.
 import type { Day } from "@/components/funnel/seven-day-checklist";
-
-export const RISK_MODE: "no_demo" | "demo_first" = "no_demo";
 
 export const TITLE = "Gold Basics Starter Kit (Free) | GoldFX Global";
 export const DESCRIPTION =
@@ -107,82 +104,31 @@ const DAY6_NO_DEMO: Day = {
   ),
 };
 
-// §2 demo-first (UNUSED unless RISK_MODE = "demo_first")
-const DAY3_DEMO_FIRST: Day = {
-  title: "Day 3: Practice and meet the cents account",
-  body: (
-    <>
-      Open a free MT5 demo account and find XAUUSD, the bid/ask price and the chart. Don&apos;t trade yet. Then read the
-      Cents Account lesson: a cents account uses real money, but in small amounts. Set a budget you can afford to lose.
-    </>
-  ),
-  href: DAY3_NO_DEMO.href,
-};
-const DAY4_DEMO_FIRST: Day = {
-  title: "Day 4: Plan your exit before you enter",
-  body: (
-    <>
-      Read Stop Loss and Take Profit. On your demo, practise placing an order with a stop loss and take profit{" "}
-      <strong>before</strong> you enter. Write down why you put your stop loss there.
-    </>
-  ),
-  href: DAY4_NO_DEMO.href,
-};
-const DAY6_DEMO_FIRST: Day = {
-  title: "Day 6: Practice trades + journal",
-  body: (
-    <>
-      Place 1–3 practice trades on your demo using your plan (stop loss, max 1% risk). If you later move to a cents
-      account, use only money you can afford to lose. {JOURNAL}
-    </>
-  ),
-};
+// The page's one "Max 1% risk per trade" sentence (EN of cents-pivot §2 SHORT, as on /en/broker).
+export const RISK_LINE_EN =
+  "If you trade, start small with a cents account: only money you can afford to lose. Max 1% risk per trade, always with a stop loss.";
 
-export const RISK_LINE_EN_NO_DEMO =
-  "If you trade, start small with a cents account, using only money you can afford to lose. Max 1% risk per trade, always with a stop loss.";
-export const RISK_LINE_EN_DEMO_FIRST =
-  "Practise on a demo first. If you then trade, you can start small with a cents account, using only money you can afford to lose. Max 1% risk per trade, always with a stop loss.";
+const BOX_CENTS = "Start small with a cents account: real money, but only small amounts you can afford to lose, always with a stop loss.";
 
-const BOX_CENTS_NO_DEMO = (
-  <>
-    Start small with a cents account: real money, but small amounts you can afford to lose.{" "}
-    <strong>Max 1% risk per trade, always with a stop loss.</strong>
-  </>
-);
-const BOX_CENTS_DEMO_FIRST = (
-  <>
-    Practise on a demo first. Then, if you choose, start small with a cents account: real money, but small amounts.{" "}
-    <strong>Max 1% risk per trade, always with a stop loss.</strong>
-  </>
-);
-
-const FAQ_HOW_MUCH_NO_DEMO =
+const FAQ_HOW_MUCH =
   "To learn: nothing, the lessons are free. If you trade, start with a cents account and a small amount you can afford to lose (each broker has its own minimum deposit), max 1% risk per trade, always with a stop loss.";
-const FAQ_HOW_MUCH_DEMO_FIRST =
-  "To learn: nothing, the lessons are free. To practise: a demo account is free. If you trade, a cents account with a small amount you can afford to lose (each broker has its own minimum deposit), max 1% risk per trade, always with a stop loss.";
-
-const DISCLAIMER_NO_DEMO =
+// The page's one "Education only, not financial advice" line. Keep byte-intact.
+export const DISCLAIMER =
   "Trading involves a real risk of loss. GoldFX Global is an education project of GFX Society. Education only, not financial advice. If you trade, start small (e.g. a cents account), max 1% risk per trade, always with a stop loss.";
-const DISCLAIMER_DEMO_FIRST =
-  "Trading involves a real risk of loss. GoldFX Global is an education project of GFX Society. Education only, not financial advice. Practise on a demo first; if you trade, start small (e.g. a cents account), max 1% risk per trade, always with a stop loss.";
-
-const demo = (RISK_MODE as string) === "demo_first";
-
 export const DAYS: Day[] = [
   DAY1,
   DAY2,
-  demo ? DAY3_DEMO_FIRST : DAY3_NO_DEMO,
-  demo ? DAY4_DEMO_FIRST : DAY4_NO_DEMO,
+  DAY3_NO_DEMO,
+  DAY4_NO_DEMO,
   DAY5,
-  demo ? DAY6_DEMO_FIRST : DAY6_NO_DEMO,
+  DAY6_NO_DEMO,
   DAY7,
 ];
-export const RISK_LINE_EN = demo ? RISK_LINE_EN_DEMO_FIRST : RISK_LINE_EN_NO_DEMO;
 export const BOX = {
   title: "🟡 Before your first real-money trade",
   items: [
     "Read the Stop Loss and Position Sizing lessons first, and write down your plan.",
-    demo ? BOX_CENTS_DEMO_FIRST : BOX_CENTS_NO_DEMO,
+    BOX_CENTS,
     "Only use money you can afford to lose. Never use money for bills, debt or your emergency fund.",
     <>There are no shortcuts. If someone promises &quot;sure profit,&quot; that&apos;s a red flag.</>,
   ],
@@ -190,10 +136,9 @@ export const BOX = {
 export const FAQ = [
   { q: "Is it really free?", a: "Yes. All the lessons and this checklist are free to read." },
   { q: "Do I need to sign up?", a: "No, not to read. Sign-up is optional if you want to save your progress (the sign-up pages are in Taglish for now)." },
-  { q: "Where should I trade?", a: "Start on a demo account first. Lesson 3 explains how cents accounts work, if you later want to try small real money you can afford to lose. ACCM is GFX's partner broker. Whatever you use, you'll learn how to check a broker's licence yourself." },
+  { q: "Where should I trade?", a: "Lesson 3 explains how cents accounts work, if you want to try small real money you can afford to lose. A free MT5 demo is optional, only to learn the buttons. You'll learn how to check a broker's licence yourself." },
   { q: "Will I make money?", a: "There's no guarantee. Trading carries a real risk of loss. The goal here is to learn a good process and risk management." },
-  { q: "How much do I need to start?", a: demo ? FAQ_HOW_MUCH_DEMO_FIRST : FAQ_HOW_MUCH_NO_DEMO },
+  { q: "How much do I need to start?", a: FAQ_HOW_MUCH },
   { q: "Is this available in my country?", a: "This page is education only and open to everyone. Trading rules are different in each country. Check your local law before you open any trading account." },
 ];
-export const DISCLAIMER = demo ? DISCLAIMER_DEMO_FIRST : DISCLAIMER_NO_DEMO;
 export const PRIVACY = "We don't collect personal information on this page. Privacy questions:";
