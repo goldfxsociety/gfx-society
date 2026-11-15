@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { NextStepLink } from "@/components/funnel/next-step-link";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE as SHARED_RISK_LINE } from "@/config/training";
 import { FirstTouch } from "@/components/funnel/first-touch";
 import { SevenDayChecklist, type Day } from "@/components/funnel/seven-day-checklist";
 import { LanguageSwitch } from "@/components/academy/language-switch";
@@ -282,6 +283,7 @@ export default async function GoldStarterPage() {
           Tingnan ang steps →
         </NextStepLink>
         <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{SHARED_RISK_LINE}</p>
       </section>
 
       {/* 7. FAQ */}

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
-import { GO_NEXT_STEP_HREF, resolveGoCode } from "@/lib/links/go-codes";
-import { NextStepLink } from "@/components/funnel/next-step-link";
+import { resolveGoCode } from "@/lib/links/go-codes";
+import { RISK_LINE } from "@/config/training";
+import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 import { GoRedirect } from "./go-redirect";
 
 export const metadata: Metadata = {
@@ -31,15 +32,15 @@ export default async function GoPage({ params }: { params: Promise<{ code: strin
       <Link href={target.href} className={`${buttonVariants({ variant: "default" })} min-h-11`}>
         Start learning →
       </Link>
-      {GO_NEXT_STEP_HREF && (
-        <NextStepLink
-          location="go"
-          className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 whitespace-normal py-2 text-center")}
-        >
-          Next step: guided training sa partner community namin
-        </NextStepLink>
-      )}
-      {GO_NEXT_STEP_HREF && <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>}
+      {/* Simplicity spec v2: the one next step is Join the Trading System (outline here; gold stays "Start learning →"). */}
+      <Link
+        href="/system/join"
+        className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-11 whitespace-normal py-2 text-center")}
+      >
+        {JOIN_SYSTEM_CTA}
+      </Link>
+      <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
+      <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       <p className="text-xs text-muted-foreground">
         Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.
       </p>

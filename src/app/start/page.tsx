@@ -5,6 +5,7 @@ import { cn } from "cn";
 import { getLessonMinutes } from "@/lib/academy/lesson-minutes";
 import { FIRST_LESSON_PATH } from "@/config/academy";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ const STEPS = [
     href: "/system/join",
     cta: JOIN_SYSTEM_CTA,
     note: IB_DISCLOSURE_TEXT,
+    risk: RISK_LINE,
   },
 ];
 
@@ -83,6 +85,7 @@ export default async function StartPage() {
               {s.cta}
             </Link>
             {"note" in s && s.note ? <p className="mt-2 text-xs text-muted-foreground">{s.note}</p> : null}
+            {"risk" in s && s.risk ? <p className="mt-1 text-xs text-muted-foreground" data-testid="risk-line">{s.risk}</p> : null}
           </li>
         ))}
       </ol>

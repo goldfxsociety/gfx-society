@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE } from "@/config/training";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -80,6 +81,7 @@ export default async function ResourcesPage() {
 
       {/* Always shown: the Broker Verification card links to ACCM's WikiFX page (post-launch fix 1). */}
       <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
+      <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
 
       <p className="text-xs text-muted-foreground">
         Education lang, not financial advice. Max 1% risk per trade.

@@ -3,13 +3,17 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
+
+const DESC =
+  "Ang GFX community: aral muna sa libreng Academy, then join the Trading System. Start small, max 1% risk, laging may stop loss.";
 
 export const metadata: Metadata = {
   title: "Community",
-  description: "Paano sumali sa GFX Society Discord community: aral muna sa libreng Academy, then ang next steps. Start small, max 1% risk, laging may stop loss.",
+  description: DESC,
   alternates: { canonical: "/community" },
-  openGraph: { title: "Community", description: "Paano sumali sa GFX Society Discord community: aral muna sa libreng Academy, then ang next steps. Start small, max 1% risk, laging may stop loss.", url: "/community", images: ["/opengraph-image"] },
+  openGraph: { title: "Community", description: DESC, url: "/community", images: ["/opengraph-image"] },
 };
 
 
@@ -44,6 +48,7 @@ export default function CommunityPage() {
           Bumalik sa Academy
         </Link>
         <p className="text-xs text-muted-foreground">{IB_DISCLOSURE_TEXT}</p>
+        <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       </div>
 
       <Link href="/" className="inline-flex min-h-11 items-center text-sm text-muted-foreground underline">

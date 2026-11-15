@@ -61,7 +61,7 @@ export const ACCM_COPY: AccmCopy = {
     },
     {
       q: "Naka-register ka na sa ACCM pero sa ibang IB?",
-      a: "I-email ang ACCM from the email na naka-register mo sa ACCM. Ang template ay nasa Join the Trading System (May problema?). To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Huwag mag-open ng second account. Hindi namin ma-promise kung gaano katagal — naka-depende ito sa ACCM.",
+      a: "I-email ang ACCM from the email na naka-register mo sa ACCM. Ang template ay nasa \"May problema?\" sa Join the Trading System page, pagka-log in mo. To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Huwag mag-open ng second account. Hindi namin ma-promise kung gaano katagal — naka-depende ito sa ACCM.",
       ib: true,
     },
     {
@@ -126,7 +126,7 @@ export const ACCM_COPY_EN: AccmCopy = {
     },
     {
       q: "Already with ACCM under a different IB?",
-      a: "Email ACCM from the email registered with ACCM. The template is on Join the Trading System (Having trouble?). To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Don't open a second account. We can't promise how long the transfer will take — timing depends on ACCM.",
+      a: "Email ACCM from the email registered with ACCM. The template is under \"Having trouble?\" on the Join the Trading System page, after you log in. To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Don't open a second account. We can't promise how long the transfer will take — timing depends on ACCM.",
       ib: true,
     },
     {

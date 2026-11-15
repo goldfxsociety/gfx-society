@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { IB_DISCLOSURE_TEXT } from "@/config/partners";
+import { RISK_LINE } from "@/config/training";
 import { JOIN_SYSTEM_CTA } from "@/content/access-request";
 
 /**
@@ -34,6 +35,7 @@ export function AccmBridge() {
         Open ACCM account (optional)
       </Link>
       <p className="text-sm text-muted-foreground">{ACCM_BRIDGE_DISCLOSURE}</p>
+      <p className="text-xs text-muted-foreground" data-testid="risk-line">{RISK_LINE}</p>
       <p className="text-sm text-muted-foreground">
         Max 1% risk, laging may stop loss. Cents account? Pera lang na kaya mong mawala. Education lang, not financial
         advice.

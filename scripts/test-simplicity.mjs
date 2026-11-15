@@ -98,6 +98,82 @@ await t("home: exactly one gold + byte-identical one-line IB disclosure, small/m
   assert.match(comp, /<p className="text-xs text-muted-foreground">\s*<strong>Disclosure:<\/strong> \{text\}\s*<\/p>/, "small muted text");
   assert.equal(IB_DISCLOSURE_TEXT, "Partner broker ng GFX ang ACCM.");
 });
+// ---- QA P1-1 (39b865e): every public page with the gold Join or an IB line renders the shared risk line ----
+const RISK_PAGES = {
+  "/": ["src/app/page.tsx"],
+  "/academy": ["src/components/academy/accm-bridge.tsx"],
+  "/academy/gold-starter": ["src/app/academy/gold-starter/page.tsx"],
+  "/start": ["src/app/start/page.tsx"],
+  "/community": ["src/app/community/page.tsx"],
+  "/resources": ["src/app/resources/page.tsx"],
+  "/go/<code>": ["src/app/go/[code]/page.tsx"],
+  "/accm + /en/accm": ["src/app/accm/accm-guide.tsx"],
+  "/broker + /en/broker": ["src/app/broker/broker-guide.tsx"],
+  "/system/join + /en/system/join": ["src/app/system/join/join-view.tsx"],
+};
+for (const [route, files] of Object.entries(RISK_PAGES)) {
+  await t(`${route}: shows the gold Join or an IB line, and renders the shared RISK_LINE (imported, not retyped)`, async () => {
+    const src = files.map(read).join("\n");
+    assert.ok(/IB_DISCLOSURE_TEXT|IbDisclosureShort|ACCM_BRIDGE_DISCLOSURE|JOIN_SYSTEM_CTA|c\.ib\b/.test(src), `${route} is in scope`);
+    const viaFooter = /<RiskFooter compact=/.test(src); // RiskFooter compact renders RISK_LINE / RISK_LINE_EN_SHORT itself
+    const rf = read("src/components/academy/risk-footer.tsx");
+    if (viaFooter) assert.match(rf, /import \{[^}]*\bRISK_LINE\b[^}]*\} from "@\/config\/training";/, "RiskFooter imports RISK_LINE");
+    else {
+      // SYSTEM_COPY.risk === RISK_LINE (asserted below), so the join doors count as the shared line.
+      if (!/SYSTEM_COPY\.risk\}/.test(src)) assert.match(src, /import \{[^}]*\bRISK_LINE\b[^}]*\} from "@\/config\/training";/, "RISK_LINE imported from config/training");
+      assert.match(src, /\{(?:RISK_LINE|SHARED_RISK_LINE|s\.risk|en \? RISK_LINE_EN_SHORT : SYSTEM_COPY\.risk|en \? RISK_LINE_EN_SHORT : RISK_LINE)\}/, "renders the shared line");
+    }
+    assert.ok(!src.includes(`"${RISK_LINE}"`), "not retyped as a literal");
+  });
+}
+await t("/community: RISK_LINE rendered next to the gold Join + IB line; meta description Join-first, not Discord-first", async () => {
+  const c = read("src/app/community/page.tsx");
+  assert.match(c, /\{JOIN_SYSTEM_CTA\}[\s\S]*?\{IB_DISCLOSURE_TEXT\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
+  const desc = c.match(/const DESC =\s*"([^"]+)"/)?.[1];
+  assert.ok(desc && /join the Trading System/.test(desc) && !/Discord/i.test(desc), desc);
+  assert.match(c, /description: DESC,[\s\S]*openGraph: \{[^}]*description: DESC/, "description and og:description share it");
+  assert.ok(!/Discord/.test(c.replace(/\/\/.*$/gm, "")), "no Discord on /community");
+});
+await t("/start, /academy bridge, /broker: shared risk line sits with the gold Join / IB line", async () => {
+  assert.match(read("src/app/start/page.tsx"), /note: IB_DISCLOSURE_TEXT,\s*risk: RISK_LINE,/);
+  assert.match(read("src/components/academy/accm-bridge.tsx"), /\{ACCM_BRIDGE_DISCLOSURE\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
+  assert.match(read("src/app/broker/broker-guide.tsx"), /\{JOIN_SYSTEM_CTA\}\s*<\/Link>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{en \? RISK_LINE_EN_SHORT : RISK_LINE\}<\/p>/);
+  for (const [f, frag] of [["src/app/start/page.tsx", "Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss."],
+    ["src/components/academy/accm-bridge.tsx", "Max 1% risk, laging may stop loss. Cents account?"], ["src/app/resources/page.tsx", "Education lang, not financial advice. Max 1% risk per trade."]]) {
+    assert.ok(main(f).includes(frag) && read(f).includes(frag), `existing risk text kept byte-identical in ${f}`);
+  }
+});
+await t("/go/<code>: one gold (Start learning), outline Join the Trading System -> /system/join, no Discord-first next step; IB + RISK_LINE", async () => {
+  const g = read("src/app/go/[code]/page.tsx");
+  assert.equal(golds(g), 1);
+  assert.match(g, /variant: "default" \}\)\} min-h-11`\}>\s*Start learning →/);
+  assert.match(g, /<Link\s+href="\/system\/join"\s+className=\{cn\(buttonVariants\(\{ variant: "outline" \}\)[^>]*>\s*\{JOIN_SYSTEM_CTA\}\s*<\/Link>/);
+  assert.ok(!/NextStepLink|partner community|GO_NEXT_STEP_HREF/.test(g), "Discord-first next step removed");
+  assert.match(g, /\{IB_DISCLOSURE_TEXT\}<\/p>\s*<p className="text-xs text-muted-foreground" data-testid="risk-line">\{RISK_LINE\}<\/p>/);
+  const edu = "Education only, not financial advice. Real risk of loss. Start small, max 1% risk, laging may stop loss.";
+  assert.ok(main("src/app/go/[code]/page.tsx").includes(edu) && g.includes(edu), "existing /go risk text unchanged");
+});
+await t("P3-4: J4 FAQ on /accm + /en/accm says the template is there after you log in; rest of each answer byte-identical", async () => {
+  const j4 = (c) => c.faq.find((f) => f.a.includes("For Transfer IB")).a;
+  const PH_OLD = "I-email ang ACCM from the email na naka-register mo sa ACCM. Ang template ay nasa Join the Trading System (May problema?). To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Huwag mag-open ng second account. Hindi namin ma-promise kung gaano katagal — naka-depende ito sa ACCM.";
+  const EN_OLD = "Email ACCM from the email registered with ACCM. The template is on Join the Trading System (Having trouble?). To: csse@accmfx.com, roselle@accmfx.com. Subject: For Transfer IB. Don't open a second account. We can't promise how long the transfer will take — timing depends on ACCM.";
+  assert.ok(j4(ACCM_COPY).includes('sa "May problema?" sa Join the Trading System page, pagka-log in mo.'));
+  assert.ok(j4(ACCM_COPY_EN).includes('under "Having trouble?" on the Join the Trading System page, after you log in.'));
+  assert.equal(j4(ACCM_COPY), PH_OLD.replace("nasa Join the Trading System (May problema?).", 'nasa "May problema?" sa Join the Trading System page, pagka-log in mo.'));
+  assert.equal(j4(ACCM_COPY_EN), EN_OLD.replace("on Join the Trading System (Having trouble?).", 'under "Having trouble?" on the Join the Trading System page, after you log in.'));
+});
+await t("Design (2): EN min deposit = PH facts; 'Long-press to copy' kept with the visible Copy chip; sr-only ' (opens in a new tab)' leading space", async () => {
+  const facts = (x) => x.match(/^Min deposit \$50 · GCash, Maya, other e-wallets\./)?.[0];
+  assert.ok(facts(SELF_CHECK_UI.tl.minDeposit) && facts(SELF_CHECK_UI.en.minDeposit) === facts(SELF_CHECK_UI.tl.minDeposit));
+  assert.equal(SELF_CHECK_UI.en.manual, "Long-press to copy");
+  assert.match(read("src/app/accm/accm-self-check.tsx"), /aria-label=\{`Copy invitation code \$\{CODE\}`\}[\s\S]*?Code: \{CODE\} ⧉/);
+  assert.ok(read("src/components/funnel/discord-apply-link.tsx").includes('lang === "en" ? " (opens in a new tab)" :'));
+});
+await t("P3-7: cron route comment covers both purges (1-day logs + ACCM 8-day bound)", async () => {
+  const r = read("src/app/api/cron/members-cleanup/route.ts");
+  assert.ok(r.includes("purge_member_gate_logs") && r.includes("purge_stale_accm_emails") && r.includes("up to 8 days") && r.includes("Monitoring the purge cron"));
+  assert.ok(!r.includes("so the 1-day retention holds without the cron"));
+});
 // ---- disclosures + risk line byte-identical ----
 await t("RISK_LINE, IB_DISCLOSURE_TEXT, EN disclosure, NEUTRAL_LICENSING_TEXT byte-identical to main / spec", async () => {
   const mt = main("src/config/training.ts"), mp = main("src/config/partners.ts");

@@ -70,10 +70,11 @@ const sessionCookie = (scn) => {
 
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox"] });
 const ctx = await browser.createBrowserContext();
-const open = async (path, width, scn) => {
+const open = async (path, width, scn, { noJs = false } = {}) => {
   for (const c of await ctx.cookies()) await ctx.deleteCookie(c);
   if (scn) await ctx.setCookie(sessionCookie(scn));
   const page = await ctx.newPage();
+  if (noJs) await page.setJavaScriptEnabled(false); // /go/<code> client-redirects to /academy after 1.5 s
   await page.setViewport({ width, height: 800, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await page.goto(BASE + path, { waitUntil: "networkidle0" });
   return page;
@@ -102,26 +103,32 @@ const PAGES = [
   { slug: "member-home", path: "/training", scn: "member", gold: "Ituloy →", risk: RISK_LINE, noIb: true },
   { slug: "accm", path: "/accm", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "en-accm", path: "/en/accm", gold: JOIN, risk: RISK_EN, ib: IB_EN, lang: "en" },
-  { slug: "broker", path: "/broker", gold: JOIN, ib: IB, lang: "fil" },
-  { slug: "en-broker", path: "/en/broker", gold: JOIN, ib: IB_EN, lang: "en" },
+  { slug: "broker", path: "/broker", gold: JOIN, risk: RISK_LINE, ib: IB, lang: "fil" },
+  { slug: "en-broker", path: "/en/broker", gold: JOIN, risk: RISK_EN, ib: IB_EN, lang: "en" },
   { slug: "system-join", path: "/system/join", gold: "Log in with your Academy account", risk: RISK_LINE, ib: IB, lang: "fil" },
   { slug: "en-system-join", path: "/en/system/join", gold: "Log in with your Academy account", risk: RISK_EN, ib: IB_EN, lang: "en" },
-  { slug: "academy", path: "/academy", gold: JOIN, shot: false },
-  { slug: "start", path: "/start", gold: JOIN, shot: false },
-  { slug: "community", path: "/community", gold: JOIN, shot: false },
+  { slug: "academy", path: "/academy", gold: JOIN, risk: RISK_LINE, ib: IB, shot: false },
+  { slug: "start", path: "/start", gold: JOIN, risk: RISK_LINE, ib: IB, shot: false },
+  { slug: "community", path: "/community", gold: JOIN, risk: RISK_LINE, ib: IB },
+  { slug: "go", path: "/go/ig_bio", gold: "Start learning", risk: RISK_LINE, ib: IB, noJs: true, outline: JOIN },
 ];
 
 try {
   for (const width of [360, 414]) {
     for (const pg of PAGES) {
       const L = `${width} ${pg.path}`;
-      const p = await open(pg.path, width, pg.scn);
+      const p = await open(pg.path, width, pg.scn, { noJs: pg.noJs });
       const r = await measure(p);
       check(r.sw <= width, `${L}: no horizontal scroll`, `scrollWidth=${r.sw}`);
       check(r.gold.length === 1 && r.gold[0].startsWith(pg.gold), `${L}: exactly one gold, "${pg.gold}"`, JSON.stringify(r.gold));
       check(r.small.length === 0, `${L}: tap targets >= 44px`, JSON.stringify(r.small));
       if (pg.risk) check(r.text.split(pg.risk).length - 1 === 1, `${L}: risk line visible once`, r.text.slice(0, 200));
       if (pg.ib) check(r.text.includes(pg.ib), `${L}: IB line visible`);
+      if (pg.outline) {
+        const o = await p.evaluate((t) => [...document.querySelectorAll("main a")].filter((a) => a.textContent.trim() === t).map((a) => a.getAttribute("href")), pg.outline);
+        check(o.length === 1 && o[0] === "/system/join", `${L}: outline "${pg.outline}" -> /system/join`, JSON.stringify(o));
+        check(!r.text.includes("partner community"), `${L}: no Discord-first "Next step" button`);
+      }
       if (pg.ibMuted) {
         const m = await p.evaluate((ib) => {
           const el = [...document.querySelectorAll("p")].find((e) => e.textContent.includes(ib));
@@ -169,6 +176,30 @@ try {
     }
   }
 
+  // Audit (QA P1-1): every public page that shows the gold "Join the Trading System" or an IB line also shows the
+  // shared risk line (RISK_LINE; /en pages RISK_LINE_EN_SHORT), visibly, in <main>. Routes: the partner-line list + sitemap.
+  {
+    const AUDIT = ["/", "/start", "/community", "/academy", "/academy/gold-starter", "/broker", "/accm", "/resources", "/system", "/system/join", "/go/ig_bio", "/go/fb_bio", "/go/tt_bio", "/en/academy/gold-starter", "/en/accm", "/en/broker", "/en/system/join"];
+    const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    const routes = [...new Set([...AUDIT, ...[...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)])];
+    let audited = 0;
+    // Legal documents (/privacy, /terms, /disclosure, /risk) quote the IB line inside legal text; they carry no Join CTA
+    // and are the long-form disclosures themselves, so they are not page footers to audit.
+    const LEGAL = new Set(["/privacy", "/terms", "/disclosure", "/risk"]);
+    for (const path of routes) {
+      if (LEGAL.has(path)) continue;
+      const p = await open(path, 360, null, { noJs: path.startsWith("/go/") });
+      const r = await measure(p);
+      await p.close();
+      const en = path.startsWith("/en/");
+      const ib = r.text.includes(IB) || r.text.includes(IB_EN);
+      const join = r.gold.some((g) => g.startsWith(JOIN));
+      if (!ib && !join) continue;
+      audited++;
+      check(r.text.includes(en ? RISK_EN : RISK_LINE), `audit 360 ${path}: ${[join && "gold Join", ib && "IB line"].filter(Boolean).join(" + ")} -> shared risk line visible`, r.text.slice(-300));
+    }
+    console.log(`INFO audit: ${audited} of ${routes.length} routes show gold Join or an IB line`);
+  }
   // /en/system/join logged in: no_match -> Having trouble? -> J4 EN caption; same actions as PH.
   for (const width of [360, 414]) {
     const p = await open("/en/system/join", width, "fresh");
