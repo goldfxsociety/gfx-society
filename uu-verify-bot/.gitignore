@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.log
+# Outputs of scripts/setup-server.ts (real ids; keep local)
+setup.out.json
+seed.generated.sql
+backups/

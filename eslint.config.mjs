@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Separate Cloudflare Worker project with its own tsconfig/tests (not part of the website).
     "discord-verify-bot/**",
+    // Universe Unlimited onboarding bot: separate Cloudflare Worker (own tsconfig/tests).
+    "uu-verify-bot/**",
   ]),
 ]);
 

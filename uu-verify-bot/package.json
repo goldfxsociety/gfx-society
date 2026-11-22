@@ -1,0 +1,30 @@
+{
+  "name": "uu-verify-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Universe Unlimited Discord onboarding bot (Cloudflare Worker, HTTP interactions, D1). Separate from the website and from the GFX VIP verifier.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test",
+    "build:dry": "wrangler deploy --dry-run --outdir .wrangler/dry",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:verify:local": "wrangler d1 execute DB --local --file sql/0001_verify.sql",
+    "setup-server": "tsx scripts/setup-server.ts",
+    "register-commands": "tsx scripts/register-commands.ts",
+    "post-verify-panel": "tsx scripts/post-verify-panel.ts",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261119.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "better-sqlite3": "^12.2.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5",
+    "vitest": "^3.2.0",
+    "wrangler": "^4"
+  }
+}

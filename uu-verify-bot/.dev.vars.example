@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `wrangler dev` on a PRIVATE TEST setup only. .dev.vars is git-ignored.
+# Never paste real values in chat, email, Discord, a commit or a PR.
+DISCORD_PUBLIC_KEY=
+DISCORD_BOT_TOKEN=
