@@ -33,8 +33,8 @@ export const ME = {
   quizTag: "Quiz",
   capstoneRow: "Capstone",
   nav: { home: "Home", courses: "Courses", account: "Account", tools: "Tools", navigate: "Navigate", modules: "Modules", later: "Paparating pa" },
-  // Member home, 4 cards (simplicity spec v2 P1.3 + Ben's decision 3). Signals is a placeholder only: no link,
-  // no dates, no performance claims.
+  // Member home, 4 cards (simplicity spec v2 P1.3 + UU partner cutover). Signals links to the UU invite; not gold,
+  // no badge, no dates, no performance claims. Hidden when the invite is null.
   home: {
     lead: "Ituloy ang training mo.",
     // Sprint 3 (spec §3). Explorer = signed in, not linked yet. No IB line here (members area).
@@ -50,8 +50,7 @@ export const ME = {
     coursesTitle: "Courses",
     coursesLine: "Gold Reset at iba pang courses.",
     signalsTitle: "Signals",
-    signalsLine: "Coming soon.",
-    signalsBadge: "Coming soon",
+    signalsLine: "Live signals sa Universe Unlimited",
     accountTitle: "Account",
     accountLine: "Settings at mga nabili mong courses.",
   },

@@ -2,14 +2,16 @@
 
 **Taglish summary:** Ang GFX Society ay para sa trading education lang — hindi ito financial advice, at hindi kami broker. Ikaw ang responsable sa sarili mong trades at pera. Kung magte-trade ka, start small (hal. cents account), max 1% risk, laging may stop loss. May IB rebates ang founder mula sa partner broker namin, ang ACCM (basahin ang IB Disclosure). Maging respectful sa community.
 
-Last updated: 2 Nov 2026 · Version: 1.3
+Last updated: 22 Nov 2026 · Version: 1.4
+
+**What changed in v1.4 (22 Nov 2026):** Universe Unlimited Discord is named as a partner community the site may link to, not a GFX-operated Service (section 1). The joining paragraph now points to the invite and to verification in the server (#verify); there is no site join form (section 6).
 
 **What changed in v1.3 (2 Nov 2026):** the broker-link line in section 7 now uses the short partner-broker line; the commission is explained in the IB Disclosure. Section 3 no longer names live sessions, which are not offered yet.
 
 **What changed in v1.2 (18 Oct 2026):** the Messenger community was replaced by the GFX Society Discord community (sections 1 and 6). Wording about trade calls was clarified (sections 3 and 6).
 
 ## 1. Agreement
-By using https://gfx-society.vercel.app, the GFX Society Academy, or the GFX Society Discord community (together, the "Services"), you agree to these Terms, our Privacy Notice, Risk Disclaimer and IB Disclosure. If you do not agree, do not use the Services. Operator: GoldFX Society (GFX), an independent education community operated by its founder, Philippines. Education lang, not financial advice.
+By using https://gfx-society.vercel.app or the GFX Society Academy (together, the "Services"), you agree to these Terms, our Privacy Notice, Risk Disclaimer and IB Disclosure. If you do not agree, do not use the Services. The site may link to the Universe Unlimited Discord, a partner community. Operator: GoldFX Society (GFX), an independent education community operated by its founder, Philippines. Education lang, not financial advice.
 
 ## 2. Eligibility
 You must be at least 18 years old and able to enter a binding agreement under Philippine law.
@@ -28,9 +30,9 @@ You must be at least 18 years old and able to enter a binding agreement under Ph
 We may suspend or close accounts that breach these Terms. You may delete your account anytime (see Privacy Notice §10).
 
 ## 6. Community rules
-**Joining the Discord community.** Ang Discord community ay para sa mga nag-register sa ACCM through our link. To join, submit the join application (inviter, registered yes/no, ACCM User ID or name, rules ✓). Moderators may approve or decline any application, and may remove a member who breaks these rules. GFX may earn a commission from ACCM if you sign up through our link. You never need an ACCM account to use the free Academy.
+**Joining the Discord community.** The Universe Unlimited Discord is a partner community for members who registered with ACCM through our link. To join, use the invite on this site and complete verification in the server (#verify). Moderators may remove a member who breaks these rules. GFX may earn a commission from ACCM if you sign up through our link. You never need an ACCM account to use the free Academy.
 
-In the Academy, the Discord community and any GFX channel you must not:
+In the Academy, the Universe Unlimited Discord and any GFX channel you must not:
 - promise or advertise profits, "guaranteed" returns, account management, fund pooling, or investment schemes;
 - sell trade calls, paid groups, courses, or recruit for other brokers/schemes without GFX approval;
 - post others' personal data, harass, spam, or post illegal, hateful or misleading content;

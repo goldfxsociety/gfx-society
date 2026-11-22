@@ -4,9 +4,9 @@ import { partners } from "@/config/partners";
 export const ACCM_PAGE_LIVE = true;
 export const NEXT_STEP_HREF = ACCM_PAGE_LIVE ? "/accm" : "/broker";
 
-/** Discord invite. Null = hide every Discord button. Only /accm and /broker render it. */
+/** Discord invite (Universe Unlimited). Used on /accm and the member-home Signals card. Null = hide every invite button / Signals link. */
 export const DISCORD_INVITE_URL: string | null =
-  process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ?? "https://discord.gg/AZb5Gk9xNP";
+  process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ?? "https://discord.gg/5HnHAhWjU";
 
 /** ACCM link for /accm or /broker: same IB link as partners.ts, with the matching utm_medium. */
 export const accmHref = (medium: "accm_page" | "broker_page") =>

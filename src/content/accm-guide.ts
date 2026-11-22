@@ -43,11 +43,11 @@ export const ACCM_COPY: AccmCopy = {
   },
   s3: "3. Pagka-register: join the Trading System",
   help: "May problema?",
-  discordCta: "Apply to join our Discord →",
+  discordCta: "Universe Unlimited Discord →",
   discordPrep:
-    "Ihanda ang ACCM User ID mo. Hihingin sa join application: sino ang nag-invite sa'yo, kung registered ka na, ang ACCM User ID mo, at pag-agree sa rules. Hindi namin hihingin ang password, OTP o ID documents mo.",
+    "Ihanda ang ACCM User ID mo. Sa server, pumunta sa #verify. Huwag ibigay ang password, OTP, o ID documents mo.",
   discordNote:
-    "Sa Discord: guided training para sa beginners. Mag-deposit lang ng pera na kaya mong mawala, max 1% risk, laging may stop loss.",
+    "Partner community ito ng GFX para sa live tools. Mag-deposit lang ng pera na kaya mong mawala, max 1% risk, laging may stop loss.",
   discordSoon: "Discord: coming soon.",
   s4: "4. FAQ",
   faq: [
@@ -58,8 +58,8 @@ export const ACCM_COPY: AccmCopy = {
       ib: true,
     },
     {
-      q: "Optional pa ba ang Discord?",
-      a: "Oo, secondary lang. Join the Trading System muna. Discord stays open until the in-system chat is live. Wala kaming Messenger.",
+      q: "Optional pa ba ang Universe Unlimited Discord?",
+      a: "Oo, secondary lang. Join the Trading System muna. Universe Unlimited Discord ang partner community para sa live tools. Wala kaming Messenger.",
     },
     {
       q: "Naka-register ka na sa ACCM pero sa ibang IB?",
@@ -111,11 +111,11 @@ export const ACCM_COPY_EN: AccmCopy = {
   },
   s3: "3. After you register: join the Trading System",
   help: "Having trouble?",
-  discordCta: "Apply to join our Discord →",
+  discordCta: "Universe Unlimited Discord →",
   discordPrep:
-    "Have your ACCM User ID ready. The join application asks who invited you, whether you're already registered, your ACCM User ID, and that you agree to the rules. We will never ask for your password, OTP or ID documents.",
+    "Have your ACCM User ID ready. In the server, go to #verify. Never share your password, OTP, or ID documents.",
   discordNote:
-    "On Discord: guided training for beginners. Only deposit money you can afford to lose, max 1% risk, always with a stop loss.",
+    "This is GFX's partner community for live tools. Only deposit money you can afford to lose, max 1% risk, always with a stop loss.",
   discordSoon: "Discord: coming soon.",
   s4: "4. FAQ",
   faq: [
@@ -126,8 +126,8 @@ export const ACCM_COPY_EN: AccmCopy = {
       ib: true,
     },
     {
-      q: "Is Discord still available?",
-      a: "Yes, as a secondary option. Join the Trading System first. Discord stays open until the in-system chat is live. We don't use Messenger.",
+      q: "Is the Universe Unlimited Discord still available?",
+      a: "Yes, as a secondary option. Join the Trading System first. Universe Unlimited Discord is the partner community for live tools. We don't use Messenger.",
     },
     {
       q: "Already with ACCM under a different IB?",
@@ -179,5 +179,5 @@ export const ACCM_DISCORD_ID = "discord";
  * Academy lesson help link (P3-13, lesson-risk-dedupe amendment): same label on every lesson, deep-links to the Discord
  * step on /accm (ACCM first, then Discord). /accm's own invite keeps ACCM_COPY.discordCta.
  */
-export const LESSON_DISCORD_LINK = "Paano sumali sa Discord →";
+export const LESSON_DISCORD_LINK = "Paano sumali sa Universe Unlimited Discord →";
 export const LESSON_DISCORD_HREF = `/accm#${ACCM_DISCORD_ID}` as const;
