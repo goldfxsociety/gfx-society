@@ -3,6 +3,8 @@ import { bits, type Overwrite, Perm } from "./discord";
 export const READ = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY);
 export const WRITE = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.ADD_REACTIONS, Perm.EMBED_LINKS, Perm.ATTACH_FILES);
 export const BOT = bits(Perm.VIEW_CHANNEL, Perm.MANAGE_CHANNELS, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.EMBED_LINKS, Perm.ATTACH_FILES);
+/** Bot allow on voice channels: usual BOT bits plus Connect, so the bot does not lose access after @everyone is denied View. */
+export const BOT_VOICE = bits(Perm.VIEW_CHANNEL, Perm.MANAGE_CHANNELS, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.EMBED_LINKS, Perm.ATTACH_FILES, Perm.CONNECT);
 export const VIEW = bits(Perm.VIEW_CHANNEL);
 
 /**

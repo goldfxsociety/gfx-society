@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DiscordCode, DiscordError, Perm } from "../src/discord";
-import { BOT, reviewChannelOverwrites } from "../src/perms";
+import { BOT, BOT_VOICE, reviewChannelOverwrites } from "../src/perms";
 import {
   BASE_ROLES,
   ChannelType,
@@ -10,6 +10,7 @@ import {
   knownGuildState,
   permissionMatrix,
   planSetup,
+  PRO_INDICATOR_LIVE_NAME,
   resolveOverwrites,
   roleOrderWarnings,
   type SetupApi,
@@ -36,7 +37,7 @@ describe("setup-server --dry-run plan", () => {
     expect(BASE_ROLES).toEqual(["Unverified", "FREE", "VIP", "Sub-IB", "Coach", "Admin / Mod", "Line: Coach Mike", "Line: GFX"]);
     expect(plan.roles.some((r) => r.name === "UU Bot")).toBe(false);
     expect(plan.channels.map((c) => c.name)).toEqual([
-      "start-here", "verify", "education", "community", "market-talk", "pro-indicator", "ai-signals", "sub-ib-leaders", "admin-log", "review-coach-mike", "review-gfx",
+      "start-here", "verify", "education", "community", "market-talk", PRO_INDICATOR_LIVE_NAME, "ai-signals", "sub-ib-leaders", "admin-log", "review-coach-mike", "review-gfx",
     ]);
     expect(plan.channels.every((c) => c.action === "create")).toBe(true);
   });
@@ -66,11 +67,14 @@ describe("setup-server --dry-run plan", () => {
       expect(matrix[ch]!.viewers).toEqual(expect.arrayContaining(["FREE", "VIP"]));
       expect(matrix[ch]!.viewers).not.toContain("Unverified");
     }
-    for (const ch of ["#pro-indicator", "#ai-signals"]) {
-      expect(matrix[ch]!.viewers).toContain("VIP");
-      expect(matrix[ch]!.viewers).not.toContain("FREE");
-      expect(plan.channels.find((c) => `#${c.name}` === ch)!.topic).toBe("Education lang, not financial advice. Max 1% risk per trade.");
-    }
+    const live = `#${PRO_INDICATOR_LIVE_NAME}`;
+    expect(matrix[live]!.viewers).toContain("VIP");
+    expect(matrix[live]!.viewers).not.toContain("FREE");
+    expect(matrix[live]!.viewers).not.toContain("Unverified");
+    expect(matrix["#ai-signals"]!.viewers).toContain("VIP");
+    expect(matrix["#ai-signals"]!.viewers).not.toContain("FREE");
+    expect(plan.channels.find((c) => c.key === "ai_signals")!.topic).toBe("Education lang, not financial advice. Max 1% risk per trade.");
+    expect(plan.channels.find((c) => c.key === "pro_indicator")!.topic).toBeUndefined();
     expect(matrix["#sub-ib-leaders"]!.viewers.sort()).toEqual(["Admin / Mod", "Coach", "Sub-IB", "bot"].sort());
     expect(matrix["#admin-log"]!.viewers.sort()).toEqual(["Admin / Mod", "bot"]);
     expect(matrix["#review-coach-mike"]!.viewers.sort()).toEqual(["Admin / Mod", "Coach", "bot", "user:1317701669768925188", "user:1417055027121619004"].sort());
@@ -91,7 +95,7 @@ describe("setup-server --dry-run plan", () => {
     const state = knownGuildState(ids.guildId, ids.botUserId);
     let n = 0;
     const roles: GuildRole[] = [...state.roles, ...BASE_ROLES.map((name) => ({ id: String(900000000000000000n + BigInt(++n)), name, position: 1 }))];
-    const channels = [...state.channels, ...plan.categories.map((c) => ({ id: String(910000000000000000n + BigInt(++n)), name: c.name, type: ChannelType.CATEGORY })), ...plan.channels.map((c) => ({ id: String(920000000000000000n + BigInt(++n)), name: c.name, type: ChannelType.TEXT }))];
+    const channels = [...state.channels, ...plan.categories.map((c) => ({ id: String(910000000000000000n + BigInt(++n)), name: c.name, type: ChannelType.CATEGORY })), ...plan.channels.map((c) => ({ id: String(920000000000000000n + BigInt(++n)), name: c.name, type: c.type }))];
     const again = planSetup({ roles, channels }, ids);
     expect(again.roles.every((r) => r.action === "exists")).toBe(true);
     expect(again.channels.every((c) => c.action === "exists")).toBe(true);
@@ -305,7 +309,7 @@ function realizedState(): GuildState {
     channels: [
       ...state.channels,
       ...fresh.categories.map((c) => ({ id: `CAT_${c.name}`, name: c.name, type: ChannelType.CATEGORY })),
-      ...fresh.channels.map((c) => ({ id: `CH_${c.key}`, name: c.name, type: ChannelType.TEXT, parent_id: `CAT_${c.category}` })),
+      ...fresh.channels.map((c) => ({ id: `CH_${c.key}`, name: c.name, type: c.type, parent_id: `CAT_${c.category}` })),
     ],
   };
 }
@@ -383,5 +387,179 @@ describe("per-user overwrite when the member is not in the server", () => {
     const again = await executePlan(plan, ids, ok);
     expect(added.sort()).toEqual(["CH_review_coach_mike:1317701669768925188", "CH_review_coach_mike:1417055027121619004"].sort());
     expect(again.warnings.some((w) => w.includes("not in the server yet; skipped per-user overwrite"))).toBe(false);
+  });
+});
+
+
+describe("pro-indicator is a VIP voice livestream", () => {
+  const plan = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids);
+  const ch = plan.channels.find((c) => c.key === "pro_indicator")!;
+
+  it("is a type-2 voice channel named 🔴 pro-indicator-live, with the live overwrite matrix", () => {
+    expect(ch).toMatchObject({ key: "pro_indicator", name: PRO_INDICATOR_LIVE_NAME, type: ChannelType.VOICE, action: "create" });
+    expect(ch.type).toBe(2);
+    expect(ch.topic).toBeUndefined();
+    expect(plan.channels.some((c) => c.name === "pro-indicator")).toBe(false);
+
+    const find = (kind: string, name?: string) =>
+      ch.access.find((o) => o.target.kind === kind && (name === undefined || (o.target.kind === "role" && o.target.name === name)));
+    const everyone = ch.access.find((o) => o.target.kind === "everyone")!;
+    const unverified = find("role", "Unverified")!;
+    const free = find("role", "FREE")!;
+    const vip = find("role", "VIP")!;
+    const coach = find("role", "Coach")!;
+    const admin = find("role", "Admin / Mod")!;
+    const botOw = ch.access.find((o) => o.target.kind === "bot")!;
+
+    expect(hasBit(everyone.deny, Perm.VIEW_CHANNEL)).toBe(true);
+    expect(hasBit(unverified.deny, Perm.VIEW_CHANNEL)).toBe(true);
+    expect(hasBit(free.deny, Perm.VIEW_CHANNEL)).toBe(true);
+
+    expect(hasBit(vip.allow, Perm.VIEW_CHANNEL)).toBe(true);
+    expect(hasBit(vip.allow, Perm.CONNECT)).toBe(true);
+    expect(hasBit(vip.allow, Perm.READ_MESSAGE_HISTORY)).toBe(true);
+    expect(hasBit(vip.deny, Perm.SPEAK)).toBe(true);
+    expect(hasBit(vip.deny, Perm.STREAM)).toBe(true);
+    expect(hasBit(vip.deny, Perm.SEND_MESSAGES)).toBe(true);
+
+    for (const staff of [coach, admin]) {
+      expect(hasBit(staff.allow, Perm.VIEW_CHANNEL)).toBe(true);
+      expect(hasBit(staff.allow, Perm.CONNECT)).toBe(true);
+      expect(hasBit(staff.allow, Perm.SPEAK)).toBe(true);
+      expect(hasBit(staff.allow, Perm.STREAM)).toBe(true);
+      expect(hasBit(staff.allow, Perm.SEND_MESSAGES)).toBe(true);
+      expect(hasBit(staff.allow, Perm.READ_MESSAGE_HISTORY)).toBe(true);
+    }
+
+    expect(botOw.allow).toBe(BOT_VOICE);
+    expect(hasBit(botOw.allow, Perm.VIEW_CHANNEL)).toBe(true);
+    expect(hasBit(botOw.allow, Perm.MANAGE_CHANNELS)).toBe(true);
+    expect(hasBit(botOw.allow, Perm.CONNECT)).toBe(true);
+  });
+
+  it("creates the voice channel (not a text #pro-indicator) from scratch", async () => {
+    const created: Array<{ name: string; type: number }> = [];
+    const api = recordingApi(async () => undefined);
+    const origCreate = api.createChannel;
+    api.createChannel = async (b) => {
+      created.push({ name: b.name, type: b.type });
+      return origCreate(b);
+    };
+    await executePlan(plan, ids, api);
+    expect(created.find((c) => c.name === PRO_INDICATOR_LIVE_NAME)).toEqual({ name: PRO_INDICATOR_LIVE_NAME, type: ChannelType.VOICE });
+    expect(created.some((c) => c.name === "pro-indicator" || (c.name === PRO_INDICATOR_LIVE_NAME && c.type === ChannelType.TEXT))).toBe(false);
+  });
+
+  it("matches an existing live voice channel by name and does not create a text stand-in", async () => {
+    const state = realizedState();
+    expect(state.channels.some((c) => c.name === PRO_INDICATOR_LIVE_NAME && c.type === ChannelType.VOICE && c.id === "CH_pro_indicator")).toBe(true);
+    const again = planSetup(state, ids);
+    expect(again.channels.find((c) => c.key === "pro_indicator")).toMatchObject({
+      action: "exists",
+      id: "CH_pro_indicator",
+      type: ChannelType.VOICE,
+      name: PRO_INDICATOR_LIVE_NAME,
+    });
+    expect(again.channels.some((c) => c.name === "pro-indicator" || (c.action === "create" && c.key === "pro_indicator"))).toBe(false);
+
+    const created: Array<{ name: string; type: number }> = [];
+    const api = recordingApi(async () => undefined);
+    const origCreate = api.createChannel;
+    api.createChannel = async (b) => {
+      created.push({ name: b.name, type: b.type });
+      return origCreate(b);
+    };
+    await executePlan(again, ids, api);
+    expect(created.some((c) => c.name === PRO_INDICATOR_LIVE_NAME || c.name === "pro-indicator")).toBe(false);
+  });
+
+  it("matches by setup.out.json id when the voice channel is not in the listing", () => {
+    const again = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids, { channelIds: { pro_indicator: "SAVED_VOICE_ID" } });
+    expect(again.channels.find((c) => c.key === "pro_indicator")).toMatchObject({
+      action: "exists",
+      id: "SAVED_VOICE_ID",
+      type: ChannelType.VOICE,
+      name: PRO_INDICATOR_LIVE_NAME,
+    });
+    expect(again.channels.some((c) => c.name === "pro-indicator")).toBe(false);
+  });
+
+  it("locks a leftover text #pro-indicator instead of treating it as the livestream, and still creates the voice channel", async () => {
+    const state = knownGuildState(ids.guildId, ids.botUserId);
+    const withOldText: GuildState = {
+      ...state,
+      channels: [...state.channels, { id: "OLD_TEXT_PRO", name: "pro-indicator", type: ChannelType.TEXT }],
+    };
+    const again = planSetup(withOldText, ids);
+    expect(again.channels.find((c) => c.key === "pro_indicator")).toMatchObject({
+      action: "create",
+      type: ChannelType.VOICE,
+      name: PRO_INDICATOR_LIVE_NAME,
+    });
+    expect(again.lockExisting.find((l) => l.id === "OLD_TEXT_PRO")).toMatchObject({ name: "pro-indicator", type: ChannelType.TEXT });
+
+    const created: Array<{ name: string; type: number }> = [];
+    const api = recordingApi(async () => undefined);
+    const origCreate = api.createChannel;
+    api.createChannel = async (b) => {
+      created.push({ name: b.name, type: b.type });
+      return origCreate(b);
+    };
+    await executePlan(again, ids, api);
+    expect(created.find((c) => c.name === PRO_INDICATOR_LIVE_NAME)?.type).toBe(ChannelType.VOICE);
+    expect(created.some((c) => c.name === "pro-indicator")).toBe(false);
+  });
+});
+
+describe("locking Discord defaults when they are already gone", () => {
+  it("is a no-op: no error, no lock targets, and the defaults are not created", async () => {
+    const fresh = knownGuildState(ids.guildId, ids.botUserId);
+    const withoutDefaults: GuildState = { ...fresh, channels: [] };
+    const plan = planSetup(withoutDefaults, ids);
+    expect(plan.lockExisting).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+    expect(plan.channels.every((c) => !["general", "General", "Text Channels", "Voice Channels"].includes(c.name))).toBe(true);
+
+    const created: Array<{ name: string; type: number }> = [];
+    const locked: string[] = [];
+    const api = recordingApi(async (channelId) => {
+      locked.push(channelId);
+    });
+    const origCreate = api.createChannel;
+    api.createChannel = async (b) => {
+      created.push({ name: b.name, type: b.type });
+      return origCreate(b);
+    };
+    const res = await executePlan(plan, ids, api);
+    expect(created.some((c) => /^(general|General|Text Channels|Voice Channels)$/.test(c.name))).toBe(false);
+    expect(locked.some((id) => DEFAULT_LOCK_IDS.includes(id))).toBe(false);
+    expect(res.channelIds.verify).toBeTruthy();
+    expect(res.channelIds.pro_indicator).toBeTruthy();
+  });
+});
+
+describe("per-user overwrite 404 codes", () => {
+  it("still warns and continues on 404/10007 (unknown member)", async () => {
+    const plan = planSetup(realizedState(), ids);
+    const missing = ids.coachMikeUserIds[0]!;
+    const api = recordingApi(async (channelId, o) => {
+      if (o.type === 1 && o.id === missing) {
+        throw new DiscordError(404, DiscordCode.UNKNOWN_MEMBER, `PUT /channels/${channelId}/permissions/${o.id}`);
+      }
+    });
+    const res = await executePlan(plan, ids, api);
+    expect(res.warnings.some((w) => w.includes(missing) && w.includes("not in the server yet; skipped per-user overwrite"))).toBe(true);
+    expect(res.channelIds.review_coach_mike).toBe("CH_review_coach_mike");
+  });
+
+  it("does not treat 404/10003 (unknown channel) as a missing member", async () => {
+    const plan = planSetup(realizedState(), ids);
+    const missing = ids.coachMikeUserIds[0]!;
+    const api = recordingApi(async (channelId, o) => {
+      if (o.type === 1 && o.id === missing) {
+        throw new DiscordError(404, DiscordCode.UNKNOWN_CHANNEL, `PUT /channels/${channelId}/permissions/${o.id}`);
+      }
+    });
+    await expect(executePlan(plan, ids, api)).rejects.toThrow(/404\/10003/);
   });
 });

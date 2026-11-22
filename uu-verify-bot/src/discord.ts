@@ -33,7 +33,9 @@ export const Perm = {
   READ_MESSAGE_HISTORY: 1n << 16n,
   USE_APPLICATION_COMMANDS: 1n << 31n,
   ADD_REACTIONS: 1n << 6n,
+  STREAM: 1n << 9n,
   CONNECT: 1n << 20n,
+  SPEAK: 1n << 21n,
 } as const;
 
 export const bits = (...p: bigint[]) => p.reduce((a, b) => a | b, 0n).toString();

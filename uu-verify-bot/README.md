@@ -100,24 +100,34 @@ The default mode is an **offline dry-run** with no token and no network.
 
 What setup does:
 
-- **Existing guild defaults:** the `@everyone` role, the managed `UU Bot` role, the `Text Channels` / `Voice Channels`
-  categories, `#general` and the `General` voice channel are **kept** (never deleted, renamed or recreated). View is
-  denied on them for @everyone and Unverified. The bot allow is written first and the @everyone deny last, so the
-  bot never loses View mid-run (denying @everyone first caused 403/50001 in a live apply).
+- **Existing guild defaults:** the `@everyone` role and the managed `UU Bot` role are **kept**. If Discord's
+  default `Text Channels` / `Voice Channels` categories, `#general` and the `General` voice channel are still
+  present, they are also kept (never deleted, renamed or recreated) and View is denied on them for @everyone
+  and Unverified. The bot allow is written first and the @everyone deny last, so the bot never loses View
+  mid-run (denying @everyone first caused 403/50001 in a live apply). If those defaults have already been
+  deleted, locking them is a no-op: setup does not error and does not recreate them.
 - **Roles created:** Unverified, FREE, VIP, Sub-IB, Coach, Admin / Mod, Line: Coach Mike, Line: GFX.
   - Coach goes to both Coach Mike accounts. Admin / Mod goes to Ben.
-  - If a per-user overwrite (for example Coach Mike on `#review-coach-mike`) returns 404 because that account is
-    not in the server yet, setup warns and continues. A later rerun adds the overwrite once they have joined.
+  - If a per-user overwrite (for example Coach Mike on `#review-coach-mike`) returns 404/10009 or 404/10007
+    because that account is not in the server yet, setup warns and continues. A later rerun adds the overwrite
+    once they have joined. A 404/10003 (unknown channel, e.g. a stale id) is not treated as a missing member.
 - **Categories:** START, COMMUNITY, VIP, IB LEADERS, ADMIN, REVIEWS. The full permission matrix is printed by the dry-run.
   Hidden categories (and locked defaults) deny View to @everyone and Unverified, and **allow View + Manage Channels for the bot**
   so the bot can still see them and create child channels (including auto-created `#review-{line}`).
+  `pro_indicator` is the VIP voice channel `🔴 pro-indicator-live` (type 2; live id `1573970781744922698` is
+  mentioned only as context — setup matches by name or by `setup.out.json` id). A rerun must not recreate a
+  text `#pro-indicator`. @everyone / Unverified / FREE deny View; VIP may View, Connect and Read History but
+  not Speak, Stream or Send; Coach and Admin / Mod may View, Connect, Speak, Stream, Send and Read History.
+  The bot allow includes View, Manage Channels, Connect and the usual bot bits.
 - **Idempotence:** setup matches existing categories/channels by name, or by id from `setup.out.json` if a hidden one is not
   visible in the guild listing. `setup.out.json` is written as each role/channel is created, so a partial apply can be resumed.
   If a sibling category already exists but a hidden one is missing from the listing and has no saved id, setup refuses to
   create it (creating it would duplicate the hidden category).
 - **Role order:** after creating roles, setup warns if `UU Bot` sits below any role the bot assigns. It never reorders.
   An admin must drag `UU Bot` above FREE, VIP, Sub-IB, Unverified and all `Line:` roles.
-- **Bot permissions:** Manage Roles, Manage Channels, View Channels, Send Messages, Attach Files, Embed Links, Read Message History.
+- **Bot permissions:** Ben has granted the UU Bot role Administrator in the live server (no code change
+  required). The intended granular set remains Manage Roles, Manage Channels, View Channels, Send Messages,
+  Attach Files, Embed Links, Read Message History.
 
 ## Secrets and config
 

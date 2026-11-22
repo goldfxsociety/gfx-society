@@ -6,13 +6,15 @@
  * Hidden categories always include a bot allow (View + Manage Channels) so the bot can still see them after
  * @everyone is denied View. When overwrites are applied one-by-one, the bot allow is written first and the
  * @everyone deny last, so the bot never loses View mid-run (denying @everyone first caused 403/50001 while
- * locking Discord's defaults). A 404 putting a per-user overwrite for someone not in the server is a warning,
- * not a stop; a later rerun adds it once they have joined. If a sibling category already exists but a hidden
- * one is not visible and has no saved id, planning fails fast instead of creating a duplicate.
+ * locking Discord's defaults). If those defaults have already been deleted, locking them is a no-op (they
+ * are not recreated). A 404/10009 or 404/10007 putting a per-user overwrite for someone not in the server
+ * is a warning, not a stop; a later rerun adds it once they have joined. A 404/10003 (unknown channel) is
+ * not treated as a missing member. If a sibling category already exists but a hidden one is not visible and
+ * has no saved id, planning fails fast instead of creating a duplicate.
  */
 import { SPEC_RISK_LINE } from "./copy";
 import { bits, DiscordCode, DiscordError, type Overwrite, Perm } from "./discord";
-import { BOT, READ, reviewChannelOverwrites, VIEW, WRITE } from "./perms";
+import { BOT, BOT_VOICE, READ, reviewChannelOverwrites, VIEW, WRITE } from "./perms";
 
 export const ROLE = {
   unverified: "Unverified",
@@ -39,6 +41,8 @@ export interface OverwriteSpec {
 export interface ChannelSpec {
   key: string;
   name: string;
+  /** Discord channel type. Defaults to text (0). Voice is 2. */
+  type?: number;
   topic?: string;
   access: OverwriteSpec[];
 }
@@ -52,11 +56,17 @@ export interface CategorySpec {
 const everyone = (allow: string, deny: string): OverwriteSpec => ({ target: { kind: "everyone" }, allow, deny });
 const role = (name: string, allow: string, deny = "0"): OverwriteSpec => ({ target: { kind: "role", name }, allow, deny });
 const bot = (): OverwriteSpec => ({ target: { kind: "bot" }, allow: BOT, deny: "0" });
+const botVoice = (): OverwriteSpec => ({ target: { kind: "bot" }, allow: BOT_VOICE, deny: "0" });
 const SEND = bits(Perm.SEND_MESSAGES);
 const VERIFY_ALLOW = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.USE_APPLICATION_COMMANDS);
 const hidden = [everyone("0", VIEW), role(ROLE.unverified, "0", VIEW)];
 /** Hidden spaces grant the bot View + Manage Channels (and the rest of BOT). Order matters for one-by-one PUTs: bot allow first, then Unverified deny, then @everyone deny last, so the bot never loses View mid-run. */
 const hiddenBot = [bot(), role(ROLE.unverified, "0", VIEW), everyone("0", VIEW)];
+/** Live voice livestream in VIP (name matches the existing channel; do not recreate a text #pro-indicator). */
+export const PRO_INDICATOR_LIVE_NAME = "🔴 pro-indicator-live";
+const VIP_VOICE_ALLOW = bits(Perm.VIEW_CHANNEL, Perm.CONNECT, Perm.READ_MESSAGE_HISTORY);
+const VIP_VOICE_DENY = bits(Perm.SPEAK, Perm.STREAM, Perm.SEND_MESSAGES);
+const STAFF_VOICE = bits(Perm.VIEW_CHANNEL, Perm.CONNECT, Perm.SPEAK, Perm.STREAM, Perm.SEND_MESSAGES, Perm.READ_MESSAGE_HISTORY);
 
 export interface People {
   coachMikeUserIds: string[];
@@ -99,7 +109,20 @@ export function layout(p: People): CategorySpec[] {
       name: "VIP",
       access: hiddenBot,
       channels: [
-        { key: "pro_indicator", name: "pro-indicator", topic: SPEC_RISK_LINE, access: [...hidden, role(ROLE.vip, READ), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
+        // Live: voice channel '🔴 pro-indicator-live' (id 1573970781744922698, type 2) in VIP. Match by this name or by setup.out.json id; do not hardcode that id as the only lookup, and do not recreate a text #pro-indicator.
+        {
+          key: "pro_indicator",
+          name: PRO_INDICATOR_LIVE_NAME,
+          type: ChannelType.VOICE,
+          access: [
+            ...hidden,
+            role(ROLE.free, "0", VIEW),
+            role(ROLE.vip, VIP_VOICE_ALLOW, VIP_VOICE_DENY),
+            role(ROLE.coach, STAFF_VOICE),
+            role(ROLE.admin, STAFF_VOICE),
+            botVoice(),
+          ],
+        },
         { key: "ai_signals", name: "ai-signals", topic: SPEC_RISK_LINE, access: [...hidden, role(ROLE.vip, READ), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
       ],
     },
@@ -158,8 +181,8 @@ export interface PriorSetupIds {
 export interface Plan {
   roles: Array<{ name: string; action: "create" | "exists"; id?: string }>;
   categories: Array<{ name: string; action: "create" | "exists"; id?: string; access: OverwriteSpec[] }>;
-  channels: Array<{ key: string; name: string; category: string; topic?: string; action: "create" | "exists"; id?: string; access: OverwriteSpec[] }>;
-  /** Pre-existing channels/categories we do not own (e.g. Discord defaults): left in place, View denied. */
+  channels: Array<{ key: string; name: string; category: string; type: number; topic?: string; action: "create" | "exists"; id?: string; access: OverwriteSpec[] }>;
+  /** Pre-existing channels/categories we do not own (e.g. Discord defaults): left in place, View denied. Absent defaults are skipped (not created). */
   lockExisting: Array<{ id: string; name: string; type: number; access: OverwriteSpec[] }>;
   memberRoles: Array<{ userId: string; role: string }>;
   warnings: string[];
@@ -167,7 +190,9 @@ export interface Plan {
   blockers: string[];
 }
 
-/** Current known state of the Universe Unlimited guild (22 Nov 2026, per Jarvis). Used by offline --dry-run. */
+/** Offline dry-run fixture: a fresh guild with Discord's default categories/channels.
+ *  In the live UU guild those defaults were later deleted; locking them when they are
+ *  absent from the guild listing is a no-op (they are never recreated). */
 export function knownGuildState(guildId: string, botUserId: string): GuildState {
   return {
     roles: [
@@ -228,17 +253,23 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
       plan.categories.push({ name: cat.name, action: "create", access: cat.access });
     }
     for (const ch of cat.channels) {
+      const type = ch.type ?? ChannelType.TEXT;
       const e = chanByName.get(ch.name);
       const priorChId = priorChan[ch.key];
       if (e) {
-        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "exists", id: e.id, access: ch.access });
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, type, topic: ch.topic, action: "exists", id: e.id, access: ch.access });
+        if (e.type !== type) {
+          plan.warnings.push(
+            `Channel ${ch.name} (${e.id}) exists as type ${e.type}, expected type ${type}. Reusing it by name and re-applying overwrites; not creating a replacement.`,
+          );
+        }
       } else if (priorChId) {
-        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "exists", id: priorChId, access: ch.access });
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, type, topic: ch.topic, action: "exists", id: priorChId, access: ch.access });
         plan.warnings.push(
           `Channel #${ch.name} (${priorChId}) is not in the guild listing. Will reuse this id from setup.out.json and re-apply overwrites instead of creating a duplicate.`,
         );
       } else {
-        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "create", access: ch.access });
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, type, topic: ch.topic, action: "create", access: ch.access });
       }
     }
   }
@@ -347,7 +378,15 @@ export async function executePlan(
       await applyOverwrites(api, ch.id, ow, warnings, out);
       channelIds[ch.key] = ch.id;
     } else {
-      channelIds[ch.key] = (await api.createChannel({ name: ch.name, type: ChannelType.TEXT, topic: ch.topic, parent_id: categoryIds[ch.category], permission_overwrites: ow })).id;
+      channelIds[ch.key] = (
+        await api.createChannel({
+          name: ch.name,
+          type: ch.type ?? ChannelType.TEXT,
+          topic: ch.topic,
+          parent_id: categoryIds[ch.category],
+          permission_overwrites: ow,
+        })
+      ).id;
     }
     out(`${ch.action === "create" ? "created" : "exists "} #${ch.name}`);
     emit();
@@ -366,7 +405,7 @@ export async function executePlan(
   return { roleIds, channelIds, categoryIds, warnings };
 }
 
-/** Write overwrites one-by-one. A 404/10009 on a member overwrite (user not in the server) is a warning, not a stop. */
+/** Write overwrites one-by-one. A 10009/10007 on a member overwrite (user not in the server) is a warning, not a stop. A 404/10003 (unknown channel) is not treated as a missing member. */
 async function applyOverwrites(
   api: SetupApi,
   channelId: string,
@@ -381,7 +420,7 @@ async function applyOverwrites(
       const missing =
         o.type === 1 &&
         e instanceof DiscordError &&
-        (e.status === 404 || e.code === DiscordCode.UNKNOWN_OVERWRITE || e.code === DiscordCode.UNKNOWN_MEMBER);
+        (e.code === DiscordCode.UNKNOWN_OVERWRITE || e.code === DiscordCode.UNKNOWN_MEMBER);
       if (!missing) throw e;
       warnings.push(
         `WARNING: user ${o.id} is not in the server yet; skipped per-user overwrite on channel ${channelId}. A later rerun will add it once they have joined.`,
