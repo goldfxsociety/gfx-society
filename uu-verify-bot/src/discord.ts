@@ -24,6 +24,7 @@ export const DiscordCode = {
 } as const;
 
 export const Perm = {
+  MANAGE_CHANNELS: 1n << 4n,
   VIEW_CHANNEL: 1n << 10n,
   SEND_MESSAGES: 1n << 11n,
   EMBED_LINKS: 1n << 14n,

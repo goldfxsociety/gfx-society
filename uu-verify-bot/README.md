@@ -106,6 +106,12 @@ What setup does:
 - **Roles created:** Unverified, FREE, VIP, Sub-IB, Coach, Admin / Mod, Line: Coach Mike, Line: GFX.
   - Coach goes to both Coach Mike accounts. Admin / Mod goes to Ben.
 - **Categories:** START, COMMUNITY, VIP, IB LEADERS, ADMIN, REVIEWS. The full permission matrix is printed by the dry-run.
+  Hidden categories (and locked defaults) deny View to @everyone and Unverified, and **allow View + Manage Channels for the bot**
+  so the bot can still see them and create child channels (including auto-created `#review-{line}`).
+- **Idempotence:** setup matches existing categories/channels by name, or by id from `setup.out.json` if a hidden one is not
+  visible in the guild listing. `setup.out.json` is written as each role/channel is created, so a partial apply can be resumed.
+  If a sibling category already exists but a hidden one is missing from the listing and has no saved id, setup refuses to
+  create it (creating it would duplicate the hidden category).
 - **Role order:** after creating roles, setup warns if `UU Bot` sits below any role the bot assigns. It never reorders.
   An admin must drag `UU Bot` above FREE, VIP, Sub-IB, Unverified and all `Line:` roles.
 - **Bot permissions:** Manage Roles, Manage Channels, View Channels, Send Messages, Attach Files, Embed Links, Read Message History.

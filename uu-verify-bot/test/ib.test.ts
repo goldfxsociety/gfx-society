@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MSG, PRIVACY_NOTICE, SPEC_IB_APPROVED_FROM_CLIENT, SPEC_IB_APPROVED_NEW, deniedDm } from "../src/copy";
 import { handleInteraction } from "../src/handlers";
 import { CID } from "../src/payloads";
-import { VIEW, WRITE } from "../src/perms";
+import { BOT, VIEW, WRITE } from "../src/perms";
 import type { Application, IbLine } from "../src/types";
 import { button, clientSubmit, denySubmit, IDS, ibSubmit, world, type World } from "./helpers";
 
@@ -74,6 +74,7 @@ describe("IB ako: new IB", () => {
     expect(ow[IDS.member]).toMatchObject({ type: 1, allow: WRITE });
     expect(ow[IDS.coachRole]).toMatchObject({ type: 0, allow: WRITE });
     expect(ow[IDS.adminRole]).toMatchObject({ type: 0, allow: WRITE });
+    expect(ow[IDS.app]).toMatchObject({ type: 1, allow: BOT });
     expect(ow[IDS.ben]).toBeUndefined(); // upline has no standing access (escalations are re-posted)
     // ib_lines row: active, upline GFX, in the dropdown immediately
     const line = w.d1.one<IbLine>("SELECT * FROM ib_lines WHERE discord_user_id = ?", IDS.member);

@@ -1,8 +1,11 @@
 /**
  * Server setup planner (pure + an injectable executor), used by scripts/setup-server.ts and unit tests.
- * Creates the spec roles/channels from scratch, matches anything that already exists by name (idempotent),
- * leaves Discord's default categories/channels and the bot's managed role in place, and locks the defaults
- * by denying View Channel to @everyone and Unverified.
+ * Creates the spec roles/channels from scratch, matches anything that already exists by name or by id from
+ * a previous setup.out.json (idempotent), leaves Discord's default categories/channels and the bot's managed
+ * role in place, and locks the defaults by denying View Channel to @everyone and Unverified (bot keep-View).
+ * Hidden categories always include a bot allow (View + Manage Channels) so the bot can still see them after
+ * @everyone is denied View. If a sibling category already exists but a hidden one is not visible and has no
+ * saved id, planning fails fast instead of creating a duplicate.
  */
 import { SPEC_RISK_LINE } from "./copy";
 import { bits, type Overwrite, Perm } from "./discord";
@@ -49,6 +52,8 @@ const bot = (): OverwriteSpec => ({ target: { kind: "bot" }, allow: BOT, deny: "
 const SEND = bits(Perm.SEND_MESSAGES);
 const VERIFY_ALLOW = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.USE_APPLICATION_COMMANDS);
 const hidden = [everyone("0", VIEW), role(ROLE.unverified, "0", VIEW)];
+/** Hidden spaces also grant the bot View + Manage Channels (and the rest of BOT) so it can still see and manage them. */
+const hiddenBot = [...hidden, bot()];
 
 export interface People {
   coachMikeUserIds: string[];
@@ -80,7 +85,7 @@ export function layout(p: People): CategorySpec[] {
     },
     {
       name: "COMMUNITY",
-      access: hidden,
+      access: hiddenBot,
       channels: [
         { key: "education", name: "education", access: [...hidden, role(ROLE.free, READ), role(ROLE.vip, READ), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
         { key: "community", name: "community", access: [...hidden, role(ROLE.free, WRITE), role(ROLE.vip, WRITE), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
@@ -89,7 +94,7 @@ export function layout(p: People): CategorySpec[] {
     },
     {
       name: "VIP",
-      access: hidden,
+      access: hiddenBot,
       channels: [
         { key: "pro_indicator", name: "pro-indicator", topic: SPEC_RISK_LINE, access: [...hidden, role(ROLE.vip, READ), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
         { key: "ai_signals", name: "ai-signals", topic: SPEC_RISK_LINE, access: [...hidden, role(ROLE.vip, READ), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] },
@@ -97,17 +102,17 @@ export function layout(p: People): CategorySpec[] {
     },
     {
       name: "IB LEADERS",
-      access: hidden,
+      access: hiddenBot,
       channels: [{ key: "sub_ib_leaders", name: "sub-ib-leaders", access: [...hidden, role(ROLE.subIb, WRITE), role(ROLE.coach, WRITE), role(ROLE.admin, WRITE), bot()] }],
     },
     {
       name: "ADMIN",
-      access: hidden,
+      access: hiddenBot,
       channels: [{ key: "admin_log", name: "admin-log", topic: "Decisions, escalations, new lines, resets, errors.", access: [...hidden, role(ROLE.admin, READ), bot()] }],
     },
     {
       name: "REVIEWS",
-      access: hidden,
+      access: hiddenBot,
       channels: [
         { key: "review_coach_mike", name: "review-coach-mike", topic: "Private review channel: Coach Mike line.", access: reviewAccess(p.coachMikeUserIds) },
         { key: "review_gfx", name: "review-gfx", topic: "Private review channel: GFX line.", access: reviewAccess([p.benUserId]) },
@@ -137,6 +142,14 @@ export interface GuildState {
 export interface SetupIds extends People {
   guildId: string;
   botUserId: string;
+  /** Managed role where tags.bot_id == botUserId, if known. Bot overwrites prefer this role; otherwise the bot user. */
+  botRoleId?: string;
+}
+
+/** Ids from a previous setup.out.json, used when the bot cannot see already-created hidden categories. */
+export interface PriorSetupIds {
+  categoryIds?: Record<string, string>;
+  channelIds?: Record<string, string>;
 }
 
 export interface Plan {
@@ -147,6 +160,8 @@ export interface Plan {
   lockExisting: Array<{ id: string; name: string; type: number; access: OverwriteSpec[] }>;
   memberRoles: Array<{ userId: string; role: string }>;
   warnings: string[];
+  /** Fatal: --apply must not run (e.g. a hidden category is missing from the listing and has no saved id). */
+  blockers: string[];
 }
 
 /** Current known state of the Universe Unlimited guild (22 Nov 2026, per Jarvis). Used by offline --dry-run. */
@@ -181,31 +196,66 @@ export function roleOrderWarnings(roles: GuildRole[], botUserId: string): string
   ];
 }
 
-export function planSetup(state: GuildState, ids: SetupIds): Plan {
+export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupIds): Plan {
   const roleByName = new Map(state.roles.map((r) => [r.name, r]));
   const lay = layout(ids);
   const ourCategoryNames = new Set(lay.map((c) => c.name));
   const ourChannelNames = new Set(lay.flatMap((c) => c.channels.map((ch) => ch.name)));
   const catByName = new Map(state.channels.filter((c) => c.type === ChannelType.CATEGORY).map((c) => [c.name, c]));
   const chanByName = new Map(state.channels.filter((c) => c.type !== ChannelType.CATEGORY).map((c) => [c.name, c]));
+  const priorCat = known?.categoryIds ?? {};
+  const priorChan = known?.channelIds ?? {};
 
-  const plan: Plan = { roles: [], categories: [], channels: [], lockExisting: [], memberRoles: [], warnings: [] };
+  const plan: Plan = { roles: [], categories: [], channels: [], lockExisting: [], memberRoles: [], warnings: [], blockers: [] };
   for (const name of BASE_ROLES) {
     const r = roleByName.get(name);
     plan.roles.push(r ? { name, action: "exists", id: r.id } : { name, action: "create" });
   }
   for (const cat of lay) {
     const c = catByName.get(cat.name);
-    plan.categories.push(c ? { name: cat.name, action: "exists", id: c.id, access: cat.access } : { name: cat.name, action: "create", access: cat.access });
+    const priorId = priorCat[cat.name];
+    if (c) {
+      plan.categories.push({ name: cat.name, action: "exists", id: c.id, access: cat.access });
+    } else if (priorId) {
+      plan.categories.push({ name: cat.name, action: "exists", id: priorId, access: cat.access });
+      plan.warnings.push(
+        `Category ${cat.name} (${priorId}) is not in the guild listing (the bot may not be able to see it). Will reuse this id from setup.out.json and re-apply overwrites instead of creating a duplicate.`,
+      );
+    } else {
+      plan.categories.push({ name: cat.name, action: "create", access: cat.access });
+    }
     for (const ch of cat.channels) {
       const e = chanByName.get(ch.name);
-      plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: e ? "exists" : "create", id: e?.id, access: ch.access });
+      const priorChId = priorChan[ch.key];
+      if (e) {
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "exists", id: e.id, access: ch.access });
+      } else if (priorChId) {
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "exists", id: priorChId, access: ch.access });
+        plan.warnings.push(
+          `Channel #${ch.name} (${priorChId}) is not in the guild listing. Will reuse this id from setup.out.json and re-apply overwrites instead of creating a duplicate.`,
+        );
+      } else {
+        plan.channels.push({ key: ch.key, name: ch.name, category: cat.name, topic: ch.topic, action: "create", access: ch.access });
+      }
     }
   }
+  const existsCats = plan.categories.filter((c) => c.action === "exists");
+  const createCats = plan.categories.filter((c) => c.action === "create");
+  if (existsCats.length > 0 && createCats.length > 0) {
+    plan.blockers.push(
+      `Refusing to create ${createCats.length === 1 ? "category" : "categories"} ${createCats.map((c) => c.name).join(", ")}: ` +
+        `other setup ${existsCats.length === 1 ? "category already exists" : "categories already exist"} (${existsCats.map((c) => c.name).join(", ")}) ` +
+        `but the missing one(s) are not visible to the bot and have no id in setup.out.json. ` +
+        `They may already exist and be hidden (View denied for @everyone without a bot allow). ` +
+        `Grant the UU Bot role View and Manage Channels on ${createCats.map((c) => c.name).join(", ")}, or add their ids to setup.out.json, then rerun. ` +
+        `Creating them now would duplicate them.`,
+    );
+  }
   // Leave defaults (and anything else not ours) in place, but lock them: no View for @everyone / Unverified.
+  // The bot keeps View so it can still see the locked defaults.
   for (const c of state.channels) {
     const ours = c.type === ChannelType.CATEGORY ? ourCategoryNames.has(c.name) : ourChannelNames.has(c.name);
-    if (!ours) plan.lockExisting.push({ id: c.id, name: c.name, type: c.type, access: hidden });
+    if (!ours) plan.lockExisting.push({ id: c.id, name: c.name, type: c.type, access: hiddenBot });
   }
   for (const id of ids.coachMikeUserIds) plan.memberRoles.push({ userId: id, role: ROLE.coach });
   plan.memberRoles.push({ userId: ids.benUserId, role: ROLE.admin });
@@ -217,7 +267,10 @@ export function resolveOverwrites(access: OverwriteSpec[], roleIds: Record<strin
   return access.map((o) => {
     const t = o.target;
     if (t.kind === "everyone") return { id: ids.guildId, type: 0, allow: o.allow, deny: o.deny };
-    if (t.kind === "bot") return { id: ids.botUserId, type: 1, allow: o.allow, deny: o.deny };
+    if (t.kind === "bot") {
+      if (ids.botRoleId) return { id: ids.botRoleId, type: 0, allow: o.allow, deny: o.deny };
+      return { id: ids.botUserId, type: 1, allow: o.allow, deny: o.deny };
+    }
     if (t.kind === "user") return { id: t.id, type: 1, allow: o.allow, deny: o.deny };
     const id = roleIds[t.name];
     if (!id) throw new Error(`unknown role ${t.name}`);
@@ -252,13 +305,24 @@ export interface SetupResult {
 }
 
 /** Execute a plan. Idempotent: existing roles/channels are reused (their overwrites are re-applied additively). */
-export async function executePlan(plan: Plan, ids: SetupIds, api: SetupApi, out: (line: string) => void = () => undefined): Promise<SetupResult> {
+export async function executePlan(
+  plan: Plan,
+  ids: SetupIds,
+  api: SetupApi,
+  out: (line: string) => void = () => undefined,
+  onProgress?: (partial: SetupResult) => void,
+): Promise<SetupResult> {
+  if (plan.blockers.length) throw new Error(plan.blockers.join("\n"));
   const roleIds: Record<string, string> = {};
+  const categoryIds: Record<string, string> = {};
+  const channelIds: Record<string, string> = {};
+  const warnings: string[] = [];
+  const emit = () => onProgress?.({ roleIds: { ...roleIds }, channelIds: { ...channelIds }, categoryIds: { ...categoryIds }, warnings: [...warnings] });
   for (const r of plan.roles) {
     roleIds[r.name] = r.id ?? (await api.createRole(r.name)).id;
     out(`${r.action === "create" ? "created" : "exists "} role ${r.name}`);
+    emit();
   }
-  const categoryIds: Record<string, string> = {};
   for (const c of plan.categories) {
     const ow = resolveOverwrites(c.access, roleIds, ids);
     if (c.id) {
@@ -266,8 +330,8 @@ export async function executePlan(plan: Plan, ids: SetupIds, api: SetupApi, out:
       categoryIds[c.name] = c.id;
     } else categoryIds[c.name] = (await api.createChannel({ name: c.name, type: ChannelType.CATEGORY, permission_overwrites: ow })).id;
     out(`${c.action === "create" ? "created" : "exists "} category ${c.name}`);
+    emit();
   }
-  const channelIds: Record<string, string> = {};
   for (const ch of plan.channels) {
     const ow = resolveOverwrites(ch.access, roleIds, ids);
     if (ch.id) {
@@ -277,13 +341,13 @@ export async function executePlan(plan: Plan, ids: SetupIds, api: SetupApi, out:
       channelIds[ch.key] = (await api.createChannel({ name: ch.name, type: ChannelType.TEXT, topic: ch.topic, parent_id: categoryIds[ch.category], permission_overwrites: ow })).id;
     }
     out(`${ch.action === "create" ? "created" : "exists "} #${ch.name}`);
+    emit();
   }
   for (const l of plan.lockExisting) {
     for (const o of resolveOverwrites(l.access, roleIds, ids)) await api.putOverwrite(l.id, o);
     out(`locked existing ${l.type === ChannelType.CATEGORY ? "category" : "channel"} ${l.name} (View denied for @everyone, Unverified; not deleted)`);
   }
   // Role-order warnings are recomputed after the roles exist (see below).
-  const warnings: string[] = [];
   for (const m of plan.memberRoles) {
     const ok = await api.addMemberRole(m.userId, roleIds[m.role]!);
     if (!ok) warnings.push(`WARNING: user ${m.userId} is not in the server yet; give them '${m.role}' after they join.`);
