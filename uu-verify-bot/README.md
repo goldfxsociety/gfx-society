@@ -124,12 +124,20 @@ What setup does:
 
   `Education lang, not financial advice. Max 1% risk per trade.`
 
-  A rerun that already finds that verbatim message (including the live message `1573974320437403671` in
-  channel `1573970781744922698`) does not post another, even if a Coach or Admin has written below it. If the
-  line is missing or the previous bot text drifted, setup posts the verbatim line once. It does not delete
-  staff messages and does not try to keep the line first. Pinning is not attempted: Discord returns 50019
-  ("This message cannot be pinned in this channel") in voice-channel chat, even when the bot has
-  Administrator. `#ai-signals` still keeps the same risk line as its channel topic.
+  Matching is on **bot-authored** messages only. A rerun that already finds a bot message with that
+  verbatim text (for example a previous setup post) does not post another, even if a Coach or Admin has
+  written below it, including a staff copy of the same line. If the bot message is missing or the previous
+  bot text drifted, setup posts a bot copy once, even when a staff message already has the same text. It
+  does not delete staff messages, edit existing messages, or try to keep the line first. A drifted earlier
+  bot message may remain. Pinning is not attempted: Discord returns 50019 ("This message cannot be pinned
+  in this channel") in voice-channel chat, even when the bot has Administrator. The dry-run prints this
+  step and labels `🔴 pro-indicator-live` as a voice channel. An online dry-run also reports whether it
+  would post or skip after listing messages (GET-only). `#ai-signals` still keeps the same risk line as
+  its channel topic.
+
+  The live chat already has message `1573974320437403671` in channel `1573970781744922698` with this
+  wording; that line was posted by hand. If it is not authored by the bot, the next apply will post one
+  bot copy beside it and will not delete the existing message.
 - **Idempotence:** setup matches existing categories/channels by name, or by id from `setup.out.json` if a hidden one is not
   visible in the guild listing. `setup.out.json` is written as each role/channel is created, so a partial apply can be resumed.
   If a sibling category already exists but a hidden one is missing from the listing and has no saved id, setup refuses to

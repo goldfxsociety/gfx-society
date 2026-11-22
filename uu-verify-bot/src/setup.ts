@@ -11,9 +11,13 @@
  * is a warning, not a stop; a later rerun adds it once they have joined. A 404/10003 (unknown channel) is
  * not treated as a missing member. If a sibling category already exists but a hidden one is not visible and
  * has no saved id, planning fails fast instead of creating a duplicate.
- * After channels exist, setup posts the verbatim risk line once in 🔴 pro-indicator-live's text chat
- * (voice channels have no topic; pinning returns Discord 50019 and is not attempted). A rerun that
- * already finds that exact message leaves it in place, even if staff have written below it.
+ * After channels exist, setup ensures exactly one bot-authored verbatim risk line in
+ * 🔴 pro-indicator-live's text chat (voice channels have no topic; pinning returns Discord
+ * 50019 and is not attempted). Matching is on bot messages only, not staff. If a bot-authored
+ * verbatim message already exists, a rerun leaves it in place, even if staff have written below
+ * it. If it is missing or the previous bot text drifted, setup posts a bot copy (including when
+ * only staff already posted the same text). It does not delete staff messages, edit existing
+ * messages, or pin. A drifted earlier bot message may remain.
  */
 import { SPEC_RISK_LINE } from "./copy";
 import { bits, DiscordCode, DiscordError, type Overwrite, Perm } from "./discord";
@@ -182,6 +186,13 @@ export interface PriorSetupIds {
   channelIds?: Record<string, string>;
 }
 
+export interface RiskLinePlan {
+  channelKey: "pro_indicator";
+  name: string;
+  type: number;
+  summary: string[];
+}
+
 export interface Plan {
   roles: Array<{ name: string; action: "create" | "exists"; id?: string }>;
   categories: Array<{ name: string; action: "create" | "exists"; id?: string; access: OverwriteSpec[] }>;
@@ -189,6 +200,8 @@ export interface Plan {
   /** Pre-existing channels/categories we do not own (e.g. Discord defaults): left in place, View denied. Absent defaults are skipped (not created). */
   lockExisting: Array<{ id: string; name: string; type: number; access: OverwriteSpec[] }>;
   memberRoles: Array<{ userId: string; role: string }>;
+  /** Offline-safe description of the voice-channel risk-line step (no message listing). */
+  riskLine: RiskLinePlan;
   warnings: string[];
   /** Fatal: --apply must not run (e.g. a hidden category is missing from the listing and has no saved id). */
   blockers: string[];
@@ -238,7 +251,16 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
   const priorCat = known?.categoryIds ?? {};
   const priorChan = known?.channelIds ?? {};
 
-  const plan: Plan = { roles: [], categories: [], channels: [], lockExisting: [], memberRoles: [], warnings: [], blockers: [] };
+  const plan: Plan = {
+    roles: [],
+    categories: [],
+    channels: [],
+    lockExisting: [],
+    memberRoles: [],
+    riskLine: voiceRiskLinePlan(),
+    warnings: [],
+    blockers: [],
+  };
   for (const name of BASE_ROLES) {
     const r = roleByName.get(name);
     plan.roles.push(r ? { name, action: "exists", id: r.id } : { name, action: "create" });
@@ -333,6 +355,47 @@ export function permissionMatrix(plan: Plan): Array<{ channel: string; viewers: 
   }));
 }
 
+/** Dry-run channel label. Voice channels include a type/voice marker so they are not printed as #text. */
+export function channelPlanLabel(ch: { name: string; type: number; topic?: string }): string {
+  const name = ch.type === ChannelType.VOICE ? ch.name : `#${ch.name}`;
+  const kind =
+    ch.type === ChannelType.VOICE ? "voice, type 2" : ch.type === ChannelType.CATEGORY ? `category, type ${ch.type}` : ch.type === ChannelType.TEXT ? undefined : `type ${ch.type}`;
+  const extras = [kind, ch.topic ? `topic: ${ch.topic}` : undefined].filter((x): x is string => !!x);
+  return extras.length ? `${name}  (${extras.join("; ")})` : name;
+}
+
+export function voiceRiskLinePlan(): RiskLinePlan {
+  return {
+    channelKey: "pro_indicator",
+    name: PRO_INDICATOR_LIVE_NAME,
+    type: ChannelType.VOICE,
+    summary: [
+      `Ensure exactly one bot-authored message with:`,
+      SPEC_RISK_LINE,
+      "Would post a bot copy if none exists (including when only staff already posted that text, or the previous bot text drifted; a drifted earlier bot message is left in place).",
+      "Would skip if a bot-authored verbatim line is already present.",
+      "Would not delete staff messages, edit existing messages, or pin.",
+    ],
+  };
+}
+
+export function formatRiskLinePlan(risk: RiskLinePlan, inspected?: RiskLineDecision): string[] {
+  const lines = [`Risk line (${risk.name}, voice, type ${risk.type}):`, ...risk.summary.map((l) => `  ${l}`)];
+  if (inspected) lines.push(`  ${describeRiskLineDecision(inspected)}`);
+  return lines;
+}
+
+export type RiskLineDecision =
+  | { action: "skip"; reason: "exists"; messageId: string }
+  | { action: "post"; reason: "missing" | "drifted" | "staff-only" };
+
+export function describeRiskLineDecision(d: RiskLineDecision): string {
+  if (d.action === "skip") return `Would skip (bot message ${d.messageId} already has the verbatim line).`;
+  if (d.reason === "drifted") return "Would post a new bot copy (previous bot text drifted; that earlier bot message is left in place).";
+  if (d.reason === "staff-only") return "Would post a bot copy (only a staff message currently has the verbatim line; staff messages are left in place).";
+  return "Would post a bot copy (no bot-authored verbatim line found).";
+}
+
 export interface SetupMessage {
   id: string;
   content: string;
@@ -361,42 +424,56 @@ export interface SetupResult {
 const RISK_LINE_PAGE = 100;
 
 /**
- * Post the verbatim risk line in a voice channel's text chat if it is not already there.
- * Idempotent: any existing message with that exact text (including the live bot message
- * 1573974320437403671 in 1573970781744922698) means we do not post again, even when later
- * staff messages sit below it. If the line is missing or the previous bot text drifted, post
- * the verbatim line once. Do not delete staff messages, do not edit existing messages, and
- * do not attempt to pin (Discord 50019 in voice-channel chat, even with Administrator).
+ * Ensure exactly one bot-authored verbatim risk line in a voice channel's text chat.
+ * Idempotent: a bot-authored message with that exact text means we do not post again,
+ * even when later staff messages sit below it (including a staff copy of the same line).
+ * Matching is on the setup bot / application user only. If the bot message is missing
+ * or the previous bot text drifted, post a bot copy once, even if a staff message
+ * already has the same text. Do not delete staff messages, do not edit existing
+ * messages, and do not attempt to pin (Discord 50019 in voice-channel chat, even
+ * with Administrator). A drifted earlier bot message may remain.
  */
 export async function ensureVoiceRiskLine(
   channelId: string,
+  botUserId: string,
   api: Pick<SetupApi, "listMessages" | "createMessage">,
   out: (line: string) => void = () => undefined,
 ): Promise<{ action: "exists" | "posted"; messageId: string }> {
-  const existing = await findVerbatimRiskLine(channelId, api);
-  if (existing) {
-    out(`risk line already in ${channelId} (${existing.id}); not posting a duplicate`);
-    return { action: "exists", messageId: existing.id };
+  const decision = await inspectVoiceRiskLine(channelId, botUserId, api);
+  if (decision.action === "skip") {
+    out(`risk line already in ${channelId} (bot message ${decision.messageId}); not posting a duplicate`);
+    return { action: "exists", messageId: decision.messageId };
   }
   const posted = await api.createMessage(channelId, SPEC_RISK_LINE);
   out(`posted risk line in ${channelId} (${posted.id})`);
   return { action: "posted", messageId: posted.id };
 }
 
-async function findVerbatimRiskLine(
+/** Decide whether to post or skip. Scans all pages so a staff verbatim line cannot hide a later bot copy, or vice versa. */
+export async function inspectVoiceRiskLine(
   channelId: string,
+  botUserId: string,
   api: Pick<SetupApi, "listMessages">,
-): Promise<SetupMessage | undefined> {
+): Promise<RiskLineDecision> {
   let before: string | undefined;
+  let sawDriftedBot = false;
+  let sawStaffVerbatim = false;
   for (;;) {
     const page = await api.listMessages(channelId, { limit: RISK_LINE_PAGE, before });
-    const hit = page.find((m) => m.content === SPEC_RISK_LINE);
-    if (hit) return hit;
-    if (page.length < RISK_LINE_PAGE) return undefined;
+    for (const m of page) {
+      const isBot = m.author.id === botUserId;
+      if (isBot && m.content === SPEC_RISK_LINE) return { action: "skip", reason: "exists", messageId: m.id };
+      if (isBot) sawDriftedBot = true;
+      else if (m.content === SPEC_RISK_LINE) sawStaffVerbatim = true;
+    }
+    if (page.length < RISK_LINE_PAGE) break;
     const last = page[page.length - 1];
-    if (!last || last.id === before) return undefined;
+    if (!last || last.id === before) break;
     before = last.id;
   }
+  if (sawDriftedBot) return { action: "post", reason: "drifted" };
+  if (sawStaffVerbatim) return { action: "post", reason: "staff-only" };
+  return { action: "post", reason: "missing" };
 }
 
 /** Execute a plan. Idempotent: existing roles/channels are reused (their overwrites are re-applied additively). */
@@ -460,7 +537,7 @@ export async function executePlan(
   if (!riskChannelId) {
     warnings.push("WARNING: pro_indicator channel id is missing; skipped posting the voice-channel risk line.");
   } else {
-    await ensureVoiceRiskLine(riskChannelId, api, out);
+    await ensureVoiceRiskLine(riskChannelId, ids.botUserId, api, out);
   }
   warnings.push(...roleOrderWarnings(await api.listRoles(), ids.botUserId));
   return { roleIds, channelIds, categoryIds, warnings };

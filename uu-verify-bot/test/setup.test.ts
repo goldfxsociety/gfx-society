@@ -6,10 +6,13 @@ import { BOT, BOT_VOICE, reviewChannelOverwrites } from "../src/perms";
 import {
   BASE_ROLES,
   ChannelType,
+  channelPlanLabel,
   ensureVoiceRiskLine,
   executePlan,
+  formatRiskLinePlan,
   type GuildRole,
   type GuildState,
+  inspectVoiceRiskLine,
   knownGuildState,
   permissionMatrix,
   planSetup,
@@ -55,8 +58,10 @@ describe("setup-server --dry-run plan", () => {
         { target: { kind: "everyone" }, allow: "0", deny: (1n << 10n).toString() },
       ]);
     }
-    // Nothing in the plan deletes or renames them.
-    expect(JSON.stringify(plan)).not.toMatch(/delete|rename/i);
+    // Nothing in the plan deletes or renames them (risk-line copy may mention "delete").
+    const actions = [...plan.roles, ...plan.categories, ...plan.channels].map((x) => x.action);
+    expect(actions.every((a) => a === "create" || a === "exists")).toBe(true);
+    expect(plan.lockExisting.map((l) => l.name).sort()).toEqual(["General", "Text Channels", "Voice Channels", "general"].sort());
   });
 
   it("Unverified sees ONLY #start-here and #verify", () => {
@@ -104,6 +109,39 @@ describe("setup-server --dry-run plan", () => {
     expect(again.roles.every((r) => r.action === "exists")).toBe(true);
     expect(again.channels.every((c) => c.action === "exists")).toBe(true);
     expect(again.lockExisting.map((l) => l.name).sort()).toEqual(["General", "Text Channels", "Voice Channels", "general"].sort());
+  });
+
+  it("dry-run labels 🔴 pro-indicator-live as a voice channel (type 2)", () => {
+    const ch = plan.channels.find((c) => c.key === "pro_indicator")!;
+    expect(ch.type).toBe(ChannelType.VOICE);
+    expect(channelPlanLabel(ch)).toBe(`${PRO_INDICATOR_LIVE_NAME}  (voice, type 2)`);
+    expect(channelPlanLabel(ch)).not.toMatch(/^#/);
+    const signals = plan.channels.find((c) => c.key === "ai_signals")!;
+    expect(channelPlanLabel(signals)).toContain("#ai-signals");
+    expect(channelPlanLabel(signals)).toContain("topic:");
+    expect(channelPlanLabel(signals)).not.toContain("voice");
+  });
+
+  it("dry-run plan describes the voice-channel risk-line step", () => {
+    expect(plan.riskLine).toMatchObject({
+      channelKey: "pro_indicator",
+      name: PRO_INDICATOR_LIVE_NAME,
+      type: ChannelType.VOICE,
+    });
+    const lines = formatRiskLinePlan(plan.riskLine);
+    expect(lines[0]).toBe(`Risk line (${PRO_INDICATOR_LIVE_NAME}, voice, type 2):`);
+    expect(lines.join("\n")).toContain(SPEC_RISK_LINE);
+    expect(lines.join("\n")).toMatch(/Would post a bot copy if none exists/);
+    expect(lines.join("\n")).toMatch(/Would skip if a bot-authored verbatim line is already present/);
+    expect(lines.join("\n")).toMatch(/Would not delete staff messages/);
+    const skipped = formatRiskLinePlan(plan.riskLine, { action: "skip", reason: "exists", messageId: "MSG_BOT" });
+    expect(skipped.at(-1)).toBe("  Would skip (bot message MSG_BOT already has the verbatim line).");
+    const staffOnly = formatRiskLinePlan(plan.riskLine, { action: "post", reason: "staff-only" });
+    expect(staffOnly.at(-1)).toContain("Would post a bot copy (only a staff message currently has the verbatim line");
+    const script = readFileSync(new URL("../scripts/setup-server.ts", import.meta.url), "utf8");
+    expect(script).toContain("channelPlanLabel");
+    expect(script).toContain("formatRiskLinePlan");
+    expect(script).toContain("inspectVoiceRiskLine");
   });
 });
 
@@ -655,7 +693,7 @@ function riskApi(messages: SetupMessage[] = []) {
 describe("voice-channel risk line", () => {
   it("posts the verbatim risk line once when the voice chat has no matching message", async () => {
     const api = riskApi([laterStaff]);
-    const res = await ensureVoiceRiskLine("CH_pro_indicator", api);
+    const res = await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, api);
     expect(res.action).toBe("posted");
     expect(api.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
     expect(api.posts).toHaveLength(1);
@@ -663,40 +701,66 @@ describe("voice-channel risk line", () => {
     expect(api.deleted).toEqual([]);
   });
 
-  it("does not post a second copy when the exact bot message already exists, even with later staff messages below it", async () => {
-    // Discord returns newest first: staff chat sits above the existing risk line.
-    const api = riskApi([laterStaff, LIVE_RISK_MESSAGE]);
-    const res = await ensureVoiceRiskLine("CH_pro_indicator", api);
+  it("does not post a second copy when a bot-authored verbatim line already exists, even with later staff messages below it", async () => {
+    // Discord returns newest first: staff chat (including a staff copy of the same line) sits above the bot line.
+    const staffCopy: SetupMessage = { id: "STAFF_SAME", content: SPEC_RISK_LINE, author: { id: ids.benUserId } };
+    const api = riskApi([laterStaff, staffCopy, LIVE_RISK_MESSAGE]);
+    const res = await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, api);
     expect(res).toEqual({ action: "exists", messageId: LIVE_RISK_MESSAGE.id });
     expect(api.posts).toEqual([]);
-    expect(api.list).toEqual([laterStaff, LIVE_RISK_MESSAGE]);
+    expect(api.list).toEqual([laterStaff, staffCopy, LIVE_RISK_MESSAGE]);
+    expect(api.deleted).toEqual([]);
+    await expect(inspectVoiceRiskLine("CH_pro_indicator", ids.botUserId, api)).resolves.toEqual({
+      action: "skip",
+      reason: "exists",
+      messageId: LIVE_RISK_MESSAGE.id,
+    });
+  });
+
+  it("posts a bot copy when only a staff message has the verbatim line, without deleting the staff message", async () => {
+    const staffOnly: SetupMessage = { id: "STAFF_LINE", content: SPEC_RISK_LINE, author: { id: ids.benUserId } };
+    const api = riskApi([laterStaff, staffOnly]);
+    await expect(inspectVoiceRiskLine("CH_pro_indicator", ids.botUserId, api)).resolves.toEqual({
+      action: "post",
+      reason: "staff-only",
+    });
+    const res = await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, api);
+    expect(res.action).toBe("posted");
+    expect(api.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(api.list.map((m) => m.id)).toEqual(["POSTED_1", "STAFF_LATER", "STAFF_LINE"]);
+    expect(api.list.find((m) => m.id === "STAFF_LINE")).toEqual(staffOnly);
     expect(api.deleted).toEqual([]);
   });
 
-  it("restores the verbatim line when it is missing or the existing bot text has drifted, without deleting staff messages", async () => {
+  it("posts a new bot copy when the previous bot text has drifted, leaving the drifted message and staff messages in place", async () => {
     const drifted: SetupMessage = {
       id: "DRIFTED_BOT",
       content: "Education lang ito, not financial advice.",
       author: { id: ids.botUserId },
     };
     const missing = riskApi([laterStaff]);
-    const missingRes = await ensureVoiceRiskLine("CH_pro_indicator", missing);
+    const missingRes = await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, missing);
     expect(missingRes.action).toBe("posted");
     expect(missing.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
     expect(missing.list.map((m) => m.id)).toContain("STAFF_LATER");
     expect(missing.deleted).toEqual([]);
 
     const driftedApi = riskApi([laterStaff, drifted]);
-    const driftedRes = await ensureVoiceRiskLine("CH_pro_indicator", driftedApi);
+    await expect(inspectVoiceRiskLine("CH_pro_indicator", ids.botUserId, driftedApi)).resolves.toEqual({
+      action: "post",
+      reason: "drifted",
+    });
+    const driftedRes = await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, driftedApi);
     expect(driftedRes.action).toBe("posted");
     expect(driftedApi.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
     expect(driftedApi.list.map((m) => m.id)).toEqual(["POSTED_1", "STAFF_LATER", "DRIFTED_BOT"]);
+    expect(driftedApi.list.find((m) => m.id === "DRIFTED_BOT")).toEqual(drifted);
     expect(driftedApi.deleted).toEqual([]);
   });
 
   it("never calls a pin endpoint (Discord 50019 in voice-channel chat, even with Administrator)", async () => {
     const api = riskApi([]);
-    await ensureVoiceRiskLine("CH_pro_indicator", api);
+    await ensureVoiceRiskLine("CH_pro_indicator", ids.botUserId, api);
     expect(api.calls.every((c) => c === "listMessages" || c === "createMessage")).toBe(true);
     const src = [
       readFileSync(new URL("../src/setup.ts", import.meta.url), "utf8"),
@@ -705,6 +769,7 @@ describe("voice-channel risk line", () => {
     ].join("\n");
     expect(src).not.toMatch(/\/pins\//);
     expect(src).not.toMatch(/pinMessage/);
+    expect(src).not.toMatch(/editMessage/);
   });
 
   it("VIP still cannot Send, Speak, or Stream; #ai-signals keeps the risk line as a topic", () => {
@@ -724,7 +789,7 @@ describe("voice-channel risk line", () => {
     expect(signals.type ?? ChannelType.TEXT).toBe(ChannelType.TEXT);
   });
 
-  it("executePlan posts once when the line is missing and skips when the live message is already there", async () => {
+  it("executePlan posts once when the line is missing and skips when a bot-authored verbatim line is already there", async () => {
     const plan = planSetup(realizedState(), ids);
 
     const first = recordingApi(async () => undefined);
@@ -740,5 +805,14 @@ describe("voice-channel risk line", () => {
     expect(again.posts).toEqual([]);
     expect(again.calls.filter((c) => c === "createMessage")).toHaveLength(0);
     expect(again.calls.some((c) => /pin/i.test(c))).toBe(false);
+
+    const staffOnly = recordingApi(async () => undefined);
+    staffOnly.seedMessages("CH_pro_indicator", [
+      laterStaff,
+      { id: "STAFF_LINE", content: SPEC_RISK_LINE, author: { id: ids.benUserId } },
+    ]);
+    await executePlan(plan, ids, staffOnly);
+    expect(staffOnly.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(staffOnly.calls.filter((c) => c === "createMessage")).toHaveLength(1);
   });
 });
