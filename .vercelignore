@@ -1,3 +1,5 @@
 # The Discord verification bot is a separate Cloudflare Worker (own package.json, secrets and deploy).
 # Keep it out of the website's Vercel uploads/builds.
 discord-verify-bot/
+# The Universe Unlimited onboarding bot is also a separate Cloudflare Worker.
+uu-verify-bot/
