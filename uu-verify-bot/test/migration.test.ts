@@ -30,7 +30,7 @@ describe("D1 migration 0001 + verify + revert", () => {
     bad(`INSERT INTO members (discord_user_id, tier) VALUES ('${IDS.member}', 'gold')`);
     d.sqlite.exec(`INSERT INTO ib_lines (slug, display_name, discord_user_id) VALUES ('coach-mike', 'Coach Mike', '${IDS.coach1}')`);
     bad(`INSERT INTO ib_lines (slug, display_name, discord_user_id) VALUES ('other-top', 'Other', '${IDS.ben}')`);
-    bad(`INSERT INTO ib_lines (slug, display_name, discord_user_id, accm_ib_email, upline_line_id) VALUES ('gfx', 'GFX', '${IDS.ben}', 'GoldFX.Society@gmail.com', 1)`);
+    bad(`INSERT INTO ib_lines (slug, display_name, discord_user_id, accm_ib_email, upline_line_id) VALUES ('gfx', 'Ben', '${IDS.ben}', 'GoldFX.Society@gmail.com', 1)`);
     const app = (id: string, status = "pending") =>
       `INSERT INTO applications (id, applicant_discord_id, type, accm_user_id, status) VALUES ('${id}', '${IDS.member}', 'free', '123456', '${status}')`;
     d.sqlite.exec(app("700000000000000001"));
@@ -63,9 +63,9 @@ describe("D1 migration 0001 + verify + revert", () => {
     d.sqlite.exec(sql);
     d.sqlite.exec(sql);
     expect(results(d, "sql/seed_verify.sql").every((x) => x.result === "ok")).toBe(true);
-    expect(d.rows("SELECT slug, discord_user_id, upline_line_id FROM ib_lines ORDER BY id")).toEqual([
-      { slug: "coach-mike", discord_user_id: IDS.coach1, upline_line_id: null },
-      { slug: "gfx", discord_user_id: IDS.ben, upline_line_id: 1 },
+    expect(d.rows("SELECT slug, display_name, discord_user_id, upline_line_id FROM ib_lines ORDER BY id")).toEqual([
+      { slug: "coach-mike", display_name: "Coach Mike", discord_user_id: IDS.coach1, upline_line_id: null },
+      { slug: "gfx", display_name: "Ben", discord_user_id: IDS.ben, upline_line_id: 1 },
     ]);
   });
 });

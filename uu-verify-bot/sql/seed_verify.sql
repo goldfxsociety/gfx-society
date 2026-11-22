@@ -10,6 +10,6 @@ SELECT 'coach_mike_top' AS check_name,
 
 SELECT 'gfx_under_coach_mike' AS check_name,
        CASE WHEN (SELECT count(*) FROM ib_lines g JOIN ib_lines c ON c.id = g.upline_line_id
-                  WHERE g.slug = 'gfx' AND c.slug = 'coach-mike' AND g.active = 1
+                  WHERE g.slug = 'gfx' AND g.display_name = 'Ben' AND c.slug = 'coach-mike' AND g.active = 1
                   AND g.accm_ib_email = 'goldfx.society@gmail.com'
                   AND g.role_id IS NOT NULL AND g.review_channel_id IS NOT NULL) = 1 THEN 'ok' ELSE 'FAIL' END AS result;

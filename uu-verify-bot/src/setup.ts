@@ -402,7 +402,7 @@ VALUES ('coach-mike', 'Coach Mike', ${sqlStr(primary)}, ${sqlStr(p.coachMikeIbEm
 ON CONFLICT (slug) DO UPDATE SET discord_user_id = excluded.discord_user_id, accm_ib_email = excluded.accm_ib_email,
   role_id = excluded.role_id, review_channel_id = excluded.review_channel_id, is_seed = 1, active = 1;
 INSERT INTO ib_lines (slug, display_name, discord_user_id, accm_ib_email, upline_line_id, role_id, review_channel_id, is_seed, active)
-VALUES ('gfx', 'GFX', ${sqlStr(p.benUserId)}, 'goldfx.society@gmail.com', (SELECT id FROM ib_lines WHERE slug = 'coach-mike'), ${sqlStr(r.roleIds[ROLE.lineGfx]!)}, ${sqlStr(r.channelIds.review_gfx!)}, 1, 1)
+VALUES ('gfx', 'Ben', ${sqlStr(p.benUserId)}, 'goldfx.society@gmail.com', (SELECT id FROM ib_lines WHERE slug = 'coach-mike'), ${sqlStr(r.roleIds[ROLE.lineGfx]!)}, ${sqlStr(r.channelIds.review_gfx!)}, 1, 1)
 ON CONFLICT (slug) DO UPDATE SET discord_user_id = excluded.discord_user_id, accm_ib_email = excluded.accm_ib_email,
   upline_line_id = excluded.upline_line_id, role_id = excluded.role_id, review_channel_id = excluded.review_channel_id, is_seed = 1, active = 1;
 `;

@@ -60,9 +60,9 @@ Mag-reverify para maibalik ang VIP.`;
 
 export const SPEC_TRANSFER = `Hindi ka pa under sa tree ni Coach Mike, kaya hindi ka pa makakapasok sa community.
 
-Para makasali, mag-transfer ka under sa GFX line. I-email sa csse@accmfx.com at roselle@accmfx.com, subject: For Transfer IB. IB email: goldfx.society@gmail.com.
+Para makasali, mag-transfer ka under kay Ben. I-email sa csse@accmfx.com at roselle@accmfx.com, subject: For Transfer IB. IB email: goldfx.society@gmail.com.
 
-Kapag complete na ang transfer, bumalik sa #verify at piliin ang GFX line.`;
+Kapag complete na ang transfer, bumalik sa #verify at piliin si Ben sa dropdown.`;
 
 export const SPEC_WRONG_IB = `Hindi ito ang tamang referring IB. I-submit ulit at piliin ang tamang IB sa dropdown.`;
 

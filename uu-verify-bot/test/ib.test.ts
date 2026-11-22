@@ -25,7 +25,7 @@ describe("IB ako: modal", () => {
     expect(r.type).toBe(9);
     expect(r.data.components[0]).toEqual({ type: 10, content: PRIVACY_NOTICE });
     expect(r.data.components[1].component.custom_id).toBe(CID.fEmail);
-    expect(r.data.components[2].component.options.map((o: any) => o.label)).toEqual(["Coach Mike", "GFX"]);
+    expect(r.data.components[2].component.options.map((o: any) => o.label)).toEqual(["Ben", "Coach Mike"]);
     expect(JSON.stringify(r)).not.toContain("@gmail.com");
   });
 
@@ -128,7 +128,7 @@ describe("IB ako: existing client becomes sub-IB (spec §6)", () => {
     await run(w, i);
     const app = appOf(w, i.id);
     expect(app.flags).toContain("upline_differs");
-    expect(w.fake.messages.get(app.review_message_id!)!.content).toContain("current referring IB on record ay GFX");
+    expect(w.fake.messages.get(app.review_message_id!)!.content).toContain("current referring IB on record ay Ben");
   });
 });
 
