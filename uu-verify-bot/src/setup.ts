@@ -1,8 +1,10 @@
 /**
  * Server setup planner (pure + an injectable executor), used by scripts/setup-server.ts and unit tests.
  * Creates the spec roles/channels from scratch, matches anything that already exists by name or by id from
- * a previous setup.out.json (idempotent), leaves Discord's default categories/channels and the bot's managed
- * role in place, and locks the defaults by denying View Channel to @everyone and Unverified (bot keep-View).
+ * a previous setup.out.json (idempotent). The gfx line role's canonical name is 'Line: Ben';
+ * a leftover 'Line: GFX' is reused as the same role and is not renamed. Leaves Discord's
+ * default categories/channels and the bot's managed role in place, and locks the defaults
+ * by denying View Channel to @everyone and Unverified (bot keep-View).
  * Hidden categories always include a bot allow (View + Manage Channels) so the bot can still see them after
  * @everyone is denied View. When overwrites are applied one-by-one, the bot allow is written first and the
  * @everyone deny last, so the bot never loses View mid-run (denying @everyone first caused 403/50001 while
@@ -31,11 +33,53 @@ export const ROLE = {
   coach: "Coach",
   admin: "Admin / Mod",
   lineCoachMike: "Line: Coach Mike",
-  lineGfx: "Line: GFX",
+  lineGfx: "Line: Ben",
 } as const;
 export const BASE_ROLES: string[] = Object.values(ROLE);
 /** Roles the bot assigns or removes at runtime (must sit BELOW the bot's managed role). */
 export const BOT_MANAGED_ROLES: string[] = [ROLE.unverified, ROLE.free, ROLE.vip, ROLE.subIb, ROLE.coach, ROLE.admin, ROLE.lineCoachMike, ROLE.lineGfx];
+/** Legacy Discord names still treated as the same role. gfx line only; setup does not rename live roles or create a second one. */
+export const ROLE_ALIASES: Record<string, readonly string[]> = {
+  [ROLE.lineGfx]: ["Line: GFX"],
+};
+
+function namesForRole(canonical: string): string[] {
+  return [canonical, ...(ROLE_ALIASES[canonical] ?? [])];
+}
+
+function isBotManagedRoleName(name: string): boolean {
+  return BOT_MANAGED_ROLES.includes(name) || Object.values(ROLE_ALIASES).some((aliases) => aliases.includes(name));
+}
+
+function priorIdForRole(canonical: string, prior: Record<string, string>): string | undefined {
+  for (const key of namesForRole(canonical)) {
+    if (prior[key]) return prior[key];
+  }
+  return undefined;
+}
+
+/** Saved setup.out.json id first, then the canonical name, then any legacy alias. */
+function matchExistingRole(
+  canonical: string,
+  roleByName: Map<string, GuildRole>,
+  roleById: Map<string, GuildRole>,
+  prior: Record<string, string>,
+): { role?: GuildRole; duplicates: GuildRole[] } {
+  const savedId = priorIdForRole(canonical, prior);
+  const saved = savedId ? roleById.get(savedId) : undefined;
+  const exact = roleByName.get(canonical);
+  const aliasHits = (ROLE_ALIASES[canonical] ?? []).map((alias) => roleByName.get(alias)).filter((r): r is GuildRole => !!r);
+  const role = saved ?? exact ?? aliasHits[0];
+  const seen = new Set<string>();
+  const all: GuildRole[] = [];
+  for (const r of [saved, exact, ...aliasHits]) {
+    if (r && !seen.has(r.id)) {
+      seen.add(r.id);
+      all.push(r);
+    }
+  }
+  return { role, duplicates: all.filter((r) => r.id !== role?.id) };
+}
 
 export const ChannelType = { TEXT: 0, VOICE: 2, CATEGORY: 4 } as const;
 
@@ -184,6 +228,7 @@ export interface SetupIds extends People {
 export interface PriorSetupIds {
   categoryIds?: Record<string, string>;
   channelIds?: Record<string, string>;
+  roleIds?: Record<string, string>;
 }
 
 export interface RiskLinePlan {
@@ -233,7 +278,7 @@ export function botRole(roles: GuildRole[], botUserId: string): GuildRole | unde
 export function roleOrderWarnings(roles: GuildRole[], botUserId: string): string[] {
   const b = botRole(roles, botUserId);
   if (!b) return ["WARNING: the bot's managed role ('UU Bot') was not found. Is the bot in the server?"];
-  const blocked = roles.filter((r) => BOT_MANAGED_ROLES.includes(r.name) && r.position >= b.position).map((r) => r.name);
+  const blocked = roles.filter((r) => isBotManagedRoleName(r.name) && r.position >= b.position).map((r) => r.name);
   if (blocked.length === 0) return [];
   return [
     `WARNING: '${b.name}' sits below role(s) the bot must assign: ${blocked.join(", ")}. ` +
@@ -243,6 +288,7 @@ export function roleOrderWarnings(roles: GuildRole[], botUserId: string): string
 
 export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupIds): Plan {
   const roleByName = new Map(state.roles.map((r) => [r.name, r]));
+  const roleById = new Map(state.roles.map((r) => [r.id, r]));
   const lay = layout(ids);
   const ourCategoryNames = new Set(lay.map((c) => c.name));
   const ourChannelNames = new Set(lay.flatMap((c) => c.channels.map((ch) => ch.name)));
@@ -250,6 +296,7 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
   const chanByName = new Map(state.channels.filter((c) => c.type !== ChannelType.CATEGORY).map((c) => [c.name, c]));
   const priorCat = known?.categoryIds ?? {};
   const priorChan = known?.channelIds ?? {};
+  const priorRole = known?.roleIds ?? {};
 
   const plan: Plan = {
     roles: [],
@@ -262,8 +309,23 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
     blockers: [],
   };
   for (const name of BASE_ROLES) {
-    const r = roleByName.get(name);
-    plan.roles.push(r ? { name, action: "exists", id: r.id } : { name, action: "create" });
+    const match = matchExistingRole(name, roleByName, roleById, priorRole);
+    if (match.role) {
+      plan.roles.push({ name, action: "exists", id: match.role.id });
+      if (match.role.name !== name && match.duplicates.length === 0) {
+        plan.warnings.push(
+          `Role '${match.role.name}' (${match.role.id}) matches '${name}' as a legacy name. Reusing it; not renaming and not creating a second role.`,
+        );
+      }
+      if (match.duplicates.length) {
+        const listed = [match.role, ...match.duplicates].map((r) => `'${r.name}' (${r.id})`).join(" and ");
+        plan.warnings.push(
+          `WARNING: both ${listed} exist. Reusing '${match.role.name}' (${match.role.id}). Not creating a second role and not renaming. An admin should remove the extra role.`,
+        );
+      }
+    } else {
+      plan.roles.push({ name, action: "create" });
+    }
   }
   for (const cat of lay) {
     const c = catByName.get(cat.name);

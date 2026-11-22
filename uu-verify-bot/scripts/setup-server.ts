@@ -79,11 +79,12 @@ function readPriorSetup(): PriorSetupIds | undefined {
   try {
     const raw: unknown = JSON.parse(readFileSync("setup.out.json", "utf8"));
     if (!raw || typeof raw !== "object") return undefined;
-    const o = raw as { categoryIds?: unknown; channelIds?: unknown };
+    const o = raw as { categoryIds?: unknown; channelIds?: unknown; roleIds?: unknown };
     const categoryIds = isIdMap(o.categoryIds) ? o.categoryIds : undefined;
     const channelIds = isIdMap(o.channelIds) ? o.channelIds : undefined;
-    if (!categoryIds && !channelIds) return undefined;
-    return { categoryIds, channelIds };
+    const roleIds = isIdMap(o.roleIds) ? o.roleIds : undefined;
+    if (!categoryIds && !channelIds && !roleIds) return undefined;
+    return { categoryIds, channelIds, roleIds };
   } catch {
     console.error("WARNING: setup.out.json exists but could not be parsed; ignoring it.");
     return undefined;

@@ -53,7 +53,7 @@ describe("D1 migration 0001 + verify + revert", () => {
     const d = new TestD1();
     const sql = seedSql(
       {
-        roleIds: { "Line: Coach Mike": IDS.lineCoachRole, "Line: GFX": IDS.lineGfxRole },
+        roleIds: { "Line: Coach Mike": IDS.lineCoachRole, "Line: Ben": IDS.lineGfxRole },
         channelIds: { review_coach_mike: IDS.reviewCoach, review_gfx: IDS.reviewGfx },
         categoryIds: {},
         warnings: [],

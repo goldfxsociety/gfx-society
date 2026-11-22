@@ -41,7 +41,7 @@ describe("setup-server --dry-run plan", () => {
 
   it("creates every spec role and channel from scratch; the managed 'UU Bot' role is untouched", () => {
     expect(plan.roles.map((r) => [r.name, r.action])).toEqual(BASE_ROLES.map((n) => [n, "create"]));
-    expect(BASE_ROLES).toEqual(["Unverified", "FREE", "VIP", "Sub-IB", "Coach", "Admin / Mod", "Line: Coach Mike", "Line: GFX"]);
+    expect(BASE_ROLES).toEqual(["Unverified", "FREE", "VIP", "Sub-IB", "Coach", "Admin / Mod", "Line: Coach Mike", "Line: Ben"]);
     expect(plan.roles.some((r) => r.name === "UU Bot")).toBe(false);
     expect(plan.channels.map((c) => c.name)).toEqual([
       "start-here", "verify", "education", "community", "market-talk", PRO_INDICATOR_LIVE_NAME, "ai-signals", "sub-ib-leaders", "admin-log", "review-coach-mike", "review-gfx",
@@ -152,15 +152,19 @@ describe("role order warning", () => {
       { id: "1", name: "UU Bot", position: 2, managed: true, tags: { bot_id: ids.botUserId } },
       { id: "2", name: "FREE", position: 1 },
       { id: "3", name: "VIP", position: 3 },
-      { id: "4", name: "Line: GFX", position: 4 },
+      { id: "4", name: "Line: Ben", position: 4 },
     ];
     const w = roleOrderWarnings(roles, ids.botUserId);
     expect(w).toHaveLength(1);
     expect(w[0]).toContain("'UU Bot' sits below");
-    expect(w[0]).toContain("VIP, Line: GFX");
+    expect(w[0]).toContain("VIP, Line: Ben");
     expect(w[0]).not.toContain("FREE,");
     expect(w[0]).toContain("drag 'UU Bot' ABOVE");
     expect(roleOrderWarnings(roles.map((r) => (r.name === "UU Bot" ? { ...r, position: 10 } : r)), ids.botUserId)).toEqual([]);
+    const legacy = roles.map((r) => (r.name === "Line: Ben" ? { ...r, name: "Line: GFX" } : r));
+    const lw = roleOrderWarnings(legacy, ids.botUserId);
+    expect(lw).toHaveLength(1);
+    expect(lw[0]).toContain("VIP, Line: GFX");
   });
 
   it("executePlan (fake API) creates everything, locks defaults, assigns member roles, and re-checks role order", async () => {
@@ -184,6 +188,8 @@ describe("role order warning", () => {
     };
     const res = await executePlan(plan, ids, api);
     expect(created.filter((c) => c.startsWith("role:"))).toHaveLength(8);
+    expect(created).toContain("role:Line: Ben");
+    expect(created).not.toContain("role:Line: GFX");
     expect(created.filter((c) => c.startsWith("ch:"))).toHaveLength(11);
     expect(created.some((c) => /general|Text Channels|Voice Channels/.test(c))).toBe(false);
     for (const id of ["DEFAULT_TEXT_CATEGORY", "DEFAULT_VOICE_CATEGORY", "DEFAULT_GENERAL_TEXT", "DEFAULT_GENERAL_VOICE"]) {
@@ -814,5 +820,84 @@ describe("voice-channel risk line", () => {
     await executePlan(plan, ids, staffOnly);
     expect(staffOnly.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
     expect(staffOnly.calls.filter((c) => c === "createMessage")).toHaveLength(1);
+  });
+});
+
+describe("gfx line role matching", () => {
+  const gfx = "Line: Ben";
+  const legacy = "Line: GFX";
+  const gfxId = "1573961871357124728";
+  const otherId = "1573961871357124999";
+
+  function withRoles(...extra: GuildRole[]): GuildState {
+    const s = knownGuildState(ids.guildId, ids.botUserId);
+    return { ...s, roles: [...s.roles, ...extra] };
+  }
+
+  it("a fresh guild plans to create 'Line: Ben'", () => {
+    const plan = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids);
+    expect(plan.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "create" });
+    expect(plan.roles.some((r) => r.name === legacy)).toBe(false);
+    expect(BASE_ROLES).toContain(gfx);
+    expect(BASE_ROLES).not.toContain(legacy);
+  });
+
+  it("matches an existing 'Line: Ben' and does not create another", () => {
+    const plan = planSetup(withRoles({ id: gfxId, name: gfx, position: 5 }), ids);
+    expect(plan.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: gfxId });
+    expect(plan.roles.filter((r) => r.name === gfx || r.name === legacy)).toHaveLength(1);
+    expect(plan.warnings.some((w) => w.includes(legacy))).toBe(false);
+  });
+
+  it("reuses a legacy 'Line: GFX' without creating or renaming", () => {
+    const plan = planSetup(withRoles({ id: gfxId, name: legacy, position: 5 }), ids);
+    expect(plan.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: gfxId });
+    expect(plan.roles.some((r) => r.action === "create" && r.name === gfx)).toBe(false);
+    expect(plan.warnings.some((w) => w.includes("legacy name") && w.includes(legacy) && w.includes("not renaming"))).toBe(true);
+  });
+
+  it("when both names exist, prefers 'Line: Ben' and warns about the duplicate", () => {
+    const plan = planSetup(
+      withRoles({ id: gfxId, name: gfx, position: 5 }, { id: otherId, name: legacy, position: 6 }),
+      ids,
+    );
+    expect(plan.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: gfxId });
+    expect(plan.roles.filter((r) => r.name === gfx)).toHaveLength(1);
+    expect(plan.warnings.some((w) => w.startsWith("WARNING:") && w.includes(gfx) && w.includes(legacy) && w.includes("extra role"))).toBe(true);
+  });
+
+  it("when both exist, a saved setup.out.json id wins over the canonical name", () => {
+    const plan = planSetup(
+      withRoles({ id: gfxId, name: gfx, position: 5 }, { id: otherId, name: legacy, position: 6 }),
+      ids,
+      { roleIds: { [legacy]: otherId } },
+    );
+    expect(plan.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: otherId });
+    expect(plan.warnings.some((w) => w.startsWith("WARNING:") && w.includes(otherId))).toBe(true);
+  });
+
+  it("matches a saved role id keyed as 'Line: Ben' or the legacy 'Line: GFX' key", () => {
+    const state = withRoles({ id: gfxId, name: gfx, position: 5 });
+    const a = planSetup(state, ids, { roleIds: { [gfx]: gfxId } });
+    const b = planSetup(state, ids, { roleIds: { [legacy]: gfxId } });
+    expect(a.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: gfxId });
+    expect(b.roles.find((r) => r.name === gfx)).toEqual({ name: gfx, action: "exists", id: gfxId });
+  });
+
+  it("executePlan reuses a legacy 'Line: GFX' and does not create 'Line: Ben'", async () => {
+    const plan = planSetup(withRoles({ id: gfxId, name: legacy, position: 5 }), ids);
+    const created: string[] = [];
+    const res = await executePlan(plan, ids, {
+      createRole: async (name) => (created.push(name), { id: `NEW_${name}` }),
+      createChannel: async (b) => ({ id: `NEW_${b.name}` }),
+      putOverwrite: async () => undefined,
+      addMemberRole: async () => true,
+      listRoles: async () => withRoles({ id: gfxId, name: legacy, position: 5 }).roles,
+      listMessages: async () => [],
+      createMessage: async () => ({ id: "RISK_LINE_MSG" }),
+    });
+    expect(created).not.toContain(gfx);
+    expect(created).not.toContain(legacy);
+    expect(res.roleIds[gfx]).toBe(gfxId);
   });
 });
