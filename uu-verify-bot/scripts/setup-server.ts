@@ -151,6 +151,9 @@ async function main() {
       }
     },
     listRoles: () => d.request<GuildRole[]>("GET", `/guilds/${ids.guildId}/roles`),
+    listMessages: (channelId, query) => d.listMessages(channelId, query),
+    createMessage: (channelId, content) =>
+      d.createMessage(channelId, { content, allowed_mentions: { parse: [] } }),
   };
   const res = await executePlan(plan, ids, api, (l) => console.log(`  ${l}`), writeProgress);
   writeProgress(res);

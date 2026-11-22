@@ -11,6 +11,9 @@
  * is a warning, not a stop; a later rerun adds it once they have joined. A 404/10003 (unknown channel) is
  * not treated as a missing member. If a sibling category already exists but a hidden one is not visible and
  * has no saved id, planning fails fast instead of creating a duplicate.
+ * After channels exist, setup posts the verbatim risk line once in 🔴 pro-indicator-live's text chat
+ * (voice channels have no topic; pinning returns Discord 50019 and is not attempted). A rerun that
+ * already finds that exact message leaves it in place, even if staff have written below it.
  */
 import { SPEC_RISK_LINE } from "./copy";
 import { bits, DiscordCode, DiscordError, type Overwrite, Perm } from "./discord";
@@ -110,6 +113,7 @@ export function layout(p: People): CategorySpec[] {
       access: hiddenBot,
       channels: [
         // Live: voice channel '🔴 pro-indicator-live' (id 1573970781744922698, type 2) in VIP. Match by this name or by setup.out.json id; do not hardcode that id as the only lookup, and do not recreate a text #pro-indicator.
+        // Risk line is posted once in this channel's text chat (not in the name, not as a topic, not pinned).
         {
           key: "pro_indicator",
           name: PRO_INDICATOR_LIVE_NAME,
@@ -329,12 +333,21 @@ export function permissionMatrix(plan: Plan): Array<{ channel: string; viewers: 
   }));
 }
 
+export interface SetupMessage {
+  id: string;
+  content: string;
+  author: { id: string };
+}
+
 export interface SetupApi {
   createRole(name: string): Promise<{ id: string }>;
   createChannel(body: { name: string; type: number; topic?: string; parent_id?: string | null; permission_overwrites: Overwrite[] }): Promise<{ id: string }>;
   putOverwrite(channelId: string, o: Overwrite): Promise<void>;
   addMemberRole(userId: string, roleId: string): Promise<boolean>;
   listRoles(): Promise<GuildRole[]>;
+  /** Newest first. Used to find an existing verbatim risk line. */
+  listMessages(channelId: string, query?: { limit?: number; before?: string }): Promise<SetupMessage[]>;
+  createMessage(channelId: string, content: string): Promise<{ id: string }>;
 }
 
 export interface SetupResult {
@@ -342,6 +355,48 @@ export interface SetupResult {
   channelIds: Record<string, string>;
   categoryIds: Record<string, string>;
   warnings: string[];
+}
+
+
+const RISK_LINE_PAGE = 100;
+
+/**
+ * Post the verbatim risk line in a voice channel's text chat if it is not already there.
+ * Idempotent: any existing message with that exact text (including the live bot message
+ * 1573974320437403671 in 1573970781744922698) means we do not post again, even when later
+ * staff messages sit below it. If the line is missing or the previous bot text drifted, post
+ * the verbatim line once. Do not delete staff messages, do not edit existing messages, and
+ * do not attempt to pin (Discord 50019 in voice-channel chat, even with Administrator).
+ */
+export async function ensureVoiceRiskLine(
+  channelId: string,
+  api: Pick<SetupApi, "listMessages" | "createMessage">,
+  out: (line: string) => void = () => undefined,
+): Promise<{ action: "exists" | "posted"; messageId: string }> {
+  const existing = await findVerbatimRiskLine(channelId, api);
+  if (existing) {
+    out(`risk line already in ${channelId} (${existing.id}); not posting a duplicate`);
+    return { action: "exists", messageId: existing.id };
+  }
+  const posted = await api.createMessage(channelId, SPEC_RISK_LINE);
+  out(`posted risk line in ${channelId} (${posted.id})`);
+  return { action: "posted", messageId: posted.id };
+}
+
+async function findVerbatimRiskLine(
+  channelId: string,
+  api: Pick<SetupApi, "listMessages">,
+): Promise<SetupMessage | undefined> {
+  let before: string | undefined;
+  for (;;) {
+    const page = await api.listMessages(channelId, { limit: RISK_LINE_PAGE, before });
+    const hit = page.find((m) => m.content === SPEC_RISK_LINE);
+    if (hit) return hit;
+    if (page.length < RISK_LINE_PAGE) return undefined;
+    const last = page[page.length - 1];
+    if (!last || last.id === before) return undefined;
+    before = last.id;
+  }
 }
 
 /** Execute a plan. Idempotent: existing roles/channels are reused (their overwrites are re-applied additively). */
@@ -400,6 +455,12 @@ export async function executePlan(
     const ok = await api.addMemberRole(m.userId, roleIds[m.role]!);
     if (!ok) warnings.push(`WARNING: user ${m.userId} is not in the server yet; give them '${m.role}' after they join.`);
     else out(`gave ${m.role} to ${m.userId}`);
+  }
+  const riskChannelId = channelIds.pro_indicator;
+  if (!riskChannelId) {
+    warnings.push("WARNING: pro_indicator channel id is missing; skipped posting the voice-channel risk line.");
+  } else {
+    await ensureVoiceRiskLine(riskChannelId, api, out);
   }
   warnings.push(...roleOrderWarnings(await api.listRoles(), ids.botUserId));
   return { roleIds, channelIds, categoryIds, warnings };

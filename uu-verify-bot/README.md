@@ -118,7 +118,18 @@ What setup does:
   mentioned only as context — setup matches by name or by `setup.out.json` id). A rerun must not recreate a
   text `#pro-indicator`. @everyone / Unverified / FREE deny View; VIP may View, Connect and Read History but
   not Speak, Stream or Send; Coach and Admin / Mod may View, Connect, Speak, Stream, Send and Read History.
-  The bot allow includes View, Manage Channels, Connect and the usual bot bits.
+  The bot allow includes View, Manage Channels, Connect, Send Messages and the usual bot bits. Manage Messages is
+  not required and is not added. Because a voice channel cannot have a topic, setup posts this exact risk line
+  once in `🔴 pro-indicator-live`'s text chat (not in the channel name):
+
+  `Education lang, not financial advice. Max 1% risk per trade.`
+
+  A rerun that already finds that verbatim message (including the live message `1573974320437403671` in
+  channel `1573970781744922698`) does not post another, even if a Coach or Admin has written below it. If the
+  line is missing or the previous bot text drifted, setup posts the verbatim line once. It does not delete
+  staff messages and does not try to keep the line first. Pinning is not attempted: Discord returns 50019
+  ("This message cannot be pinned in this channel") in voice-channel chat, even when the bot has
+  Administrator. `#ai-signals` still keeps the same risk line as its channel topic.
 - **Idempotence:** setup matches existing categories/channels by name, or by id from `setup.out.json` if a hidden one is not
   visible in the guild listing. `setup.out.json` is written as each role/channel is created, so a partial apply can be resumed.
   If a sibling category already exists but a hidden one is missing from the listing and has no saved id, setup refuses to

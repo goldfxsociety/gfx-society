@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { SPEC_RISK_LINE } from "../src/copy";
 import { DiscordCode, DiscordError, Perm } from "../src/discord";
 import { BOT, BOT_VOICE, reviewChannelOverwrites } from "../src/perms";
 import {
   BASE_ROLES,
   ChannelType,
+  ensureVoiceRiskLine,
   executePlan,
   type GuildRole,
   type GuildState,
@@ -15,6 +18,7 @@ import {
   roleOrderWarnings,
   type SetupApi,
   type SetupIds,
+  type SetupMessage,
 } from "../src/setup";
 
 const ids: SetupIds = {
@@ -137,6 +141,8 @@ describe("role order warning", () => {
         { id: "b", name: "UU Bot", position: 1, managed: true, tags: { bot_id: ids.botUserId } },
         { id: "v", name: "VIP", position: 5 },
       ],
+      listMessages: async () => [],
+      createMessage: async () => ({ id: "RISK_LINE_MSG" }),
     };
     const res = await executePlan(plan, ids, api);
     expect(created.filter((c) => c.startsWith("role:"))).toHaveLength(8);
@@ -245,6 +251,8 @@ describe("hidden-but-existing category matching", () => {
       putOverwrite: async () => undefined,
       addMemberRole: async () => true,
       listRoles: async () => [],
+      listMessages: async () => [],
+      createMessage: async () => ({ id: "x" }),
     };
     await expect(executePlan(plan, ids, api)).rejects.toThrow(/Refusing to create/);
     expect(created).toEqual([]);
@@ -314,11 +322,25 @@ function realizedState(): GuildState {
   };
 }
 
-function recordingApi(putOverwrite: SetupApi["putOverwrite"], addMemberRole: SetupApi["addMemberRole"] = async () => true): SetupApi & { created: string[] } {
+function recordingApi(putOverwrite: SetupApi["putOverwrite"], addMemberRole: SetupApi["addMemberRole"] = async () => true): SetupApi & {
+  created: string[];
+  posts: Array<{ channelId: string; content: string }>;
+  calls: string[];
+  seedMessages: (channelId: string, messages: SetupMessage[]) => void;
+} {
   const created: string[] = [];
+  const posts: Array<{ channelId: string; content: string }> = [];
+  const calls: string[] = [];
+  const byChannel = new Map<string, SetupMessage[]>();
   let n = 0;
+  let msgN = 0;
   return {
     created,
+    posts,
+    calls,
+    seedMessages(channelId, messages) {
+      byChannel.set(channelId, [...messages]);
+    },
     createRole: async (name) => (created.push(`role:${name}`), { id: String(930000000000000000n + BigInt(++n)) }),
     createChannel: async (b) => (created.push(`${b.type === ChannelType.CATEGORY ? "cat" : "ch"}:${b.name}`), { id: String(940000000000000000n + BigInt(++n)) }),
     putOverwrite,
@@ -327,6 +349,22 @@ function recordingApi(putOverwrite: SetupApi["putOverwrite"], addMemberRole: Set
       { id: ids.botRoleId!, name: "UU Bot", position: 10, managed: true, tags: { bot_id: ids.botUserId } },
       { id: "v", name: "VIP", position: 5 },
     ],
+    listMessages: async (channelId, query) => {
+      calls.push("listMessages");
+      const all = byChannel.get(channelId) ?? [];
+      const start = query?.before ? all.findIndex((m) => m.id === query.before) : -1;
+      const slice = start >= 0 ? all.slice(start + 1) : all;
+      return slice.slice(0, query?.limit ?? slice.length);
+    },
+    createMessage: async (channelId, content) => {
+      calls.push("createMessage");
+      const id = `MSG_${++msgN}`;
+      posts.push({ channelId, content });
+      const list = byChannel.get(channelId) ?? [];
+      list.unshift({ id, content, author: { id: ids.botUserId } });
+      byChannel.set(channelId, list);
+      return { id };
+    },
   };
 }
 
@@ -435,6 +473,9 @@ describe("pro-indicator is a VIP voice livestream", () => {
     expect(hasBit(botOw.allow, Perm.VIEW_CHANNEL)).toBe(true);
     expect(hasBit(botOw.allow, Perm.MANAGE_CHANNELS)).toBe(true);
     expect(hasBit(botOw.allow, Perm.CONNECT)).toBe(true);
+    expect(hasBit(botOw.allow, Perm.SEND_MESSAGES)).toBe(true);
+    expect(hasBit(botOw.allow, Perm.MANAGE_MESSAGES)).toBe(false);
+    expect(ch.name).not.toContain(SPEC_RISK_LINE);
   });
 
   it("creates the voice channel (not a text #pro-indicator) from scratch", async () => {
@@ -561,5 +602,143 @@ describe("per-user overwrite 404 codes", () => {
       }
     });
     await expect(executePlan(plan, ids, api)).rejects.toThrow(/404\/10003/);
+  });
+});
+
+
+const LIVE_RISK_MESSAGE: SetupMessage = {
+  id: "1573974320437403671",
+  content: SPEC_RISK_LINE,
+  author: { id: ids.botUserId },
+};
+const laterStaff: SetupMessage = {
+  id: "STAFF_LATER",
+  content: "Going live in 5.",
+  author: { id: ids.benUserId },
+};
+
+function riskApi(messages: SetupMessage[] = []) {
+  const posts: Array<{ channelId: string; content: string }> = [];
+  const calls: string[] = [];
+  const deleted: string[] = [];
+  let list = [...messages];
+  let n = 0;
+  const api: Pick<SetupApi, "listMessages" | "createMessage"> & {
+    posts: typeof posts;
+    calls: typeof calls;
+    deleted: typeof deleted;
+    list: SetupMessage[];
+  } = {
+    posts,
+    calls,
+    deleted,
+    get list() {
+      return list;
+    },
+    listMessages: async (_channelId, query) => {
+      calls.push("listMessages");
+      const start = query?.before ? list.findIndex((m) => m.id === query.before) : -1;
+      const slice = start >= 0 ? list.slice(start + 1) : list;
+      return slice.slice(0, query?.limit ?? slice.length);
+    },
+    createMessage: async (channelId, content) => {
+      calls.push("createMessage");
+      const id = `POSTED_${++n}`;
+      posts.push({ channelId, content });
+      list = [{ id, content, author: { id: ids.botUserId } }, ...list];
+      return { id };
+    },
+  };
+  return api;
+}
+
+describe("voice-channel risk line", () => {
+  it("posts the verbatim risk line once when the voice chat has no matching message", async () => {
+    const api = riskApi([laterStaff]);
+    const res = await ensureVoiceRiskLine("CH_pro_indicator", api);
+    expect(res.action).toBe("posted");
+    expect(api.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(api.posts).toHaveLength(1);
+    expect(api.calls).not.toContain("pin");
+    expect(api.deleted).toEqual([]);
+  });
+
+  it("does not post a second copy when the exact bot message already exists, even with later staff messages below it", async () => {
+    // Discord returns newest first: staff chat sits above the existing risk line.
+    const api = riskApi([laterStaff, LIVE_RISK_MESSAGE]);
+    const res = await ensureVoiceRiskLine("CH_pro_indicator", api);
+    expect(res).toEqual({ action: "exists", messageId: LIVE_RISK_MESSAGE.id });
+    expect(api.posts).toEqual([]);
+    expect(api.list).toEqual([laterStaff, LIVE_RISK_MESSAGE]);
+    expect(api.deleted).toEqual([]);
+  });
+
+  it("restores the verbatim line when it is missing or the existing bot text has drifted, without deleting staff messages", async () => {
+    const drifted: SetupMessage = {
+      id: "DRIFTED_BOT",
+      content: "Education lang ito, not financial advice.",
+      author: { id: ids.botUserId },
+    };
+    const missing = riskApi([laterStaff]);
+    const missingRes = await ensureVoiceRiskLine("CH_pro_indicator", missing);
+    expect(missingRes.action).toBe("posted");
+    expect(missing.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(missing.list.map((m) => m.id)).toContain("STAFF_LATER");
+    expect(missing.deleted).toEqual([]);
+
+    const driftedApi = riskApi([laterStaff, drifted]);
+    const driftedRes = await ensureVoiceRiskLine("CH_pro_indicator", driftedApi);
+    expect(driftedRes.action).toBe("posted");
+    expect(driftedApi.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(driftedApi.list.map((m) => m.id)).toEqual(["POSTED_1", "STAFF_LATER", "DRIFTED_BOT"]);
+    expect(driftedApi.deleted).toEqual([]);
+  });
+
+  it("never calls a pin endpoint (Discord 50019 in voice-channel chat, even with Administrator)", async () => {
+    const api = riskApi([]);
+    await ensureVoiceRiskLine("CH_pro_indicator", api);
+    expect(api.calls.every((c) => c === "listMessages" || c === "createMessage")).toBe(true);
+    const src = [
+      readFileSync(new URL("../src/setup.ts", import.meta.url), "utf8"),
+      readFileSync(new URL("../src/discord.ts", import.meta.url), "utf8"),
+      readFileSync(new URL("../scripts/setup-server.ts", import.meta.url), "utf8"),
+    ].join("\n");
+    expect(src).not.toMatch(/\/pins\//);
+    expect(src).not.toMatch(/pinMessage/);
+  });
+
+  it("VIP still cannot Send, Speak, or Stream; #ai-signals keeps the risk line as a topic", () => {
+    const plan = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids);
+    const ch = plan.channels.find((c) => c.key === "pro_indicator")!;
+    const vip = ch.access.find((o) => o.target.kind === "role" && o.target.name === "VIP")!;
+    expect(hasBit(vip.allow, Perm.VIEW_CHANNEL)).toBe(true);
+    expect(hasBit(vip.allow, Perm.READ_MESSAGE_HISTORY)).toBe(true);
+    expect(hasBit(vip.deny, Perm.SEND_MESSAGES)).toBe(true);
+    expect(hasBit(vip.deny, Perm.SPEAK)).toBe(true);
+    expect(hasBit(vip.deny, Perm.STREAM)).toBe(true);
+    expect(ch.topic).toBeUndefined();
+    expect(ch.name).toBe(PRO_INDICATOR_LIVE_NAME);
+    expect(ch.name).not.toContain(SPEC_RISK_LINE);
+    const signals = plan.channels.find((c) => c.key === "ai_signals")!;
+    expect(signals.topic).toBe(SPEC_RISK_LINE);
+    expect(signals.type ?? ChannelType.TEXT).toBe(ChannelType.TEXT);
+  });
+
+  it("executePlan posts once when the line is missing and skips when the live message is already there", async () => {
+    const plan = planSetup(realizedState(), ids);
+
+    const first = recordingApi(async () => undefined);
+    const created = await executePlan(plan, ids, first);
+    expect(created.channelIds.pro_indicator).toBe("CH_pro_indicator");
+    expect(first.posts).toEqual([{ channelId: "CH_pro_indicator", content: SPEC_RISK_LINE }]);
+    expect(first.calls.filter((c) => c === "createMessage")).toHaveLength(1);
+    expect(first.calls.some((c) => /pin/i.test(c))).toBe(false);
+
+    const again = recordingApi(async () => undefined);
+    again.seedMessages("CH_pro_indicator", [laterStaff, LIVE_RISK_MESSAGE]);
+    await executePlan(plan, ids, again);
+    expect(again.posts).toEqual([]);
+    expect(again.calls.filter((c) => c === "createMessage")).toHaveLength(0);
+    expect(again.calls.some((c) => /pin/i.test(c))).toBe(false);
   });
 });

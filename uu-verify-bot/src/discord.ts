@@ -36,6 +36,7 @@ export const Perm = {
   STREAM: 1n << 9n,
   CONNECT: 1n << 20n,
   SPEAK: 1n << 21n,
+  MANAGE_MESSAGES: 1n << 13n,
 } as const;
 
 export const bits = (...p: bigint[]) => p.reduce((a, b) => a | b, 0n).toString();
@@ -117,6 +118,17 @@ export class Discord {
   // Messages.
   createMessage(channelId: string, json: unknown) {
     return this.request<{ id: string }>("POST", `/channels/${channelId}/messages`, { json });
+  }
+  /** Newest first. Used by setup to find an existing verbatim risk line (no pin: Discord 50019 in voice chat). */
+  listMessages(channelId: string, query?: { limit?: number; before?: string }) {
+    const q = new URLSearchParams();
+    if (query?.limit != null) q.set("limit", String(query.limit));
+    if (query?.before) q.set("before", query.before);
+    const qs = q.toString();
+    return this.request<Array<{ id: string; content: string; author: { id: string } }>>(
+      "GET",
+      `/channels/${channelId}/messages${qs ? `?${qs}` : ""}`,
+    );
   }
   createMessageWithFile(channelId: string, payload: unknown, file: Blob, filename: string) {
     const form = new FormData();
