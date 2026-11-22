@@ -21,9 +21,13 @@ import { Discord, DiscordError } from "../src/discord";
 import { startHerePanel, verifyPanel } from "../src/payloads";
 import {
   botRole,
+  channelPlanLabel,
+  describeRiskLineDecision,
   executePlan,
+  formatRiskLinePlan,
   type GuildChannel,
   type GuildRole,
+  inspectVoiceRiskLine,
   knownGuildState,
   permissionMatrix,
   planSetup,
@@ -114,7 +118,9 @@ async function main() {
   console.log("\nCategories / channels:");
   for (const c of plan.categories) {
     console.log(`  ${c.action === "create" ? "+" : "="} ${c.name}`);
-    for (const ch of plan.channels.filter((x) => x.category === c.name)) console.log(`      ${ch.action === "create" ? "+" : "="} #${ch.name}${ch.topic ? `  (topic: ${ch.topic})` : ""}`);
+    for (const ch of plan.channels.filter((x) => x.category === c.name)) {
+      console.log(`      ${ch.action === "create" ? "+" : "="} ${channelPlanLabel(ch)}`);
+    }
   }
   console.log("\nExisting channels left in place, View denied for @everyone + Unverified:");
   for (const l of plan.lockExisting) console.log(`  🔒 ${l.name} (type ${l.type})`);
@@ -122,6 +128,19 @@ async function main() {
   for (const m of permissionMatrix(plan)) console.log(`  ${m.channel.padEnd(20)} view: ${m.viewers.join(", ")}\n  ${"".padEnd(20)} write: ${m.writers.join(", ") || "(read-only)"}`);
   console.log("\nMember roles:");
   for (const m of plan.memberRoles) console.log(`  ${m.role} → ${m.userId}`);
+  console.log("");
+  for (const line of formatRiskLinePlan(plan.riskLine)) console.log(line);
+  if (!apply && online && discord) {
+    const riskCh = plan.channels.find((c) => c.key === "pro_indicator");
+    if (riskCh?.id) {
+      const decision = await inspectVoiceRiskLine(riskCh.id, ids.botUserId, {
+        listMessages: (channelId, query) => discord!.listMessages(channelId, query),
+      });
+      console.log(`  ${describeRiskLineDecision(decision)}`);
+    } else if (riskCh?.action === "create") {
+      console.log("  Would post a bot copy after the channel is created.");
+    }
+  }
   for (const w of plan.warnings) console.log(`\n${w}`);
   for (const b of plan.blockers) console.error(`\n${b}`);
   if (plan.blockers.length) {
@@ -151,6 +170,9 @@ async function main() {
       }
     },
     listRoles: () => d.request<GuildRole[]>("GET", `/guilds/${ids.guildId}/roles`),
+    listMessages: (channelId, query) => d.listMessages(channelId, query),
+    createMessage: (channelId, content) =>
+      d.createMessage(channelId, { content, allowed_mentions: { parse: [] } }),
   };
   const res = await executePlan(plan, ids, api, (l) => console.log(`  ${l}`), writeProgress);
   writeProgress(res);
