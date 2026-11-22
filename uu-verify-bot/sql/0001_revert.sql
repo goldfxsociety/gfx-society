@@ -4,6 +4,7 @@
 -- Afterwards sql/0001_verify.sql reports FAIL on every row (tables gone), and the migration can be re-applied.
 DROP TABLE IF EXISTS cron_runs;
 DROP TABLE IF EXISTS decision_logs;
+DROP TABLE IF EXISTS review_cards;
 DROP TABLE IF EXISTS applications;
 DROP TABLE IF EXISTS members;
 DROP TABLE IF EXISTS ib_lines;

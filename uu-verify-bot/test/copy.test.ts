@@ -82,6 +82,12 @@ describe("member-facing copy", () => {
     expect(shotVip.description).toBe(C.MODAL.shotDescVip);
   });
 
+  it("non-admin duplicate notice is the signed-off Admin / Mod-only text for approve and deny", () => {
+    expect(C.MSG.needAdminDupUserId).toBe(
+      "Duplicate ACCM User ID: Admin / Mod muna ang mag-review bago i-approve o i-Deny.",
+    );
+  });
+
   it("review buttons: VIP says 'Approve VIP ($50+)'; IB cards add the admin-only email button", () => {
     expect(JSON.stringify(reviewButtons("700000000000000001", "vip"))).toContain("Approve VIP ($50+)");
     expect(JSON.stringify(reviewButtons("700000000000000001", "free"))).not.toContain("View IB Email");

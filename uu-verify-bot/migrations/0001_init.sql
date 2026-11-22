@@ -121,3 +121,18 @@ CREATE TABLE IF NOT EXISTS cron_runs (
   finished_at  TEXT,
   PRIMARY KEY (job, period_key)
 );
+
+-- Every review card ever posted. Escalation overwrites applications.review_message_id; this table
+-- lets cron retry a leftover screenshot in a lower IB channel if the old-card delete failed after a hop.
+CREATE TABLE IF NOT EXISTS review_cards (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  application_id  TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  channel_id      TEXT NOT NULL
+                  CHECK (length(channel_id) BETWEEN 17 AND 20 AND channel_id NOT GLOB '*[^0-9]*'),
+  message_id      TEXT NOT NULL
+                  CHECK (length(message_id) BETWEEN 17 AND 20 AND message_id NOT GLOB '*[^0-9]*'),
+  posted_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  deleted_at      TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS review_cards_msg_uq ON review_cards (channel_id, message_id);
+CREATE INDEX IF NOT EXISTS review_cards_pending_idx ON review_cards (deleted_at, application_id);

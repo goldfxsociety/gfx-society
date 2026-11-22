@@ -10,7 +10,7 @@ import { type Deps, cdnFetch, HOURS_48, log } from "./deps";
 import { DiscordError } from "./discord";
 import { BudgetExceeded, CRON_BUDGET, Meter } from "./meter";
 import { NO_MENTIONS } from "./payloads";
-import { deleteCard } from "./review";
+import { deleteTrackedCard } from "./review";
 import { sniffImageType } from "./attachments";
 import { manila, monthStartUtc, periodKey, RESET_CATCHUP_DAYS, reverifyWindowStartUtc, upcomingReset } from "./time";
 import type { Application, IbLine } from "./types";
@@ -30,7 +30,7 @@ export const COST = {
   resetRole: 3, // DELETE role + UPDATE member + INSERT log
   resetDm: 3, // open DM + send + UPDATE log
   reminder: 3, // open DM + send + UPDATE cursor
-  card: 2, // DELETE message + UPDATE
+  card: 3, // DELETE message + UPDATE review_cards + maybe UPDATE applications
   escalation: 12, // lines(3) + member(1) + GET msg + CDN + POST card + UPDATE + DELETE old + log + admin-log
   batchQuery: 1,
   finish: 4,
@@ -174,13 +174,16 @@ export async function vipReminder(deps: Deps, meter: Meter, s: CronSummary): Pro
   }
 }
 
-/** Retry deleting review cards (screenshots) whose delete failed at decision time. */
+/** Retry deleting leftover review cards (screenshots), including ones from a failed post-hop delete. */
 export async function cleanupCards(deps: Deps, meter: Meter, s: CronSummary): Promise<void> {
   if (!meter.has(COST.batchQuery + COST.card)) return;
   const rows = await deps.db.cardsToClean(Math.min(5, Math.floor((meter.left() - 1) / COST.card)));
   for (const r of rows) {
     if (!meter.has(COST.card + 1)) return;
-    if (await deleteCard(deps, r)) s.cards++;
+    const ok = await deleteTrackedCard(deps, { applicationId: r.application_id, channelId: r.channel_id, messageId: r.message_id });
+    if (!ok) continue;
+    s.cards++;
+    if ((await deps.db.openCardCount(r.application_id)) === 0) await deps.db.markCardDeleted(r.application_id, deps.now().toISOString());
   }
 }
 
@@ -248,6 +251,8 @@ async function moveUp(deps: Deps, app: Application, from: IbLine, to: IbLine, ca
   };
   const ctx = await cardContext(deps, next, cache);
   const posted = await postCard(deps, to.review_channel_id!, next, ctx, image);
+  // Track the new card immediately so a failed cleanup still retries it if the hop loses the race with a decision.
+  await db.recordCard(app.id, to.review_channel_id!, posted.id, nowIso);
   const moved = await db.moveCard({
     id: app.id,
     reviewerLineId: to.id,
@@ -259,14 +264,20 @@ async function moveUp(deps: Deps, app: Application, from: IbLine, to: IbLine, ca
     flags,
   });
   if (!moved) {
-    // Decided meanwhile: remove the new card again.
-    await discord.deleteOwnMessage(to.review_channel_id!, posted.id).catch((e) => log("cleanup escalated card failed", e));
+    // Decided meanwhile: remove the new card again. Cron retries it if this delete fails.
+    await deleteTrackedCard(deps, { applicationId: app.id, channelId: to.review_channel_id!, messageId: posted.id });
     return;
   }
-  if (app.review_channel_id && app.review_message_id) await discord.deleteOwnMessage(app.review_channel_id, app.review_message_id).catch((e) => {
-    if (stop(e)) throw e;
-    log("delete old card failed", e);
-  });
+  if (app.review_channel_id && app.review_message_id) {
+    try {
+      await discord.deleteOwnMessage(app.review_channel_id, app.review_message_id);
+      await db.markReviewCardDeleted(app.review_channel_id, app.review_message_id, nowIso);
+    } catch (e) {
+      if (stop(e)) throw e;
+      log("delete old card failed", e);
+      await db.log({ applicationId: app.id, action: "card_delete_failed" }, nowIso).catch(() => undefined);
+    }
+  }
   await db.log({ applicationId: app.id, action: "escalated", targetId: app.applicant_discord_id, lineId: to.id, detail: `from line ${from.id} to ${to.id}` }, nowIso);
   await adminLog(deps, `[ESCALATED 48h] app ${app.id} · ${app.type.toUpperCase()} · <@${app.applicant_discord_id}> · ${from.display_name} → ${to.display_name}`);
 }

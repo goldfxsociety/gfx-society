@@ -58,22 +58,54 @@ export async function notifyMember(deps: Deps, userId: string, content: string):
   return ok;
 }
 
-/** Delete the review card — and with it the only copy of the screenshot. Failures are retried by cron. */
-export async function deleteCard(deps: Deps, app: Pick<Application, "id" | "review_channel_id" | "review_message_id">): Promise<boolean> {
+/** Delete one posted review card (404 already counts as done in deleteOwnMessage). Failures are retried by cron. */
+export async function deleteTrackedCard(
+  deps: Deps,
+  card: { applicationId: string; channelId: string; messageId: string },
+): Promise<boolean> {
   const nowIso = deps.now().toISOString();
-  if (!app.review_channel_id || !app.review_message_id) {
-    await deps.db.markCardDeleted(app.id, nowIso);
-    return true;
-  }
   try {
-    await deps.discord.deleteOwnMessage(app.review_channel_id, app.review_message_id);
-    await deps.db.markCardDeleted(app.id, nowIso);
+    await deps.discord.deleteOwnMessage(card.channelId, card.messageId);
+    await deps.db.markReviewCardDeleted(card.channelId, card.messageId, nowIso);
     return true;
   } catch (e) {
     log("card delete failed", e);
-    await deps.db.log({ applicationId: app.id, action: "card_delete_failed" }, nowIso).catch(() => undefined);
+    await deps.db.log({ applicationId: card.applicationId, action: "card_delete_failed" }, nowIso).catch(() => undefined);
     return false;
   }
+}
+
+/** Delete every posted review card for this application — including leftovers from a 48h hop — and clear the screenshot URL. */
+export async function deleteCard(deps: Deps, app: Pick<Application, "id" | "review_channel_id" | "review_message_id">): Promise<boolean> {
+  const nowIso = deps.now().toISOString();
+  const tracked = await deps.db.openCards(app.id);
+  const list = [...tracked];
+  if (
+    app.review_channel_id &&
+    app.review_message_id &&
+    !list.some((c) => c.channel_id === app.review_channel_id && c.message_id === app.review_message_id)
+  ) {
+    list.push({ application_id: app.id, channel_id: app.review_channel_id, message_id: app.review_message_id });
+  }
+  if (list.length === 0) {
+    await deps.db.markCardDeleted(app.id, nowIso);
+    return true;
+  }
+  let all = true;
+  for (const c of list) {
+    if (!(await deleteTrackedCard(deps, { applicationId: app.id, channelId: c.channel_id, messageId: c.message_id }))) all = false;
+  }
+  if (all) await deps.db.markCardDeleted(app.id, nowIso);
+  return all;
+}
+
+/** Flagged (or live) duplicate User ID / IB email: only Admin / Mod may close it. */
+export async function isFlaggedDuplicate(app: Application, deps: Deps): Promise<boolean> {
+  const flags = parseFlags(app.flags);
+  if (flags.includes("dup_user_id") || flags.includes("dup_ib_email")) return true;
+  if (app.accm_user_id && (await deps.db.accmUsedByOther(app.accm_user_id, app.applicant_discord_id))) return true;
+  if (app.accm_ib_email && (await deps.db.ibEmailTaken(app.accm_ib_email, app.id))) return true;
+  return false;
 }
 
 const logLine = (tag: string, app: Application, actorId: string | null, extra: string[] = []) =>
@@ -259,6 +291,9 @@ export async function runDeny(i: Interaction, chk: Extract<ReviewerCheck, { ok: 
   const { db } = deps;
   const { app, actorId } = chk;
   try {
+    // Design 22 Nov: a flagged duplicate stays pending until an Admin / Mod reviews. Line IB / Coach cannot deny or send the Denied DM.
+    const dupCode = code === "duplicate" || code === "duplicate_email";
+    if (!chk.admin && (dupCode || (await isFlaggedDuplicate(app, deps)))) return void (await notice(deps, i, MSG.needAdminDupUserId));
     const status = code === "not_tree" ? "transferred" : "denied";
     const reason = code === "other" ? `other: ${note}`.slice(0, 400) : code;
     const nowIso = deps.now().toISOString();

@@ -243,6 +243,29 @@ describe("Duplicate ACCM User ID", () => {
     expect(w.fake.dms.get(IDS.member)).toEqual([deniedDm(reason)]);
     expect(w.fake.dms.get(IDS.member)!.join("\n")).not.toMatch(/Kailangan muna|i-review ng admin|admin still|look at it/i);
   });
+
+  it("a line IB or Coach without Admin / Mod cannot deny a flagged duplicate; card stays pending and no Denied DM is sent", async () => {
+    const w = world();
+    w.d1.sqlite.exec(`INSERT INTO members (discord_user_id, accm_user_id, referring_ib_line_id, tier) VALUES ('${IDS.member2}', '654321', 2, 'free')`);
+    w.fake.members.set(IDS.member, []);
+    const i = clientSubmit(IDS.member, [], { accm: "654321", type: "free", line: "2" });
+    await submit(w, i);
+    const app = appOf(w, i.id);
+    expect(app.flags).toContain("dup_user_id");
+    // Line IB (Ben, no Admin role)
+    await handleInteraction(denySubmit(app.id, IDS.ben, [], app.review_channel_id!, "duplicate", "", app.review_message_id!), w.deps, w.ctx);
+    await w.ctx.flush();
+    expect(followups(w).at(-1)).toBe(MSG.needAdminDupUserId);
+    expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+    expect(w.fake.messages.has(app.review_message_id!)).toBe(true);
+    // Coach without Admin / Mod, any deny reason
+    await handleInteraction(denySubmit(app.id, IDS.coach1, [IDS.coachRole], app.review_channel_id!, "unclear", "", app.review_message_id!), w.deps, w.ctx);
+    await w.ctx.flush();
+    expect(followups(w).at(-1)).toBe(MSG.needAdminDupUserId);
+    expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+  });
 });
 
 describe("Transfer route", () => {

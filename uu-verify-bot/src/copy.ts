@@ -174,7 +174,7 @@ export const MSG = {
   alreadyDecided: "Na-decide na ang application na ito.",
   staleCard: "Lumipat na ang application na ito sa ibang review channel.",
   notFound: "Hindi makita ang application na ito.",
-  needAdminDupUserId: "Duplicate ACCM User ID: Admin / Mod muna ang mag-review bago i-approve.",
+  needAdminDupUserId: "Duplicate ACCM User ID: Admin / Mod muna ang mag-review bago i-approve o i-Deny.",
   dupEmailBlocked: "Duplicate ACCM IB email: hindi gagawa ng pangalawang line. Admin: ayusin muna nang manual, o i-Deny.",
   otherNeedsNote: "Para sa Other, ilagay ang reason.",
   roleFailed: "Hindi ma-assign ang role (check bot permissions at role order). Hindi pa na-decide; subukan ulit.",

@@ -17,7 +17,7 @@ describe("D1 migration 0001 + verify + revert", () => {
     const d = new TestD1();
     d.sqlite.exec(MIGRATION);
     const r = results(d, "sql/0001_verify.sql");
-    expect(r.length).toBe(7);
+    expect(r.length).toBe(8);
     expect(r.filter((x) => x.result !== "ok")).toEqual([]);
   });
 
@@ -43,7 +43,7 @@ describe("D1 migration 0001 + verify + revert", () => {
   it("revert drops everything (verify then FAILs) and the migration re-applies cleanly", () => {
     const d = new TestD1();
     d.sqlite.exec(readSql("sql/0001_revert.sql"));
-    expect(d.rows("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('ib_lines','members','applications','decision_logs','cron_runs')")).toEqual([]);
+    expect(d.rows("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('ib_lines','members','applications','decision_logs','cron_runs','review_cards')")).toEqual([]);
     expect(results(d, "sql/0001_verify.sql").find((x) => x.check_name === "tables")?.result).toBe("FAIL");
     d.sqlite.exec(MIGRATION);
     expect(results(d, "sql/0001_verify.sql").every((x) => x.result === "ok")).toBe(true);

@@ -43,6 +43,12 @@ export interface CronRun {
   finished_at: string | null;
 }
 
+export interface PostedCard {
+  application_id: string;
+  channel_id: string;
+  message_id: string;
+}
+
 export interface NewApplication {
   id: string;
   applicantId: string;
@@ -202,8 +208,34 @@ export class Db {
       return /applications\.id|PRIMARY/i.test((e as Error).message) ? "dup_id" : "pending_exists";
     }
   }
-  async setCard(id: string, channelId: string, messageId: string, screenshotUrl: string | null): Promise<void> {
+  async setCard(id: string, channelId: string, messageId: string, screenshotUrl: string | null, postedAt?: string): Promise<void> {
     await this.run("UPDATE applications SET review_channel_id = ?, review_message_id = ?, screenshot_url = ? WHERE id = ?", channelId, messageId, screenshotUrl, id);
+    await this.recordCard(id, channelId, messageId, postedAt);
+  }
+  /** Remember every posted review card so leftover screenshots can be retried after a hop overwrites review_message_id. */
+  async recordCard(applicationId: string, channelId: string, messageId: string, postedAt?: string): Promise<void> {
+    await this.run(
+      `INSERT INTO review_cards (application_id, channel_id, message_id, posted_at)
+       VALUES (?, ?, ?, COALESCE(?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))
+       ON CONFLICT(channel_id, message_id) DO NOTHING`,
+      applicationId, channelId, messageId, postedAt ?? null,
+    );
+  }
+  async markReviewCardDeleted(channelId: string, messageId: string, nowIso: string): Promise<void> {
+    await this.run(
+      "UPDATE review_cards SET deleted_at = ? WHERE channel_id = ? AND message_id = ? AND deleted_at IS NULL",
+      nowIso, channelId, messageId,
+    );
+  }
+  openCards(applicationId: string): Promise<PostedCard[]> {
+    return this.all<PostedCard>(
+      "SELECT application_id, channel_id, message_id FROM review_cards WHERE application_id = ? AND deleted_at IS NULL ORDER BY id",
+      applicationId,
+    );
+  }
+  async openCardCount(applicationId: string): Promise<number> {
+    const r = await this.first<{ n: number }>("SELECT count(*) AS n FROM review_cards WHERE application_id = ? AND deleted_at IS NULL", applicationId);
+    return r?.n ?? 0;
   }
   async deleteApp(id: string): Promise<void> {
     await this.run("DELETE FROM applications WHERE id = ? AND status = 'pending'", id);
@@ -247,10 +279,19 @@ export class Db {
       nowIso, limit,
     );
   }
-  /** Decided applications whose review card (screenshot) is still up: retried by cron. */
-  cardsToClean(limit: number): Promise<Application[]> {
-    return this.all<Application>(
-      "SELECT * FROM applications WHERE status <> 'pending' AND screenshot_deleted_at IS NULL AND review_message_id IS NOT NULL ORDER BY decided_at, id LIMIT ?",
+  /**
+   * Posted review cards that should be deleted and retried by cron: every undeleted card that is
+   * not the current card of a still-pending application (so a leftover after a 48h hop is included).
+   */
+  cardsToClean(limit: number): Promise<PostedCard[]> {
+    return this.all<PostedCard>(
+      `SELECT c.application_id, c.channel_id, c.message_id
+       FROM review_cards c
+       LEFT JOIN applications a ON a.id = c.application_id
+       WHERE c.deleted_at IS NULL
+         AND NOT (a.status = 'pending' AND a.review_channel_id = c.channel_id AND a.review_message_id = c.message_id)
+       ORDER BY c.id
+       LIMIT ?`,
       limit,
     );
   }

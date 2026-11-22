@@ -86,6 +86,67 @@ describe("48h upline escalation", () => {
     expect(w.fake.messages.has(card.review_message_id!)).toBe(false);
   });
 
+  it("retries a leftover screenshot in the lower IB channel when the post-hop delete fails", async () => {
+    const w = world();
+    withSubLine(w);
+    w.fake.members.set(IDS.member, []);
+    const i = clientSubmit(IDS.member, [], { accm: "123456", type: "free", line: "3" });
+    await handleInteraction(i, w.deps, w.ctx);
+    await w.ctx.flush();
+    const a0 = appOf(w, i.id);
+    const oldId = a0.review_message_id!;
+    expect(w.fake.messages.has(oldId)).toBe(true);
+
+    w.fake.failDeleteMessage = true;
+    advance(w, 49 * HOUR);
+    expect((await runCron(w.deps)).escalated).toBe(1);
+    const a1 = appOf(w, i.id);
+    expect(a1).toMatchObject({ current_reviewer_line_id: 2, review_channel_id: IDS.reviewGfx, status: "pending" });
+    expect(a1.review_message_id).not.toBe(oldId);
+    expect(w.fake.messages.has(oldId)).toBe(true); // leftover in the lower IB channel
+    expect(w.fake.messages.has(a1.review_message_id!)).toBe(true); // current upline card
+    expect(w.d1.one<{ n: number }>("SELECT count(*) n FROM review_cards WHERE application_id = ? AND deleted_at IS NULL", i.id).n).toBe(2);
+
+    w.fake.failDeleteMessage = false;
+    const s = await runCron(w.deps);
+    expect(s.cards).toBe(1);
+    expect(w.fake.messages.has(oldId)).toBe(false);
+    expect(w.fake.messages.has(a1.review_message_id!)).toBe(true); // pending current card stays
+    expect(appOf(w, i.id).status).toBe("pending");
+    expect(appOf(w, i.id).screenshot_deleted_at).toBeNull();
+    expect(w.d1.one<{ n: number }>("SELECT count(*) n FROM review_cards WHERE application_id = ? AND deleted_at IS NULL", i.id).n).toBe(1);
+
+    // A later decision still deletes the current card (and would also have wiped the leftover).
+    const card = appOf(w, i.id);
+    await handleInteraction(button(CID.approve + card.id, IDS.ben, [], card.review_channel_id!, card.review_message_id!), w.deps, w.ctx);
+    await w.ctx.flush();
+    expect(w.fake.messages.has(card.review_message_id!)).toBe(false);
+    expect(appOf(w, i.id).screenshot_deleted_at).not.toBeNull();
+  });
+
+  it("a decision after a failed hop delete still removes the leftover card in the lower channel", async () => {
+    const w = world();
+    withSubLine(w);
+    w.fake.members.set(IDS.member, []);
+    const i = clientSubmit(IDS.member, [], { accm: "123456", type: "free", line: "3" });
+    await handleInteraction(i, w.deps, w.ctx);
+    await w.ctx.flush();
+    const oldId = appOf(w, i.id).review_message_id!;
+    w.fake.failDeleteMessage = true;
+    advance(w, 49 * HOUR);
+    await runCron(w.deps);
+    const card = appOf(w, i.id);
+    expect(w.fake.messages.has(oldId)).toBe(true);
+    w.fake.failDeleteMessage = false;
+    await handleInteraction(button(CID.approve + card.id, IDS.ben, [], card.review_channel_id!, card.review_message_id!), w.deps, w.ctx);
+    await w.ctx.flush();
+    expect(w.fake.messages.has(oldId)).toBe(false);
+    expect(w.fake.messages.has(card.review_message_id!)).toBe(false);
+    expect(appOf(w, i.id)).toMatchObject({ status: "approved" });
+    expect(appOf(w, i.id).screenshot_deleted_at).not.toBeNull();
+    expect(w.d1.one<{ n: number }>("SELECT count(*) n FROM review_cards WHERE application_id = ? AND deleted_at IS NULL", i.id).n).toBe(0);
+  });
+
   it("old reviewer's stale card cannot decide after escalation; IB requests escalate too", async () => {
     const w = world();
     withSubLine(w);

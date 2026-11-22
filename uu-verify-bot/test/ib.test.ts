@@ -154,6 +154,27 @@ describe("Duplicate ACCM IB email", () => {
     ).toThrow(/UNIQUE/);
   });
 
+  it("a line IB or Coach without Admin / Mod cannot approve or deny a flagged duplicate email; only Admin / Mod may deny after review", async () => {
+    const w = world();
+    w.fake.members.set(IDS.member, []);
+    const i = ibSubmit(IDS.member, [], { email: "GOLDFX.society@gmail.com", line: "1" });
+    await run(w, i);
+    const app = appOf(w, i.id);
+    expect(app.flags).toContain("dup_ib_email");
+    // Coach Mike is the reviewer for line 1; no Admin role. Approve stays blocked for everyone.
+    await click(w, CID.approve + app.id, IDS.coach1, [], app);
+    expect(followups(w).at(-1)).toBe(MSG.dupEmailBlocked);
+    expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+    expect(w.fake.createdRoles).toHaveLength(0);
+    // Non-admin Deny uses the same Admin / Mod-only notice (Design-signed wording), not a Denied DM.
+    await run(w, denySubmit(app.id, IDS.coach1, [], app.review_channel_id!, "duplicate_email", "", app.review_message_id!));
+    expect(followups(w).at(-1)).toBe(MSG.needAdminDupUserId);
+    expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+    expect(w.fake.messages.has(app.review_message_id!)).toBe(true);
+  });
+
   it("admin deny after review uses the post-review duplicate-email copy, not admin-still-needs-to-look wording", async () => {
     const w = world();
     w.fake.members.set(IDS.member, []);

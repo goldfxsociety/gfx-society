@@ -19,7 +19,7 @@ The architecture is the same as `discord-verify-bot/`:
   - The dropdown shows display names only (+ "Upline: X"). Its last option is the transfer option ("Wala sa list / ibang IB").
   - More than 24 lines → the member is pointed to `/verify-client` with autocomplete.
 - **#verify → IB ako**
-  - New Sub-IB under an upline line: ACCM IB email + screenshot.
+  - New Sub-IB under an upline line: ACCM IB email + upline dropdown (no screenshot).
   - The email is visible to Admins only, via the "Admin: View IB Email" button (logged as `email_viewed`).
   - Approval auto-creates the `Line: {name}` role, the `#review-{slug}` channel and the `ib_lines` row.
 - **Review cards**
@@ -28,7 +28,9 @@ The architecture is the same as `discord-verify-bot/`:
   - Approve / Deny, with deny presets plus a note. The member gets the §10 DM (fallback: `/uu-status`), and the
     decision is logged to D1 and `#admin-log`.
   - The card (with the screenshot) is deleted after the decision.
-  - Duplicate User ID needs an Admin to approve. A duplicate IB email blocks approval for everyone.
+  - Duplicate User ID: only Admin / Mod may approve or deny. A duplicate IB email cannot be approved by anyone
+    (including Admin / Mod); only Admin / Mod may deny it after a manual review. A line IB or Coach without
+    Admin / Mod cannot close either kind of duplicate; the card stays pending and no Denied DM is sent.
 - **Coach Mike line:** one line, one role, one `#review-coach-mike`, one dropdown entry. Both accounts in
   `COACH_MIKE_DISCORD_USER_IDS` get Coach, can decide Coach Mike cases, and are the escalation root.
 
@@ -38,13 +40,13 @@ Every run is capped at 45 subrequests + D1 queries (`src/meter.ts`) and resumes 
 
 | Job | Rule |
 |---|---|
-| 48h escalation | A pending card older than 48h moves to the next upline line's review channel. The screenshot is re-uploaded each hop. It stops at Coach Mike with one `#admin-log` alert. |
+| 48h escalation | A pending card older than 48h moves to the next upline line's review channel. The screenshot is re-uploaded each hop. It stops at Coach Mike with one `#admin-log` alert. Every posted card is tracked in `review_cards`; if the old-card delete fails after a hop, cron retries it until the screenshot is gone from the lower channel. |
 | VIP reminder | 00:00 Manila, 7 days before the 1st. DMs every VIP verified before that moment. |
 | VIP reset | On the 1st (only starts on Manila days 1–3): VIP role removed from VIPs verified before the reminder window. FREE and Sub-IB are kept. Idempotent per `YYYY-MM` (`cron_runs` + unique `decision_logs` row). |
 
 ## Storage (D1)
 
-`migrations/0001_init.sql` creates five tables: `ib_lines`, `members`, `applications`, `decision_logs` and `cron_runs`.
+`migrations/0001_init.sql` creates six tables: `ib_lines`, `members`, `applications`, `review_cards`, `decision_logs` and `cron_runs`.
 
 - **No balances or amounts are ever stored.** VIP only stores `vip_above_min = yes/no`.
 - `accm_ib_email` is shown to admins only.
@@ -52,10 +54,10 @@ Every run is capped at 45 subrequests + D1 queries (`src/meter.ts`) and resumes 
 
 | File | Purpose |
 |---|---|
-| `sql/0001_verify.sql` | 7 read-only checks, all must return `ok`. One SELECT per check, because D1 caps compound SELECTs. |
+| `sql/0001_verify.sql` | 8 read-only checks, all must return `ok`. One SELECT per check, because D1 caps compound SELECTs. |
 | `sql/seed.template.sql` | Reference only. The real seed is `seed.generated.sql`, written by setup (git-ignored). |
 | `sql/seed_verify.sql` | 3 checks after seeding. |
-| `sql/0001_revert.sql` | Drops all five tables and un-records the migration. **Export a backup first.** |
+| `sql/0001_revert.sql` | Drops all six tables and un-records the migration. **Export a backup first.** |
 
 ### D1 run order (Jarvis, after QA PASS + merge)
 
@@ -66,7 +68,7 @@ confirm prompt.
 cd uu-verify-bot && npm ci
 npx wrangler d1 create uu-verify-bot                          # paste database_id into wrangler.toml
 CI=1 npx wrangler d1 migrations apply DB --remote
-npx wrangler d1 execute DB --remote --file sql/0001_verify.sql   # 7 × ok
+npx wrangler d1 execute DB --remote --file sql/0001_verify.sql   # 8 × ok
 npm run setup-server                                           # offline dry-run: review the plan
 npm run setup-server -- --dry-run --online                     # optional GET-only diff (token in env)
 npm run setup-server -- --apply                                # creates roles/channels; writes setup.out.json + seed.generated.sql
@@ -137,7 +139,9 @@ npm run build:dry                # wrangler deploy --dry-run
    removed on approval if present.
 6. **Copy (Design signed off, 22 Nov 2026):** the privacy notice, deny presets beyond §10 (wrong upline, unclear
    FREE/VIP, below $50, duplicate, duplicate email, other), and the VIP reminder. Duplicate deny copy is sent only
-   after an admin reviews and denies; the application stays pending until then. The screenshot-deletion sentence
+   after an Admin / Mod reviews and denies; a line IB or Coach without Admin / Mod cannot approve or deny.
+   The in-channel notice is "Duplicate ACCM User ID: Admin / Mod muna ang mag-review bago i-approve o i-Deny."
+   (same wording for a non-admin deny of a duplicate IB email). The screenshot-deletion sentence
    was not added to the modal screenshot Label descriptions: Discord caps those at 100 characters (FREE would be
    105, VIP 118). It stays in the privacy notice in `#start-here`, the `#verify` panel, and at the top of both modals.
 7. **Leavers and VIP scope:** the bot can't see leaves. Returning members are detected from D1 on their next
