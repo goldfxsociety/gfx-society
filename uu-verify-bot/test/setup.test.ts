@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Perm } from "../src/discord";
+import { DiscordCode, DiscordError, Perm } from "../src/discord";
 import { BOT, reviewChannelOverwrites } from "../src/perms";
 import {
   BASE_ROLES,
@@ -45,9 +45,9 @@ describe("setup-server --dry-run plan", () => {
     expect(plan.lockExisting.map((l) => l.name).sort()).toEqual(["General", "Text Channels", "Voice Channels", "general"].sort());
     for (const l of plan.lockExisting) {
       expect(l.access).toEqual([
-        { target: { kind: "everyone" }, allow: "0", deny: (1n << 10n).toString() },
-        { target: { kind: "role", name: "Unverified" }, allow: "0", deny: (1n << 10n).toString() },
         { target: { kind: "bot" }, allow: BOT, deny: "0" },
+        { target: { kind: "role", name: "Unverified" }, allow: "0", deny: (1n << 10n).toString() },
+        { target: { kind: "everyone" }, allow: "0", deny: (1n << 10n).toString() },
       ]);
     }
     // Nothing in the plan deletes or renames them.
@@ -140,7 +140,8 @@ describe("role order warning", () => {
     expect(created.some((c) => /general|Text Channels|Voice Channels/.test(c))).toBe(false);
     for (const id of ["DEFAULT_TEXT_CATEGORY", "DEFAULT_VOICE_CATEGORY", "DEFAULT_GENERAL_TEXT", "DEFAULT_GENERAL_VOICE"]) {
       const p = puts.filter((x) => x.channelId === id);
-      expect(p.map((x) => x.id)).toEqual([ids.guildId, res.roleIds.Unverified, ids.botRoleId]);
+      // Bot allow first, Unverified next, @everyone last — denying @everyone first was the live 403/50001.
+      expect(p.map((x) => x.id)).toEqual([ids.botRoleId, res.roleIds.Unverified, ids.guildId]);
       expect(p.filter((x) => x.id !== ids.botRoleId).every((x) => (BigInt(x.deny) & Perm.VIEW_CHANNEL) === Perm.VIEW_CHANNEL)).toBe(true);
       expect(p.find((x) => x.id === ids.botRoleId)?.deny).toBe("0");
     }
@@ -278,5 +279,109 @@ describe("resolveOverwrites bot target", () => {
   it("falls back to a bot user member overwrite without botRoleId", () => {
     const ow = resolveOverwrites([{ target: { kind: "bot" }, allow: BOT, deny: "0" }], {}, { ...ids, botRoleId: undefined });
     expect(ow).toEqual([{ id: ids.botUserId, type: 1, allow: BOT, deny: "0" }]);
+  });
+
+  it("writes the bot allow before the @everyone deny even if the access list is in the unsafe order", () => {
+    const ow = resolveOverwrites(
+      [
+        { target: { kind: "everyone" }, allow: "0", deny: (1n << 10n).toString() },
+        { target: { kind: "role", name: "Unverified" }, allow: "0", deny: (1n << 10n).toString() },
+        { target: { kind: "bot" }, allow: BOT, deny: "0" },
+      ],
+      { Unverified: "UNVERIFIED_ROLE" },
+      ids,
+    );
+    expect(ow.map((o) => o.id)).toEqual([ids.botRoleId, "UNVERIFIED_ROLE", ids.guildId]);
+  });
+});
+
+const DEFAULT_LOCK_IDS = ["DEFAULT_TEXT_CATEGORY", "DEFAULT_VOICE_CATEGORY", "DEFAULT_GENERAL_TEXT", "DEFAULT_GENERAL_VOICE"];
+
+function realizedState(): GuildState {
+  const fresh = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids);
+  const state = knownGuildState(ids.guildId, ids.botUserId);
+  return {
+    roles: [...state.roles, ...BASE_ROLES.map((name) => ({ id: `ROLE_${name}`, name, position: 2 }))],
+    channels: [
+      ...state.channels,
+      ...fresh.categories.map((c) => ({ id: `CAT_${c.name}`, name: c.name, type: ChannelType.CATEGORY })),
+      ...fresh.channels.map((c) => ({ id: `CH_${c.key}`, name: c.name, type: ChannelType.TEXT, parent_id: `CAT_${c.category}` })),
+    ],
+  };
+}
+
+function recordingApi(putOverwrite: SetupApi["putOverwrite"], addMemberRole: SetupApi["addMemberRole"] = async () => true): SetupApi & { created: string[] } {
+  const created: string[] = [];
+  let n = 0;
+  return {
+    created,
+    createRole: async (name) => (created.push(`role:${name}`), { id: String(930000000000000000n + BigInt(++n)) }),
+    createChannel: async (b) => (created.push(`${b.type === ChannelType.CATEGORY ? "cat" : "ch"}:${b.name}`), { id: String(940000000000000000n + BigInt(++n)) }),
+    putOverwrite,
+    addMemberRole,
+    listRoles: async () => [
+      { id: ids.botRoleId!, name: "UU Bot", position: 10, managed: true, tags: { bot_id: ids.botUserId } },
+      { id: "v", name: "VIP", position: 5 },
+    ],
+  };
+}
+
+describe("lockExisting overwrite order keeps bot View", () => {
+  it("writes the bot allow before the @everyone deny so a mid-run View loss cannot happen", async () => {
+    // Live bug: denying @everyone first removed the bot's only View on Text Channels, so the next PUT failed with 403/50001.
+    const plan = planSetup(knownGuildState(ids.guildId, ids.botUserId), ids);
+    const botCanSee = new Set(DEFAULT_LOCK_IDS);
+    const puts: Array<{ channelId: string; id: string }> = [];
+    const api = recordingApi(async (channelId, o) => {
+      if (!botCanSee.has(channelId) && DEFAULT_LOCK_IDS.includes(channelId)) {
+        throw new DiscordError(403, 50001, `PUT /channels/${channelId}/permissions/${o.id}`);
+      }
+      puts.push({ channelId, id: o.id });
+      const denyView = (BigInt(o.deny) & Perm.VIEW_CHANNEL) === Perm.VIEW_CHANNEL;
+      const allowView = (BigInt(o.allow) & Perm.VIEW_CHANNEL) === Perm.VIEW_CHANNEL;
+      if (o.id === ids.botRoleId && allowView) botCanSee.add(channelId);
+      else if (o.id === ids.guildId && denyView) botCanSee.delete(channelId);
+    });
+    const res = await executePlan(plan, ids, api);
+    for (const id of DEFAULT_LOCK_IDS) {
+      const p = puts.filter((x) => x.channelId === id);
+      const botIdx = p.findIndex((x) => x.id === ids.botRoleId);
+      const everyoneIdx = p.findIndex((x) => x.id === ids.guildId);
+      expect(botIdx).toBeGreaterThanOrEqual(0);
+      expect(everyoneIdx).toBeGreaterThan(botIdx);
+    }
+    expect(res.channelIds.verify).toBeTruthy();
+  });
+});
+
+describe("per-user overwrite when the member is not in the server", () => {
+  it("warns and continues on 404/10009 for Coach Mike, and a later rerun adds the overwrites once they have joined", async () => {
+    // Live bug: a rerun PUT of Coach Mike's overwrites on #review-coach-mike returned 404/10009 and aborted the run.
+    const plan = planSetup(realizedState(), ids);
+    expect(plan.channels.find((c) => c.key === "review_coach_mike")).toMatchObject({ action: "exists", id: "CH_review_coach_mike" });
+    const missing = new Set(ids.coachMikeUserIds);
+    const puts: Array<{ channelId: string; id: string }> = [];
+    const failing = recordingApi(async (channelId, o) => {
+      if (o.type === 1 && missing.has(o.id)) {
+        throw new DiscordError(404, DiscordCode.UNKNOWN_OVERWRITE, `PUT /channels/${channelId}/permissions/${o.id}`);
+      }
+      puts.push({ channelId, id: o.id });
+    }, async (userId) => !missing.has(userId));
+    const res = await executePlan(plan, ids, failing);
+    expect(failing.created).toEqual([]);
+    expect(res.warnings.filter((w) => w.includes("1317701669768925188") && w.includes("not in the server") && w.includes("later rerun"))).toHaveLength(1);
+    expect(res.warnings.filter((w) => w.includes("1417055027121619004") && w.includes("not in the server") && w.includes("later rerun"))).toHaveLength(1);
+    expect(res.warnings.some((w) => w.includes("1417055027121619004") && w.includes("Coach"))).toBe(true);
+    // The run finished: Ben's overwrite on #review-gfx and the default locks were still applied.
+    expect(puts.some((p) => p.channelId === "CH_review_gfx" && p.id === ids.benUserId)).toBe(true);
+    expect(DEFAULT_LOCK_IDS.every((id) => puts.some((p) => p.channelId === id && p.id === ids.botRoleId))).toBe(true);
+
+    const added: string[] = [];
+    const ok = recordingApi(async (channelId, o) => {
+      if (o.type === 1 && missing.has(o.id)) added.push(`${channelId}:${o.id}`);
+    }, async () => true);
+    const again = await executePlan(plan, ids, ok);
+    expect(added.sort()).toEqual(["CH_review_coach_mike:1317701669768925188", "CH_review_coach_mike:1417055027121619004"].sort());
+    expect(again.warnings.some((w) => w.includes("not in the server yet; skipped per-user overwrite"))).toBe(false);
   });
 });

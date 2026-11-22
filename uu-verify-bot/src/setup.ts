@@ -4,11 +4,14 @@
  * a previous setup.out.json (idempotent), leaves Discord's default categories/channels and the bot's managed
  * role in place, and locks the defaults by denying View Channel to @everyone and Unverified (bot keep-View).
  * Hidden categories always include a bot allow (View + Manage Channels) so the bot can still see them after
- * @everyone is denied View. If a sibling category already exists but a hidden one is not visible and has no
- * saved id, planning fails fast instead of creating a duplicate.
+ * @everyone is denied View. When overwrites are applied one-by-one, the bot allow is written first and the
+ * @everyone deny last, so the bot never loses View mid-run (denying @everyone first caused 403/50001 while
+ * locking Discord's defaults). A 404 putting a per-user overwrite for someone not in the server is a warning,
+ * not a stop; a later rerun adds it once they have joined. If a sibling category already exists but a hidden
+ * one is not visible and has no saved id, planning fails fast instead of creating a duplicate.
  */
 import { SPEC_RISK_LINE } from "./copy";
-import { bits, type Overwrite, Perm } from "./discord";
+import { bits, DiscordCode, DiscordError, type Overwrite, Perm } from "./discord";
 import { BOT, READ, reviewChannelOverwrites, VIEW, WRITE } from "./perms";
 
 export const ROLE = {
@@ -52,8 +55,8 @@ const bot = (): OverwriteSpec => ({ target: { kind: "bot" }, allow: BOT, deny: "
 const SEND = bits(Perm.SEND_MESSAGES);
 const VERIFY_ALLOW = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.USE_APPLICATION_COMMANDS);
 const hidden = [everyone("0", VIEW), role(ROLE.unverified, "0", VIEW)];
-/** Hidden spaces also grant the bot View + Manage Channels (and the rest of BOT) so it can still see and manage them. */
-const hiddenBot = [...hidden, bot()];
+/** Hidden spaces grant the bot View + Manage Channels (and the rest of BOT). Order matters for one-by-one PUTs: bot allow first, then Unverified deny, then @everyone deny last, so the bot never loses View mid-run. */
+const hiddenBot = [bot(), role(ROLE.unverified, "0", VIEW), everyone("0", VIEW)];
 
 export interface People {
   coachMikeUserIds: string[];
@@ -252,7 +255,7 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
     );
   }
   // Leave defaults (and anything else not ours) in place, but lock them: no View for @everyone / Unverified.
-  // The bot keeps View so it can still see the locked defaults.
+  // The bot keeps View (allow written first) so it can still see the locked defaults while it finishes the PUTs.
   for (const c of state.channels) {
     const ours = c.type === ChannelType.CATEGORY ? ourCategoryNames.has(c.name) : ourChannelNames.has(c.name);
     if (!ours) plan.lockExisting.push({ id: c.id, name: c.name, type: c.type, access: hiddenBot });
@@ -263,8 +266,14 @@ export function planSetup(state: GuildState, ids: SetupIds, known?: PriorSetupId
   return plan;
 }
 
+/** PUT order that never drops the bot's View mid-run: bot allow first, other roles/users next, @everyone last. */
+export function safeAccessOrder(access: OverwriteSpec[]): OverwriteSpec[] {
+  const rank = (t: Target) => (t.kind === "bot" ? 0 : t.kind === "everyone" ? 2 : 1);
+  return [...access].sort((a, b) => rank(a.target) - rank(b.target));
+}
+
 export function resolveOverwrites(access: OverwriteSpec[], roleIds: Record<string, string>, ids: SetupIds): Overwrite[] {
-  return access.map((o) => {
+  return safeAccessOrder(access).map((o) => {
     const t = o.target;
     if (t.kind === "everyone") return { id: ids.guildId, type: 0, allow: o.allow, deny: o.deny };
     if (t.kind === "bot") {
@@ -326,7 +335,7 @@ export async function executePlan(
   for (const c of plan.categories) {
     const ow = resolveOverwrites(c.access, roleIds, ids);
     if (c.id) {
-      for (const o of ow) await api.putOverwrite(c.id, o);
+      await applyOverwrites(api, c.id, ow, warnings, out);
       categoryIds[c.name] = c.id;
     } else categoryIds[c.name] = (await api.createChannel({ name: c.name, type: ChannelType.CATEGORY, permission_overwrites: ow })).id;
     out(`${c.action === "create" ? "created" : "exists "} category ${c.name}`);
@@ -335,7 +344,7 @@ export async function executePlan(
   for (const ch of plan.channels) {
     const ow = resolveOverwrites(ch.access, roleIds, ids);
     if (ch.id) {
-      for (const o of ow) await api.putOverwrite(ch.id, o);
+      await applyOverwrites(api, ch.id, ow, warnings, out);
       channelIds[ch.key] = ch.id;
     } else {
       channelIds[ch.key] = (await api.createChannel({ name: ch.name, type: ChannelType.TEXT, topic: ch.topic, parent_id: categoryIds[ch.category], permission_overwrites: ow })).id;
@@ -344,7 +353,7 @@ export async function executePlan(
     emit();
   }
   for (const l of plan.lockExisting) {
-    for (const o of resolveOverwrites(l.access, roleIds, ids)) await api.putOverwrite(l.id, o);
+    await applyOverwrites(api, l.id, resolveOverwrites(l.access, roleIds, ids), warnings, out);
     out(`locked existing ${l.type === ChannelType.CATEGORY ? "category" : "channel"} ${l.name} (View denied for @everyone, Unverified; not deleted)`);
   }
   // Role-order warnings are recomputed after the roles exist (see below).
@@ -355,6 +364,31 @@ export async function executePlan(
   }
   warnings.push(...roleOrderWarnings(await api.listRoles(), ids.botUserId));
   return { roleIds, channelIds, categoryIds, warnings };
+}
+
+/** Write overwrites one-by-one. A 404/10009 on a member overwrite (user not in the server) is a warning, not a stop. */
+async function applyOverwrites(
+  api: SetupApi,
+  channelId: string,
+  ow: Overwrite[],
+  warnings: string[],
+  out: (line: string) => void,
+): Promise<void> {
+  for (const o of ow) {
+    try {
+      await api.putOverwrite(channelId, o);
+    } catch (e) {
+      const missing =
+        o.type === 1 &&
+        e instanceof DiscordError &&
+        (e.status === 404 || e.code === DiscordCode.UNKNOWN_OVERWRITE || e.code === DiscordCode.UNKNOWN_MEMBER);
+      if (!missing) throw e;
+      warnings.push(
+        `WARNING: user ${o.id} is not in the server yet; skipped per-user overwrite on channel ${channelId}. A later rerun will add it once they have joined.`,
+      );
+      out(`skipped member overwrite for ${o.id} on ${channelId} (not in the server yet)`);
+    }
+  }
 }
 
 const sqlStr = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
