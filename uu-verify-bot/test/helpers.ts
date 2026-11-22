@@ -209,7 +209,7 @@ export function world(start = "2026-11-22T06:00:00.000Z"): World {
   d1.sqlite.exec(`
     INSERT INTO ib_lines (id, slug, display_name, discord_user_id, accm_ib_email, upline_line_id, role_id, review_channel_id, is_seed)
     VALUES (1, 'coach-mike', 'Coach Mike', '${IDS.coach1}', NULL, NULL, '${IDS.lineCoachRole}', '${IDS.reviewCoach}', 1),
-           (2, 'gfx', 'GFX', '${IDS.ben}', 'goldfx.society@gmail.com', 1, '${IDS.lineGfxRole}', '${IDS.reviewGfx}', 1);
+           (2, 'gfx', 'Ben', '${IDS.ben}', 'goldfx.society@gmail.com', 1, '${IDS.lineGfxRole}', '${IDS.reviewGfx}', 1);
   `);
   const fake = new FakeDiscord();
   for (const id of [IDS.coach1, IDS.coach2]) fake.members.set(id, [IDS.coachRole]);

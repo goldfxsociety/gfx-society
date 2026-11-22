@@ -34,7 +34,7 @@ describe("Client ako: open modal", () => {
     expect(comps[1].component).toMatchObject({ custom_id: CID.fAccm, min_length: 6, max_length: 6 });
     expect(comps[2].component.options.map((o: any) => o.value)).toEqual(["free"]);
     const opts = comps[3].component.options;
-    expect(opts.map((o: any) => o.label)).toEqual(["Coach Mike", "GFX", TRANSFER_OPTION_LABEL]);
+    expect(opts.map((o: any) => o.label)).toEqual(["Ben", "Coach Mike", TRANSFER_OPTION_LABEL]);
     expect(JSON.stringify(r)).not.toContain("goldfx.society@gmail.com"); // IB email never in a dropdown
     expect(comps[4].component).toMatchObject({ type: 19, custom_id: CID.fShot, file_types: ["image"], max_values: 1 });
   });
@@ -113,7 +113,7 @@ describe("Client ako: FREE flow", () => {
     const card = w.fake.messages.get(app.review_message_id!)!;
     expect(card.channelId).toBe(IDS.reviewGfx);
     expect(card.content).toContain("123456");
-    expect(card.content).toContain("Referring IB: GFX");
+    expect(card.content).toContain("Referring IB: Ben");
     expect(card.file?.filename).toBe(`uu-${i.id}.png`); // neutral name, never the member's filename
     expect(card.file?.bytes).toEqual(PNG);
     expect(card.allowed_mentions).toEqual({ parse: [], users: [IDS.ben] });

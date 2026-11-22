@@ -21,6 +21,9 @@ describe("member-facing copy", () => {
 
   it("transfer copy carries the ACCM transfer emails, subject and GFX IB email", () => {
     expect(C.SPEC_TRANSFER).toContain("csse@accmfx.com at roselle@accmfx.com, subject: For Transfer IB. IB email: goldfx.society@gmail.com.");
+    expect(C.SPEC_TRANSFER).toContain("mag-transfer ka under kay Ben");
+    expect(C.SPEC_TRANSFER).toContain("piliin si Ben sa dropdown");
+    expect(C.SPEC_TRANSFER).not.toContain("GFX line");
   });
 
   it("Denied DM fills [reason]", () => {
@@ -69,7 +72,7 @@ describe("member-facing copy", () => {
     expect(C.MODAL.shotDescVip).toBe("$50 o more na deposit o balance. Pwede mong i-crop ang ibang details.");
     expect(C.PRIVACY_NOTICE).toContain(deletion);
     const lines = [
-      { id: 1, slug: "gfx", display_name: "GFX", discord_user_id: "1", accm_ib_email: "hidden@example.com", upline_line_id: null, role_id: "r", review_channel_id: "c", active: 1, is_seed: 1, created_at: "2026-01-01T00:00:00.000Z" },
+      { id: 1, slug: "gfx", display_name: "Ben", discord_user_id: "1", accm_ib_email: "hidden@example.com", upline_line_id: null, role_id: "r", review_channel_id: "c", active: 1, is_seed: 1, created_at: "2026-01-01T00:00:00.000Z" },
     ];
     const client = clientModal({ allowed: ["free", "vip"], lines, defaultLineId: null, prefillAccm: null }) as any;
     const clientVip = clientModal({ allowed: ["vip"], lines, defaultLineId: null, prefillAccm: null }) as any;

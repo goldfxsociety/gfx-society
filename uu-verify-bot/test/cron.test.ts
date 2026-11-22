@@ -59,7 +59,7 @@ describe("48h upline escalation", () => {
     const c1 = w.fake.messages.get(a1.review_message_id!)!;
     expect(c1.file?.bytes).toEqual(PNG); // screenshot preserved until the final decision
     expect(c1.content).toContain("escalated ×1");
-    expect(w.fake.messagesIn(IDS.adminLog).at(-1)?.content).toContain("Sub IB → GFX");
+    expect(w.fake.messagesIn(IDS.adminLog).at(-1)?.content).toContain("Sub IB → Ben");
 
     // Hop 2: GFX → Coach Mike
     advance(w, 49 * HOUR);
