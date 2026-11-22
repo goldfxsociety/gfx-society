@@ -208,13 +208,14 @@ await t("privacy: v1.5 served now (flag live); v1.4 kept as rollback history; th
   assert.match(v15, /\| Google LLC \(Gmail\) \|/);
   // Drift guard: removing the v1.5-only lines from v1.5 and the replaced lines from v1.4 leaves identical text.
   const a = v14.split("\n"), b = v15.split("\n");
-  const v15only = (l) => /Version: 1\.5|What changed in v1\.5|^\| Google LLC \(Gmail\)|^\| Different ACCM email waiting|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
-  const v14only = (l) => /Version: 1\.4|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
+  const uuWho = (l) => /^GoldFX Society \("GFX", "we", "us"\) operates https:\/\/gfx-society\.vercel\.app/.test(l);
+  const v15only = (l) => uuWho(l) || /Version: 1\.5|What changed in v1\.5|^\| Google LLC \(Gmail\)|^\| Different ACCM email waiting|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
+  const v14only = (l) => uuWho(l) || /Version: 1\.4|What changed in v1\.4\.1|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   assert.deepEqual(b.filter((l) => !v15only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")), a.filter((l) => !v14only(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === "")));
 });
 await t("privacy v1.6 = v1.5 plus only the request-cadence lines (drift guard; every v1.5 mailer passage kept)", async () => {
   const v15 = read("src/content/legal/privacy-notice-v1.5.md").split("\n"), v16 = read("src/content/legal/privacy-notice-v1.6.md").split("\n");
-  const changed = (l) => /^Last updated:|What changed in v1\.6|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
+  const changed = (l) => /^Last updated:|What changed in v1\.6|What changed in v1\.7|^GoldFX Society \("GFX", "we", "us"\) operates https:\/\/gfx-society\.vercel\.app|^- \*\*Access request \(optional\):\*\*|^\| Trading System access request/.test(l);
   const norm = (a) => a.filter((l) => !changed(l)).filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
   assert.deepEqual(norm(v16), norm(v15));
   const v16s = v16.join("\n");

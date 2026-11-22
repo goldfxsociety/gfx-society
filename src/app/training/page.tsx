@@ -5,6 +5,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { Play, BookOpen, Zap, UserRound } from "lucide-react";
 import { ME } from "@/config/members-home";
+import { DISCORD_INVITE_URL } from "@/config/journey";
+import { DiscordApplyLink } from "@/components/funnel/discord-apply-link";
 import { createClient } from "@/lib/supabase/server";
 import { formatPhtDate } from "@/lib/training/time";
 import { getAllCourseViews, groupByModule } from "@/lib/training/courses";
@@ -104,7 +106,7 @@ export default async function TrainingPage() {
         {explorer ? <ExplorerSeen /> : <FlipBanner text={H.flipBanner} />}
         {membership === "grace" && <GraceBanner />}
 
-        {/* 4 cards (simplicity spec v2 P1.3): Continue training (the one gold), Courses, Signals (coming soon), Account. */}
+        {/* 4 cards (simplicity spec v2 P1.3): Continue training (the one gold), Courses, Signals (UU invite), Account. */}
         <ul className="flex flex-col gap-3" aria-label="Member home">
           {/* 1. Continue training: the one gold CTA. Finished courses use an explicit capstone or review action. */}
           <li>
@@ -153,19 +155,20 @@ export default async function TrainingPage() {
               </span>
             </Link>
           </li>
-          {/* 3. Signals: placeholder only. Not a link or button, not focusable, no hover, no gold, no dates, no claims. */}
-          <li>
-            <div aria-disabled="true" className={cn(card, "items-center opacity-60")} data-testid="card-signals">
-              <span aria-hidden className={cn(icon, "text-muted-foreground")}>
-                <Zap className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-lg font-semibold">{H.signalsTitle}</span>
-                <span className="block text-sm text-muted-foreground">{H.signalsLine}</span>
-              </span>
-              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">{H.signalsBadge}</span>
-            </div>
-          </li>
+          {/* 3. Signals: UU invite, secondary (not gold). Hidden when the invite is null. No coming-soon fallback. */}
+          {DISCORD_INVITE_URL ? (
+            <li>
+              <DiscordApplyLink page="training" testId="card-signals" className={cn(card, "min-h-11 items-center hover:bg-muted/40")}>
+                <span aria-hidden className={icon}>
+                  <Zap className="size-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-lg font-semibold">{H.signalsTitle}</span>
+                  <span className="block text-sm text-muted-foreground">{H.signalsLine}</span>
+                </span>
+              </DiscordApplyLink>
+            </li>
+          ) : null}
           {/* 4. Account */}
           <li>
             <Link href="/account" className={cn(card, "hover:bg-muted/40")} data-testid="card-account">

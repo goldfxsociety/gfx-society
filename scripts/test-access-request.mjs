@@ -278,14 +278,15 @@ await t("privacy page: live flag serves v1.6; v1.5 kept as history; v1.4 stays o
   assert.match(read("src/app/privacy/page.tsx"), /const PRIVACY_FILE = ACCM_CONFIRM_MAIL_LIVE \? "privacy-notice-v1\.6\.md" : "privacy-notice\.md";/);
   assert.equal(AR.ACCM_CONFIRM_MAIL_LIVE, true);
   assert.match(read("src/content/legal/privacy-notice-v1.5.md"), /^Last updated: 11 Nov 2026 · Version: 1\.5$/m);
-  assert.match(read("src/content/legal/privacy-notice-v1.6.md"), /^Last updated: 15 Nov 2026 · Version: 1\.6$/m);
+  assert.match(read("src/content/legal/privacy-notice-v1.6.md"), /^Last updated: 22 Nov 2026 · Version: 1\.7$/m);
 });
 await t("privacy v1.6: spec §3 request line verbatim (TL), EN equivalent, no 'monthly update' for requests, no User ID", async () => {
   const p = read("src/content/legal/privacy-notice-v1.6.md");
   assert.ok(p.includes("Kung mag-request ka ng access, sine-save namin ang Academy email mo, ACCM email (kung binigay), at IB name (kung binigay) para i-check sa ACCM member data sa bawat import (puwede anytime, kasama ang existing monthly refresh). Hindi namin ito auto-dine-delete. Kung gusto mong burahin ang data na ito, mag-email sa goldfx.society@gmail.com."));
   assert.ok(p.includes("so we can check them against ACCM member data at each import (this can happen any time, including the existing monthly refresh). We don't delete this data automatically."));
+  assert.match(p, /\*\*What changed in v1\.7 \(22 Nov 2026\):\*\*/);
   assert.match(p, /\*\*What changed in v1\.6 \(15 Nov 2026\):\*\*/);
-  assert.ok(p.indexOf("What changed in v1.6") < p.indexOf("What changed in v1.5"), "newest change note first");
+  assert.ok(p.indexOf("What changed in v1.7") < p.indexOf("What changed in v1.6") < p.indexOf("What changed in v1.5"), "newest change note first");
   assert.ok(!/monthly update/.test(p), "no 'monthly update' cadence left");
   const req = p.split("\n").find((l) => l.startsWith("- **Access request (optional):**"));
   assert.ok(req && !/User ID/i.test(req), "no ACCM User ID on the request line (spec §3)");

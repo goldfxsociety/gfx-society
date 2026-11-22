@@ -15,7 +15,7 @@ const check = (ok, label, extra = "") => { if (ok) pass++; else fail++; console.
 
 const JOIN = "Join the Trading System";
 const LATER_KEY = "gfx_reconsent_later_at"; // src/components/consent/reconsent-banner.tsx
-const DISCORD = "Paano sumali sa Discord →"; // P3-13 lesson label (LESSON_DISCORD_LINK); /accm keeps "Apply to join our Discord →"
+const DISCORD = "Paano sumali sa Universe Unlimited Discord →"; // P3-13 lesson label (LESSON_DISCORD_LINK); /accm keeps "Universe Unlimited Discord →"
 const IB = "Partner broker ng GFX ang ACCM.";
 const RISK_RE = /Max 1% risk per trade/g;
 const NFA_RE = /(?:not|hindi) financial advice/gi; // QA risk-audit counter (lesson-risk-dedupe spec)
@@ -202,7 +202,7 @@ try {
     await p.evaluate(() => { document.querySelector('[data-testid="lesson-help"]').open = true; });
     await Promise.all([p.waitForNavigation({ waitUntil: "networkidle0" }), p.evaluate((D) => [...document.querySelectorAll('[data-testid="lesson-help"] a')].find((a) => a.textContent.trim() === D).click(), DISCORD)]);
     await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
-    const x = await p.evaluate(() => { const d = document.getElementById("discord"); const b = d?.getBoundingClientRect(); return { url: location.pathname + location.hash, tag: d?.tagName, open: d?.open, inView: b ? b.top < innerHeight && b.bottom > 0 : false, invite: d?.innerText.includes("Apply to join our Discord →") || d?.innerText.includes("Discord: coming soon."), focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
+    const x = await p.evaluate(() => { const d = document.getElementById("discord"); const b = d?.getBoundingClientRect(); return { url: location.pathname + location.hash, tag: d?.tagName, open: d?.open, inView: b ? b.top < innerHeight && b.bottom > 0 : false, invite: d?.innerText.includes("Universe Unlimited Discord →") || d?.innerText.includes("Discord: coming soon."), focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
     check(x.url === "/accm#discord" && x.tag === "DETAILS" && x.open && x.inView && x.invite, `${width} lesson help -> /accm#discord: Discord step open and in view`, JSON.stringify(x));
     check(x.focusIsSummary, `${width} lesson help -> /accm#discord: keyboard focus on the step's summary`, JSON.stringify(x));
     if (OUT) await p.screenshot({ path: `${OUT}/${width}-accm-discord-landing.png` });

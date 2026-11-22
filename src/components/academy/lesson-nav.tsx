@@ -15,8 +15,8 @@ const NEXT_GOLD = cn(buttonVariants({ variant: "default" }), "h-auto min-h-12 w-
 
 /**
  * Lesson-end help (lesson-end-buttons spec + P3-13): Discord is never gold and never a card; it is a muted text link
- * ("Paano sumali sa Discord →") under a closed "May problema?" expander. It deep-links to the Discord step on /accm
- * (ACCM first, then Discord; never straight to discord.gg), so the IB line sits in the same expander.
+ * ("Paano sumali sa Universe Unlimited Discord →") under a closed "May problema?" expander. It deep-links to the Discord
+ * step on /accm (ACCM first, then the invite; never straight to discord.gg), so the IB line sits in the same expander.
  */
 export function LessonHelp() {
   return (

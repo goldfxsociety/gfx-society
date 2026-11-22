@@ -188,19 +188,22 @@ try {
         const s = await p.evaluate(() => {
           const c = document.querySelector('[data-testid="card-signals"]');
           const ids = ["card-continue", "card-courses", "card-signals", "card-account"].map((id) => document.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect());
-          const focusables = [...document.querySelectorAll("a[href], button, input, [tabindex]")];
+          const cs = c ? getComputedStyle(c) : null;
+          const bg = cs?.backgroundColor ?? "";
           return {
-            disabled: c?.getAttribute("aria-disabled"), tag: c?.tagName, inLink: Boolean(c?.closest("a, button")), hasLink: Boolean(c?.querySelector("a, button, [tabindex]")),
-            focusable: focusables.some((f) => c?.contains(f)), text: c?.innerText.replace(/\s+/g, " ").trim(),
+            tag: c?.tagName, href: c?.getAttribute("href"), target: c?.getAttribute("target"), rel: c?.getAttribute("rel"),
+            text: c?.innerText.replace(/\s+/g, " ").trim(),
+            gold: /rgb\(212, 160, 23\)/.test(bg) || Boolean(c?.className?.includes?.("bg-primary") || c?.className?.includes?.("border-primary")),
+            minH: c ? parseFloat(cs.minHeight) || c.getBoundingClientRect().height : 0,
             order: ids.every((b, i) => b && (i === 0 || b.top > ids[i - 1].top)), fold: ids[3]?.bottom ?? 9999, vh: window.innerHeight,
           };
         });
-        check(s.disabled === "true" && s.tag === "DIV" && !s.inLink && !s.hasLink && !s.focusable, `${L}: Signals card not a link/button, aria-disabled, not focusable`, JSON.stringify(s));
-        check(s.text === "Signals Coming soon. Coming soon", `${L}: Signals copy only "Coming soon" (no dates/claims)`, s.text);
+        check(s.tag === "A" && s.href === "https://discord.gg/5HnHAhWjU" && s.target === "_blank" && /noopener/.test(s.rel || "") && /noreferrer/.test(s.rel || ""), `${L}: Signals card is the UU invite, new tab`, JSON.stringify(s));
+        check(s.text === "Signals Live signals sa Universe Unlimited" && !s.gold, `${L}: Signals copy, secondary not gold, no Coming soon`, JSON.stringify(s));
+        check(s.minH >= 44, `${L}: Signals card is at least 44px`, s.minH);
         check(s.order, `${L}: card order Continue, Courses, Signals, Account`);
         console.log(`INFO ${L}: 4th card bottom ${Math.round(s.fold)}px of ${s.vh}px viewport`);
-        await p.click('[data-testid="card-signals"]').catch(() => {});
-        check(p.url().endsWith("/training"), `${L}: clicking Signals goes nowhere`, p.url());
+        // Do not click through to discord.gg (no live Discord calls).
       }
       if (OUT && pg.shot !== false) {
         await p.screenshot({ path: `${OUT}/${width}-${pg.slug}-fold.png` }); // first screen, as a visitor sees it
@@ -288,7 +291,7 @@ try {
     p = await open(`${path}#discord`, 360);
     await p.waitForFunction(() => document.getElementById("discord")?.open === true, { timeout: 5000 }).catch(() => {});
     x = await p.evaluate(() => { const d = document.getElementById("discord"); return { open: d?.open, text: d?.innerText ?? "", focusIsSummary: document.activeElement === d?.querySelector("summary") }; });
-    check(x.open && (x.text.includes("Apply to join our Discord →") || x.text.includes("coming soon")), `360 ${path}#discord: Discord step opens; invite label unchanged`, JSON.stringify(x));
+    check(x.open && (x.text.includes("Universe Unlimited Discord →") || x.text.includes("coming soon")), `360 ${path}#discord: Discord step opens; UU invite label`, JSON.stringify(x));
     check(x.focusIsSummary, `360 ${path}#discord: keyboard focus on the step's summary`, JSON.stringify(x));
     // Native details, no trap: Tab moves on to the invite link inside, Enter on the summary still toggles.
     await p.keyboard.press("Tab");

@@ -1,6 +1,6 @@
 // Offline tests for the simplicity / UX sprint (design/trading-system/simplicity-review-spec.md v2 + Ben's decisions):
 // one gold CTA per page (incl. /en/accm, /en/broker, /en/system/join), disclosures + risk line byte-identical to their
-// sources on main, long /accm risk text inside the "Risk warning" expander, Signals card not a link and claim/date-free,
+// sources on main, long /accm risk text inside the "Risk warning" expander, Signals card is a secondary UU invite (not gold),
 // EN J4 caption, copy rules, docs G6/G7. No network, no Supabase, no env reads.
 // Run: node --experimental-strip-types scripts/test-simplicity.mjs   (Node >= 22.15; needs `git` with the pre-sprint base commit)
 import assert from "node:assert/strict";
@@ -30,6 +30,9 @@ const main = (f) => execFileSync("git", ["show", `${BASE_REF}:${f}`], { cwd: roo
 const golds = (s) => s.match(/variant: (?:[^,}"]*\? )?"default"/g)?.length ?? 0;
 // JSX text as rendered: collapse whitespace runs, decode the two entities used in these files.
 const jsxText = (s) => s.replace(/\s+/g, " ").replace(/&apos;/g, "'").replace(/&amp;/g, "&").trim();
+const UU_IB_CHOICE = "The Universe Unlimited Discord is a partner community for members who registered with ACCM through our link.";
+const OLD_IB_CHOICE = "Our Discord community is for members who registered with ACCM through our link.";
+const withLegacyIbChoice = (s) => s.replaceAll(UU_IB_CHOICE, OLD_IB_CHOICE);
 
 const { RISK_LINE, RISK_LINE_EN_SHORT } = await import("../src/config/training.ts");
 const { IB_DISCLOSURE_TEXT, IB_DISCLOSURE_TEXT_EN, NEUTRAL_LICENSING_TEXT } = await import("../src/config/partners.ts");
@@ -226,7 +229,9 @@ await t("RISK_LINE, IB_DISCLOSURE_TEXT, EN disclosure, NEUTRAL_LICENSING_TEXT by
 });
 await t("IbDisclosureFull, accm-bridge disclosure, /broker risk box byte-identical to main", async () => {
   const full = (s) => jsxText(s.slice(s.indexOf("export function IbDisclosureFull"), s.lastIndexOf("}")));
-  assert.equal(full(read("src/components/compliance/ib-disclosure.tsx")), full(main("src/components/compliance/ib-disclosure.tsx")));
+  const ib = read("src/components/compliance/ib-disclosure.tsx");
+  assert.ok(ib.includes(UU_IB_CHOICE));
+  assert.equal(full(withLegacyIbChoice(ib)), full(main("src/components/compliance/ib-disclosure.tsx")));
   const bridge = (s) => s.match(/export const ACCM_BRIDGE_DISCLOSURE =\s*`[^`]+`/)[0];
   assert.equal(bridge(read("src/components/academy/accm-bridge.tsx")), bridge(main("src/components/academy/accm-bridge.tsx")));
   const mb = main("src/app/broker/page.tsx");
@@ -299,21 +304,26 @@ await t("/en/accm: RISK_LINE_EN_SHORT visible; English long warning (byte-identi
 });
 
 // ---- Signals card ----
-await t("Signals card: not a link/button, aria-disabled, not focusable, no gold/hover, no dates or claims, order", async () => {
+await t("Signals card: UU invite via DiscordApplyLink, secondary not gold, no badge, hidden if invite is null, order", async () => {
   const tr = read("src/app/training/page.tsx");
-  const a = tr.indexOf('data-testid="card-signals"');
-  const card = tr.slice(tr.lastIndexOf("<div", a), tr.indexOf("</div>", a) + 6);
-  assert.match(card, /aria-disabled="true"/);
-  assert.ok(!/<Link|<a\b|href=|<button|onClick|tabIndex|role="button"|hover:|variant:|bg-primary|border-primary/.test(card), card);
-  const s = [ME.home.signalsTitle, ME.home.signalsLine, ME.home.signalsBadge].join(" ");
-  assert.equal(ME.home.signalsTitle, "Signals"); assert.equal(ME.home.signalsLine, "Coming soon."); assert.equal(ME.home.signalsBadge, "Coming soon");
+  assert.match(tr, /\{DISCORD_INVITE_URL \? \(/);
+  assert.match(tr, /<DiscordApplyLink page="training" testId="card-signals" className=\{cn\(card, "min-h-11 items-center hover:bg-muted\/40"\)\}>/);
+  const a = tr.indexOf('testId="card-signals"');
+  const card = tr.slice(tr.lastIndexOf("<DiscordApplyLink", a), tr.indexOf("</DiscordApplyLink>", a) + "</DiscordApplyLink>".length);
+  assert.ok(!/aria-disabled|signalsBadge|Coming soon|variant: "default"|bg-primary|border-primary/.test(card), card);
+  assert.ok(!("signalsBadge" in ME.home), "no Coming soon badge");
+  const s = [ME.home.signalsTitle, ME.home.signalsLine].join(" ");
+  assert.equal(ME.home.signalsTitle, "Signals"); assert.equal(ME.home.signalsLine, "Live signals sa Universe Unlimited");
   assert.ok(!/\d/.test(s), "no dates or numbers");
-  assert.ok(!/profit|win|pips?|accura|%|guarant|live|daily|weekly|join|vip|free/i.test(s), "no claims");
-  const order = ["card-continue", "card-courses", "card-signals", "card-account"].map((id) => tr.indexOf(`data-testid="${id}"`));
+  assert.ok(!/profit|win|pips?|accura|%|guarant|daily|weekly|vip|free/i.test(s), "no performance claims or VIP");
+  const order = ["card-continue", "card-courses", "card-signals", "card-account"].map((id) => tr.indexOf(`"${id}"`));
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), "Continue, Courses, Signals, Account");
   assert.match(tr, /<Link href="\/courses"/); assert.match(tr, /<Link href="\/account"/);
   assert.ok(!/IB_DISCLOSURE|Partner broker/.test(tr), "members area: no IB line");
   assert.equal(tr.match(/<MembersFooter/g)?.length, 1, "risk line once");
+  const { DISCORD_INVITE_URL } = await import("../src/config/journey.ts");
+  assert.equal(DISCORD_INVITE_URL, "https://discord.gg/5HnHAhWjU");
+  assert.ok(!/AZb5Gk9xNP/.test(read("src/config/journey.ts")));
 });
 
 // ---- EN pages ----
@@ -456,7 +466,9 @@ await t("P3 type/spacing pass (Appendix G): H1 24px inner / 30px landing, H2 18p
   assert.match(read("src/app/start/page.tsx"), /bg-amber-500\/10 p-4 text-sm/);
   assert.match(read("src/app/accm/accm-guide.tsx"), /<details key=\{f\.q\} className="rounded-lg border border-border px-4">/);
   assert.match(read("src/app/courses/page.tsx"), /<h2 className="text-lg font-semibold">/);
-  assert.equal(read("src/components/compliance/ib-disclosure.tsx"), read_at("a141f8f4d09dbf677cc86c3d13924c566649e744", "src/components/compliance/ib-disclosure.tsx"), "IB disclosure file byte-identical (not part of the type pass)");
+  const ib = read("src/components/compliance/ib-disclosure.tsx");
+  assert.ok(ib.includes(UU_IB_CHOICE));
+  assert.equal(withLegacyIbChoice(ib), read_at("a141f8f4d09dbf677cc86c3d13924c566649e744", "src/components/compliance/ib-disclosure.tsx"), "IB disclosure file unchanged except the UU partner-community sentence");
   assert.equal(read("src/app/signup/page.tsx"), read_at("a141f8f4d09dbf677cc86c3d13924c566649e744", "src/app/signup/page.tsx"), "/signup (required consent) untouched");
 });
 function read_at(ref, f) { return execFileSync("git", ["show", `${ref}:${f}`], { cwd: root, encoding: "utf8" }); }
@@ -559,19 +571,19 @@ await t("LessonNav: one mid-course label 'Next lesson →' (no 'Start {level} �
   // Each branch renders exactly one gold: level-end box (next) | Academy-complete box | mid-level link.
   assert.equal(n.match(/variant: "default"/g)?.length, 2, "NEXT_GOLD + Join");
 });
-await t("LessonHelp (P3-13): muted 'Paano sumali sa Discord →' -> /accm#discord under closed 'May problema?', with the IB line; /accm invite keeps its label", async () => {
+await t("LessonHelp (P3-13): muted 'Paano sumali sa Universe Unlimited Discord →' -> /accm#discord under closed 'May problema?', with the IB line; /accm invite keeps its UU label", async () => {
   const n = read("src/components/academy/lesson-nav.tsx");
   const h = n.slice(n.indexOf("export function LessonHelp"), n.indexOf("export function LessonNav"));
   assert.match(h, /<Expander summary=\{JOIN_COPY\.helpSummary\} testId="lesson-help">/);
   assert.match(h, /<NextStepLink location="lesson_help" href=\{LESSON_DISCORD_HREF\} className="inline-flex min-h-11 items-center self-start underline">\s*\{LESSON_DISCORD_LINK\}/);
   const AG = await import("../src/content/accm-guide.ts");
-  assert.equal(AG.LESSON_DISCORD_LINK, "Paano sumali sa Discord →");
+  assert.equal(AG.LESSON_DISCORD_LINK, "Paano sumali sa Universe Unlimited Discord →");
   assert.equal(AG.LESSON_DISCORD_HREF, "/accm#discord");
   assert.equal(AG.ACCM_DISCORD_ID, "discord");
   assert.ok(!/discord\.gg|DISCORD_INVITE_URL|DiscordApplyLink/.test(h), "ACCM first: never straight to Discord from a lesson");
   assert.ok(!/variant/.test(h), "not a button");
   assert.match(h, /\{IB_DISCLOSURE_TEXT\}/);
-  assert.equal(ACCM_COPY.discordCta, "Apply to join our Discord →"); assert.equal(ACCM_COPY_EN.discordCta, "Apply to join our Discord →");
+  assert.equal(ACCM_COPY.discordCta, "Universe Unlimited Discord →"); assert.equal(ACCM_COPY_EN.discordCta, "Universe Unlimited Discord →");
   assert.equal(JOIN_COPY.helpSummary, "May problema?");
   const lp = read("src/app/academy/[levelSlug]/[lessonSlug]/page.tsx");
   assert.equal(lp.match(/<LessonHelp \/>/g)?.length, 1, "one help expander on every lesson");
@@ -634,7 +646,34 @@ await t("P3-13: id=\"discord\" on the /accm + /en/accm Discord step, opened by O
   assert.match(read("src/components/layout/expander.tsx"), /<details id=\{id\}/);
   const o = read("src/components/layout/open-on-hash.tsx");
   assert.match(o, /window\.location\.hash !== `#\$\{id\}`/); assert.match(o, /el\.open = true/); assert.match(o, /"hashchange"/);
-  assert.equal(ACCM_COPY.discordCta, "Apply to join our Discord →", "/accm invite label unchanged");
+  assert.equal(ACCM_COPY.discordCta, "Universe Unlimited Discord →", "/accm invite label is the UU CTA");
+});
+await t("UU partner cutover: ACCM + FAQ copy, invite fallback, no old invite in app fallbacks or tests", async () => {
+  assert.equal(ACCM_COPY.discordCta, "Universe Unlimited Discord →");
+  assert.equal(ACCM_COPY_EN.discordCta, "Universe Unlimited Discord →");
+  assert.equal(ACCM_COPY.discordPrep, "Ihanda ang ACCM User ID mo. Sa server, pumunta sa #verify. Huwag ibigay ang password, OTP, o ID documents mo.");
+  assert.equal(ACCM_COPY_EN.discordPrep, "Have your ACCM User ID ready. In the server, go to #verify. Never share your password, OTP, or ID documents.");
+  assert.equal(ACCM_COPY.discordNote, "Partner community ito ng GFX para sa live tools. Mag-deposit lang ng pera na kaya mong mawala, max 1% risk, laging may stop loss.");
+  assert.equal(ACCM_COPY_EN.discordNote, "This is GFX's partner community for live tools. Only deposit money you can afford to lose, max 1% risk, always with a stop loss.");
+  assert.equal(ACCM_COPY.discordSoon, "Discord: coming soon.");
+  assert.equal(ACCM_COPY_EN.discordSoon, "Discord: coming soon.");
+  const faq = ACCM_COPY.faq.find((i) => i.q.startsWith("Optional pa ba"));
+  const faqEn = ACCM_COPY_EN.faq.find((i) => i.q.startsWith("Is the Universe Unlimited Discord"));
+  assert.equal(faq.q, "Optional pa ba ang Universe Unlimited Discord?");
+  assert.equal(faq.a, "Oo, secondary lang. Join the Trading System muna. Universe Unlimited Discord ang partner community para sa live tools. Wala kaming Messenger.");
+  assert.equal(faqEn.q, "Is the Universe Unlimited Discord still available?");
+  assert.equal(faqEn.a, "Yes, as a secondary option. Join the Trading System first. Universe Unlimited Discord is the partner community for live tools. We don't use Messenger.");
+  const { DISCORD_INVITE_URL } = await import("../src/config/journey.ts");
+  assert.equal(DISCORD_INVITE_URL, "https://discord.gg/5HnHAhWjU");
+  for (const f of [
+    "src/config/journey.ts",
+    "src/content/accm-guide.ts",
+    "scripts/test-simplicity.mjs",
+    "scripts/qa/simplicity-e2e.mjs",
+    "scripts/qa/lesson-end-e2e.mjs",
+    "scripts/test-access-request.mjs",
+    "scripts/test-accm-confirm-mail.mjs",
+  ]) assert.ok(!/https:\/\/discord\.gg\/AZb5Gk9xNP/.test(read(f)), f);
 });
 await t("DB scripts (supabase/scripts/20261115_lesson_risk_dedupe): by id, no new table/grant, RAISE guards, pinned md5s, self-contained revert restoring updated_at", async () => {
   const dir = "supabase/scripts/20261115_lesson_risk_dedupe";

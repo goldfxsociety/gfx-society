@@ -2,7 +2,9 @@
 
 **Taglish summary:** Kinokolekta lang namin ang pangalan, email, trading experience level mo, at basic usage data ng site para maibigay ang Academy at education emails. Hindi namin ibinebenta o shine-share ang data mo sa brokers unless pumayag ka. Pwede mong i-access, itama, o ipa-delete ang data mo anytime — email lang sa goldfx.society@gmail.com, o i-delete mo mismo ang account mo sa Account settings. Kung sasali ka sa Discord community namin, ginagamit lang namin ang join application answers mo para i-verify na nag-register ka sa ACCM through our link. Kung mag-a-apply ka for deposit verification para sa members-only channels, ang deposit screenshot mo ay para lang sa verification, binubura ito ng bot, at isang decision log lang ang tinatago namin.
 
-Last updated: 11 Nov 2026 · Version: 1.4
+Last updated: 22 Nov 2026 · Version: 1.4.1
+
+**What changed in v1.4.1 (22 Nov 2026):** Universe Unlimited Discord is named as a partner community the site may link to; GFX does not operate that server (section 1, "Who we are"). We have not added new retention rules. Walang nagbago sa ibang paggamit namin ng data mo.
 
 **What changed in v1.4 (11 Nov 2026):** the members area now uses your normal Academy login (email + password, with a confirmed email) instead of a 6-digit email code (section 2, "Members area verification"). We added the optional Trading System access request and its data (section 2 and section 7). It only applies if you choose to request access. Walang nagbago sa ibang paggamit namin ng data mo.
 
@@ -13,7 +15,7 @@ Last updated: 11 Nov 2026 · Version: 1.4
 **What changed in v1.1 (18 Oct 2026):** the GFX Society Messenger community was replaced by the GFX Society Discord community. We added the Discord join application (section 2) and Discord Inc. as a provider (section 5). No change to how we handle your Academy account data.
 
 ## 1. Who we are (Personal Information Controller)
-GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app, the GFX Society Academy, and the GFX Society Discord community, which is open to members who registered with ACCM through our link. GFX is the personal information controller (PIC) under the Data Privacy Act of 2012 (Republic Act No. 10173), its Implementing Rules and Regulations, and National Privacy Commission (NPC) issuances.
+GoldFX Society ("GFX", "we", "us") operates https://gfx-society.vercel.app and the GFX Society Academy. The site may link to the Universe Unlimited Discord, a partner community for members who registered with ACCM through our link. GFX is the personal information controller (PIC) under the Data Privacy Act of 2012 (Republic Act No. 10173), its Implementing Rules and Regulations, and National Privacy Commission (NPC) issuances.
 - Controller: GoldFX Society (GFX), an independent education community operated by its founder
 - Address: Philippines
 - Privacy contact: goldfx.society@gmail.com
