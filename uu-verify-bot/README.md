@@ -106,7 +106,8 @@ What setup does:
   and Unverified. The bot allow is written first and the @everyone deny last, so the bot never loses View
   mid-run (denying @everyone first caused 403/50001 in a live apply). If those defaults have already been
   deleted, locking them is a no-op: setup does not error and does not recreate them.
-- **Roles created:** Unverified, FREE, VIP, Sub-IB, Coach, Admin / Mod, Line: Coach Mike, Line: GFX.
+- **Roles created:** Unverified, FREE, VIP, Sub-IB, Coach, Admin / Mod, Line: Coach Mike, Line: Ben.
+  - A leftover `Line: GFX` is treated as the same gfx-line role (after a saved `setup.out.json` id, then exact `Line: Ben`). Setup reuses it and does not rename it or create a second role. If both names exist, the saved id wins, then `Line: Ben`, and setup warns about the extra role.
   - Coach goes to both Coach Mike accounts. Admin / Mod goes to Ben.
   - If a per-user overwrite (for example Coach Mike on `#review-coach-mike`) returns 404/10009 or 404/10007
     because that account is not in the server yet, setup warns and continues. A later rerun adds the overwrite
