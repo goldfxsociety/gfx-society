@@ -208,7 +208,7 @@ describe("Client ako: VIP flow", () => {
 });
 
 describe("Duplicate ACCM User ID", () => {
-  it("is flagged on the card and blocks normal approval until an Admin / Mod overrides", async () => {
+  it("is flagged on the card, stays pending with no Denied DM, and blocks normal approval until an Admin / Mod overrides", async () => {
     const w = world();
     w.d1.sqlite.exec(`INSERT INTO members (discord_user_id, accm_user_id, referring_ib_line_id, tier) VALUES ('${IDS.member2}', '654321', 2, 'free')`);
     w.fake.members.set(IDS.member, []);
@@ -216,12 +216,32 @@ describe("Duplicate ACCM User ID", () => {
     await submit(w, i);
     const app = appOf(w, i.id);
     expect(app.flags).toContain("dup_user_id");
+    expect(app.status).toBe("pending");
     expect(w.fake.messages.get(app.review_message_id!)!.content).toContain("Duplicate ACCM User ID");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
     await click(w, CID.approve + app.id, IDS.ben, [], app); // Ben as line IB, WITHOUT Admin role
     expect(followups(w).at(-1)).toBe(MSG.needAdminDupUserId);
     expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
     await click(w, CID.approve + app.id, IDS.admin, [IDS.adminRole], app);
     expect(appOf(w, i.id)).toMatchObject({ status: "approved", decision_reason: "admin_override_duplicate" });
+  });
+
+  it("admin deny after review uses the post-review duplicate copy, not admin-still-needs-to-look wording", async () => {
+    const w = world();
+    w.d1.sqlite.exec(`INSERT INTO members (discord_user_id, accm_user_id, referring_ib_line_id, tier) VALUES ('${IDS.member2}', '654321', 2, 'free')`);
+    w.fake.members.set(IDS.member, []);
+    const i = clientSubmit(IDS.member, [], { accm: "654321", type: "free", line: "2" });
+    await submit(w, i);
+    const app = appOf(w, i.id);
+    expect(app.status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+    await handleInteraction(denySubmit(app.id, IDS.admin, [IDS.adminRole], app.review_channel_id!, "duplicate", "", app.review_message_id!), w.deps, w.ctx);
+    await w.ctx.flush();
+    const reason = "Nagamit na ang ACCM User ID na ito ng ibang Discord account. Hindi ma-approve ang application na ito.";
+    expect(appOf(w, i.id)).toMatchObject({ status: "denied", decision_reason: "duplicate" });
+    expect(w.fake.dms.get(IDS.member)).toEqual([deniedDm(reason)]);
+    expect(w.fake.dms.get(IDS.member)!.join("\n")).not.toMatch(/Kailangan muna|i-review ng admin|admin still|look at it/i);
   });
 });
 

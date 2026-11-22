@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MSG, PRIVACY_NOTICE, SPEC_IB_APPROVED_FROM_CLIENT, SPEC_IB_APPROVED_NEW } from "../src/copy";
+import { MSG, PRIVACY_NOTICE, SPEC_IB_APPROVED_FROM_CLIENT, SPEC_IB_APPROVED_NEW, deniedDm } from "../src/copy";
 import { handleInteraction } from "../src/handlers";
 import { CID } from "../src/payloads";
 import { VIEW, WRITE } from "../src/perms";
 import type { Application, IbLine } from "../src/types";
-import { button, clientSubmit, IDS, ibSubmit, world, type World } from "./helpers";
+import { button, clientSubmit, denySubmit, IDS, ibSubmit, world, type World } from "./helpers";
 
 const { freeRole, vipRole, subIbRole } = IDS;
 const EMAIL = "juan.ib@example.com";
@@ -132,23 +132,41 @@ describe("IB ako: existing client becomes sub-IB (spec §6)", () => {
 });
 
 describe("Duplicate ACCM IB email", () => {
-  it("is flagged and never creates a second line, not even by an Admin", async () => {
+  it("is flagged, stays pending with no Denied DM, and never creates a second line, not even by an Admin", async () => {
     const w = world();
     w.fake.members.set(IDS.member, []);
     const i = ibSubmit(IDS.member, [], { email: "GOLDFX.society@gmail.com", line: "1" });
     await run(w, i);
     const app = appOf(w, i.id);
     expect(app.flags).toContain("dup_ib_email");
+    expect(app.status).toBe("pending");
     expect(w.fake.messages.get(app.review_message_id!)!.content).toContain("Duplicate ACCM IB email");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
     await click(w, CID.approve + app.id, IDS.admin, [IDS.adminRole], app);
     expect(followups(w).at(-1)).toBe(MSG.dupEmailBlocked);
     expect(appOf(w, i.id).status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
     expect(w.fake.createdRoles).toHaveLength(0);
     expect(w.d1.one<{ n: number }>("SELECT count(*) n FROM ib_lines").n).toBe(2);
     // DB constraint backs it up.
     expect(() =>
       w.d1.sqlite.exec(`INSERT INTO ib_lines (slug, display_name, discord_user_id, accm_ib_email, upline_line_id) VALUES ('x', 'X', '${IDS.member}', 'goldfx.society@gmail.com', 1)`),
     ).toThrow(/UNIQUE/);
+  });
+
+  it("admin deny after review uses the post-review duplicate-email copy, not admin-still-needs-to-look wording", async () => {
+    const w = world();
+    w.fake.members.set(IDS.member, []);
+    const i = ibSubmit(IDS.member, [], { email: "GOLDFX.society@gmail.com", line: "1" });
+    await run(w, i);
+    const app = appOf(w, i.id);
+    expect(app.status).toBe("pending");
+    expect(w.fake.dms.get(IDS.member) ?? []).toEqual([]);
+    await run(w, denySubmit(app.id, IDS.admin, [IDS.adminRole], app.review_channel_id!, "duplicate_email", "", app.review_message_id!));
+    const reason = "May IB line na gamit ang ACCM IB email na ito. Hindi ma-approve ang application na ito.";
+    expect(appOf(w, i.id)).toMatchObject({ status: "denied", decision_reason: "duplicate_email" });
+    expect(w.fake.dms.get(IDS.member)).toEqual([deniedDm(reason)]);
+    expect(w.fake.dms.get(IDS.member)!.join("\n")).not.toMatch(/Kailangan muna|i-review ng admin|admin still|look at it/i);
   });
 
   it("second pending IB request with the same email is flagged too", async () => {

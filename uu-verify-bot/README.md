@@ -125,15 +125,21 @@ npm run build:dry                # wrangler deploy --dry-run
 
 ## Assumptions (need Design or Ben confirmation)
 
-1. **VIP carry-over:** a VIP who reverifies on or after the reminder moment (7 days before the 1st) is not reset that month.
+1. **VIP carry-over (Design signed off, 22 Nov 2026):** an approved VIP proof in the 7-day window (from 00:00
+   Asia/Manila, 7 days before the 1st, until 00:00 on the 1st) keeps VIP through that month's reset, including a
+   first-time VIP approval in the window. Those members do not get the reset-day DM. Mid-month approvals outside
+   the window still reset.
 2. **Reset start window:** the reset only starts on Manila days 1–3, so a mid-month deploy never wipes VIP.
 3. **Review channel access:** that line's IB, Coach, Admin and the bot. Uplines see escalated cases in their own channel.
-4. **New Sub-IB who wasn't a client:** gets FREE + the upline's line tag. A client who becomes a Sub-IB under a
-   different upline is flagged, not blocked.
+4. **New Sub-IB / upline mismatch (Design signed off, 22 Nov 2026):** a new Sub-IB who wasn't a client gets FREE +
+   the upline's line tag. A client who becomes a Sub-IB under a different upline is flagged on the card, not blocked.
 5. **Unverified:** an HTTP-only bot can't assign roles on join, so @everyone acts as Unverified. The Unverified role is
    removed on approval if present.
-6. **Our own wording (needs Design sign-off):** the privacy notice, plus deny presets beyond §10: wrong upline, unclear
-   (FREE/VIP), below $50, duplicate, duplicate email, other.
+6. **Copy (Design signed off, 22 Nov 2026):** the privacy notice, deny presets beyond §10 (wrong upline, unclear
+   FREE/VIP, below $50, duplicate, duplicate email, other), and the VIP reminder. Duplicate deny copy is sent only
+   after an admin reviews and denies; the application stays pending until then. The screenshot-deletion sentence
+   was not added to the modal screenshot Label descriptions: Discord caps those at 100 characters (FREE would be
+   105, VIP 118). It stays in the privacy notice in `#start-here`, the `#verify` panel, and at the top of both modals.
 7. **Leavers and VIP scope:** the bot can't see leaves. Returning members are detected from D1 on their next
    application. The reset only covers VIPs recorded in D1, not VIP roles added by hand.
 8. **Inactive IB lines:** an IB line whose owner leaves stays in the dropdown until an admin sets `active = 0` in D1.

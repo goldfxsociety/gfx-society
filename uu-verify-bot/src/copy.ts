@@ -50,9 +50,9 @@ Dahilan: [reason]
 
 Pwede kang mag-submit ulit kapag ready na.`;
 
-export const SPEC_REMINDER = `Paalala: sa 1st ng susunod na buwan, babalik sa FREE ang lahat ng VIP roles.
+export const SPEC_REMINDER = `Paalala: sa 1st ng susunod na buwan, babalik sa FREE ang VIP roles.
 
-Kung gusto mong manatiling VIP, mag-reverify bago mag-1st. Screenshot lang na $50 o more ang deposit o balance mo. Pwede mong i-crop ang ibang details.`;
+Kung gusto mong manatiling VIP, mag-reverify bago mag-1st. Kapag na-approve, hindi ka kasama sa reset. Screenshot lang na $50 o more ang deposit o balance mo. Pwede mong i-crop ang ibang details.`;
 
 export const SPEC_RESET_DAY = `Nag-reset na ang VIP roles para sa buwang ito. Naka-FREE ka ulit.
 
@@ -71,9 +71,9 @@ export const SPEC_RISK_LINE = `Education lang, not financial advice. Max 1% risk
 /** Fill the Denied DM. Admins replace [reason] before a denial is sent. */
 export const deniedDm = (reason: string) => SPEC_DENIED.replace("[reason]", reason.trim());
 
-// ── Privacy notice (spec §11 asks for it; wording is ours — needs Design sign-off) ──
+// ── Privacy notice (Design sign-off, 22 Nov 2026 amendment; exact text) ──
 export const PRIVACY_NOTICE =
-  "Privacy: Ang referring IB mo lang ang makakakita ng proof mo (at ang upline niya hanggang kay Coach Mike kung ma-escalate). Admins lang ang makakakita ng IB email. Buburahin ang screenshot pagkatapos ng decision. Huwag mag-send ng full account statement.";
+  "Privacy: Ang IB na pinili mo lang ang makakakita ng proof mo (at ang upline niya hanggang kay Coach Mike kung ma-escalate). Admins lang ang makakakita ng IB email. Buburahin ang screenshot pagkatapos ng decision. Huwag mag-send ng full account statement.";
 
 // ── Panels ──────────────────────────────────────────────────────────────────
 export const START_HERE_PANEL = `${SPEC_START_HERE}\n\n${PRIVACY_NOTICE}`;
@@ -110,9 +110,9 @@ export function denyReasonText(code: string, type: "free" | "vip" | "ib", note?:
     case "below_min":
       return "Hindi pa umaabot sa $50 minimum ang deposit o balance na nakita sa screenshot.";
     case "duplicate":
-      return "Nagamit na ang ACCM User ID na ito ng ibang Discord account. Kailangan muna itong i-review ng admin.";
+      return "Nagamit na ang ACCM User ID na ito ng ibang Discord account. Hindi ma-approve ang application na ito.";
     case "duplicate_email":
-      return "May IB line na gamit ang ACCM IB email na ito. Kailangan muna itong i-review ng admin.";
+      return "May IB line na gamit ang ACCM IB email na ito. Hindi ma-approve ang application na ito.";
     default:
       return (note ?? "").trim();
   }
@@ -131,6 +131,9 @@ export const MODAL = {
   lineLabel: "Referring IB",
   lineDesc: "Discord display name lang ang makikita.",
   shotLabel: "Screenshot",
+  // Discord Label description max is 100 chars. Adding "Buburahin ang screenshot pagkatapos ng decision."
+  // would be 105 (FREE) and 118 (VIP), so it is not appended here. The sentence stays in PRIVACY_NOTICE,
+  // which is shown in #start-here, the #verify panel, and as TEXT_DISPLAY at the top of both modals.
   shotDescFree: "Verified status mo. Pwede mong i-crop ang ibang details.",
   shotDescVip: "$50 o more na deposit o balance. Pwede mong i-crop ang ibang details.",
   emailLabel: "ACCM IB email",
