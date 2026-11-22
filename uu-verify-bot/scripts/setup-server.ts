@@ -16,19 +16,22 @@
  * Env: DISCORD_BOT_TOKEN (never printed), GUILD_ID, DISCORD_APP_ID, COACH_MIKE_DISCORD_USER_IDS, BEN_DISCORD_USER_ID,
  *      COACH_MIKE_IB_EMAIL (optional). Defaults for the public ids come from wrangler.toml.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { Discord, DiscordError } from "../src/discord";
 import { startHerePanel, verifyPanel } from "../src/payloads";
 import {
+  botRole,
   executePlan,
   type GuildChannel,
   type GuildRole,
   knownGuildState,
   permissionMatrix,
   planSetup,
+  type PriorSetupIds,
   seedSql,
   type SetupApi,
   type SetupIds,
+  type SetupResult,
   varsSnippet,
 } from "../src/setup";
 
@@ -62,6 +65,31 @@ if (postPanels && !(apply && args.has("--confirm-ben-ok"))) {
   process.exit(1);
 }
 
+function isIdMap(v: unknown): v is Record<string, string> {
+  return !!v && typeof v === "object" && Object.values(v).every((x) => typeof x === "string");
+}
+
+/** Reuse ids from a previous (possibly partial) apply so hidden categories are not duplicated. */
+function readPriorSetup(): PriorSetupIds | undefined {
+  if (!existsSync("setup.out.json")) return undefined;
+  try {
+    const raw: unknown = JSON.parse(readFileSync("setup.out.json", "utf8"));
+    if (!raw || typeof raw !== "object") return undefined;
+    const o = raw as { categoryIds?: unknown; channelIds?: unknown };
+    const categoryIds = isIdMap(o.categoryIds) ? o.categoryIds : undefined;
+    const channelIds = isIdMap(o.channelIds) ? o.channelIds : undefined;
+    if (!categoryIds && !channelIds) return undefined;
+    return { categoryIds, channelIds };
+  } catch {
+    console.error("WARNING: setup.out.json exists but could not be parsed; ignoring it.");
+    return undefined;
+  }
+}
+
+function writeProgress(partial: SetupResult) {
+  writeFileSync("setup.out.json", JSON.stringify(partial, null, 2));
+}
+
 async function main() {
   let state = knownGuildState(ids.guildId, ids.botUserId);
   let discord: Discord | null = null;
@@ -77,7 +105,9 @@ async function main() {
     ]);
     state = { roles, channels };
   }
-  const plan = planSetup(state, ids);
+  ids.botRoleId = botRole(state.roles, ids.botUserId)?.id;
+  const prior = readPriorSetup();
+  const plan = planSetup(state, ids, prior);
   console.log(`Mode: ${apply ? "APPLY" : online ? "DRY-RUN (online, read-only)" : "DRY-RUN (offline, known guild state)"}`);
   console.log("\nRoles:");
   for (const r of plan.roles) console.log(`  ${r.action === "create" ? "+ create" : "= exists"}  ${r.name}`);
@@ -93,6 +123,12 @@ async function main() {
   console.log("\nMember roles:");
   for (const m of plan.memberRoles) console.log(`  ${m.role} → ${m.userId}`);
   for (const w of plan.warnings) console.log(`\n${w}`);
+  for (const b of plan.blockers) console.error(`\n${b}`);
+  if (plan.blockers.length) {
+    if (apply) console.error("\nApply aborted. Nothing was changed in this run.");
+    else console.log("\nDry run only. Nothing was changed. Fix the issue above before --apply.");
+    process.exit(1);
+  }
   if (!apply) {
     console.log("\nDry run only. Nothing was changed.");
     return;
@@ -116,8 +152,8 @@ async function main() {
     },
     listRoles: () => d.request<GuildRole[]>("GET", `/guilds/${ids.guildId}/roles`),
   };
-  const res = await executePlan(plan, ids, api, (l) => console.log(`  ${l}`));
-  writeFileSync("setup.out.json", JSON.stringify(res, null, 2));
+  const res = await executePlan(plan, ids, api, (l) => console.log(`  ${l}`), writeProgress);
+  writeProgress(res);
   writeFileSync("seed.generated.sql", seedSql(res, { ...ids, coachMikeIbEmail }));
   console.log("\nWrote setup.out.json and seed.generated.sql (both git-ignored).");
   console.log("\nPaste into wrangler.toml [vars]:\n" + varsSnippet(res));

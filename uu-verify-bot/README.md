@@ -78,7 +78,7 @@ npx wrangler d1 execute DB --remote --file sql/seed_verify.sql   # 3 × ok
 npx wrangler secret put DISCORD_PUBLIC_KEY
 npx wrangler secret put DISCORD_BOT_TOKEN
 npx wrangler deploy
-npm run register-commands
+npm run register-commands   # DISCORD_BOT_TOKEN in env; app/guild ids default to wrangler.toml [vars]
 # Developer Portal → UU app → Interactions Endpoint URL = https://uu-verify-bot.<subdomain>.workers.dev/interactions
 npm run post-verify-panel -- --confirm-ben-ok                   # ONLY with Ben's OK for the public post
 ```
@@ -102,17 +102,28 @@ What setup does:
 
 - **Existing guild defaults:** the `@everyone` role, the managed `UU Bot` role, the `Text Channels` / `Voice Channels`
   categories, `#general` and the `General` voice channel are **kept** (never deleted, renamed or recreated). View is
-  denied on them for @everyone and Unverified.
+  denied on them for @everyone and Unverified. The bot allow is written first and the @everyone deny last, so the
+  bot never loses View mid-run (denying @everyone first caused 403/50001 in a live apply).
 - **Roles created:** Unverified, FREE, VIP, Sub-IB, Coach, Admin / Mod, Line: Coach Mike, Line: GFX.
   - Coach goes to both Coach Mike accounts. Admin / Mod goes to Ben.
+  - If a per-user overwrite (for example Coach Mike on `#review-coach-mike`) returns 404 because that account is
+    not in the server yet, setup warns and continues. A later rerun adds the overwrite once they have joined.
 - **Categories:** START, COMMUNITY, VIP, IB LEADERS, ADMIN, REVIEWS. The full permission matrix is printed by the dry-run.
+  Hidden categories (and locked defaults) deny View to @everyone and Unverified, and **allow View + Manage Channels for the bot**
+  so the bot can still see them and create child channels (including auto-created `#review-{line}`).
+- **Idempotence:** setup matches existing categories/channels by name, or by id from `setup.out.json` if a hidden one is not
+  visible in the guild listing. `setup.out.json` is written as each role/channel is created, so a partial apply can be resumed.
+  If a sibling category already exists but a hidden one is missing from the listing and has no saved id, setup refuses to
+  create it (creating it would duplicate the hidden category).
 - **Role order:** after creating roles, setup warns if `UU Bot` sits below any role the bot assigns. It never reorders.
   An admin must drag `UU Bot` above FREE, VIP, Sub-IB, Unverified and all `Line:` roles.
 - **Bot permissions:** Manage Roles, Manage Channels, View Channels, Send Messages, Attach Files, Embed Links, Read Message History.
 
 ## Secrets and config
 
-- `wrangler.toml` holds only public IDs and `REPLACE_WITH_*` placeholders.
+- `wrangler.toml` holds only public IDs and `REPLACE_WITH_*` placeholders. `preview_urls` is set to `false`.
+  `npm run register-commands` reads `DISCORD_APP_ID` and `GUILD_ID` from `[vars]` (env `DISCORD_APP_ID` /
+  `DISCORD_GUILD_ID` or `GUILD_ID` override). The bot token is still env-only.
 - `DISCORD_PUBLIC_KEY` and `DISCORD_BOT_TOKEN` are set **only** with `wrangler secret put`. For local dev, use `.dev.vars`
   (git-ignored; see `.dev.vars.example`). Never commit or paste them.
 

@@ -8,6 +8,8 @@ name = "uu-verify-bot"
 main = "src/index.ts"
 compatibility_date = "2026-04-20"
 workers_dev = true
+# Explicitly off: wrangler would otherwise enable Preview URLs by default when workers_dev is on.
+preview_urls = false
 
 # Every 5 minutes. Each tick runs, in order and under one budget of 45 subrequests (Discord + CDN + D1, Free cap 50):
 #  1st-of-month VIP reset (Asia/Manila) → 7-day-before reminder DMs → leftover review-card cleanup → 48h escalation.

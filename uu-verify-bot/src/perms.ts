@@ -2,7 +2,7 @@ import { bits, type Overwrite, Perm } from "./discord";
 
 export const READ = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY);
 export const WRITE = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.ADD_REACTIONS, Perm.EMBED_LINKS, Perm.ATTACH_FILES);
-export const BOT = bits(Perm.VIEW_CHANNEL, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.EMBED_LINKS, Perm.ATTACH_FILES);
+export const BOT = bits(Perm.VIEW_CHANNEL, Perm.MANAGE_CHANNELS, Perm.READ_MESSAGE_HISTORY, Perm.SEND_MESSAGES, Perm.EMBED_LINKS, Perm.ATTACH_FILES);
 export const VIEW = bits(Perm.VIEW_CHANNEL);
 
 /**

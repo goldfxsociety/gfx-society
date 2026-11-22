@@ -17,6 +17,7 @@ export const DiscordCode = {
   UNKNOWN_CHANNEL: 10003,
   UNKNOWN_MEMBER: 10007,
   UNKNOWN_MESSAGE: 10008,
+  UNKNOWN_OVERWRITE: 10009,
   UNKNOWN_ROLE: 10011,
   UNKNOWN_USER: 10013,
   CANNOT_DM: 50007,
@@ -24,6 +25,7 @@ export const DiscordCode = {
 } as const;
 
 export const Perm = {
+  MANAGE_CHANNELS: 1n << 4n,
   VIEW_CHANNEL: 1n << 10n,
   SEND_MESSAGES: 1n << 11n,
   EMBED_LINKS: 1n << 14n,
